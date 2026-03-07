@@ -1,7 +1,7 @@
 # EducoreAcademy
 
 ## Overview
-A full-stack application built with React, Vite, Node.js, Express, and MongoDB.
+A full-stack application built with React, Vite, Node.js, Express, and SQL Server.
 
 ## Project Structure
 - `frontend/` - React frontend powered by Vite
