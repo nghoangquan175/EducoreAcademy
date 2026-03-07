@@ -1,4 +1,4 @@
-# Online Learning Platform
+# EducoreAcademy
 
 ## Overview
 A full-stack application built with React, Vite, Node.js, Express, and MongoDB.
@@ -9,7 +9,7 @@ A full-stack application built with React, Vite, Node.js, Express, and MongoDB.
 
 ## Prerequisites
 - Node.js installed
-- MongoDB installed and running locally on `mongodb://localhost:27017`
+- SQL Server installed and running locally on `//localhost:5000`
 
 ## Running the Backend
 1. Navigate to the backend folder:
