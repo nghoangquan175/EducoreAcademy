@@ -2,8 +2,8 @@
 .banner-wrapper {
   position: relative;
   /* Break out of main-content's max-width constraint */
-  width: 80vw;
-  margin-left: calc(50% - 40vw);
+  /* width: 80vw; */
+  /* margin-left: calc(50% - 40vw); */
   /* reserve space at bottom for pagination */
   padding-bottom: 48px;
 }
@@ -11,7 +11,7 @@
 /* ─── Swiper shell ────────────────────────────────────── */
 .banner-swiper {
   width: 100%;
-  border-radius: 0;
+  border-radius: 20px;
   overflow: hidden;
 }
 
@@ -19,9 +19,9 @@
 .banner-slide {
   display: flex;
   align-items: center;
-  min-height: 480px;
-  padding: 60px 80px;
-  gap: 48px;
+  min-height: 380px;
+  padding: 40px 60px;
+  gap: 40px;
   box-sizing: border-box;
 }
 
@@ -91,6 +91,7 @@
 .btn-icon {
   transition: transform 0.2s;
 }
+
 .banner-btn-cta:hover .btn-icon {
   transform: translateX(4px);
 }
@@ -105,7 +106,7 @@
 }
 
 .banner-image {
-  max-height: 380px;
+  max-height: 300px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -149,6 +150,7 @@
   left: 0;
   transform: translateX(-50%);
 }
+
 .banner-btn-prev:hover {
   transform: translateX(-50%) scale(1.1);
 }
@@ -157,6 +159,7 @@
   right: 0;
   transform: translateX(50%);
 }
+
 .banner-btn-next:hover {
   transform: translateX(50%) scale(1.1);
 }

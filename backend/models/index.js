@@ -1,3 +1,6 @@
+const Banner = require('./Banner');
+
+// Re-export with existing models
 const User = require('./User');
 const Course = require('./Course');
 const Lesson = require('./Lesson');
@@ -54,5 +57,6 @@ module.exports = {
   Progress,
   Review,
   Notification,
-  Article
+  Article,
+  Banner,
 };

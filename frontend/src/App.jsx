@@ -4,8 +4,12 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './contexts/AuthContext';
 import Header from './components/Header';
 import BannerCarousel from './components/BannerCarousel';
+import ProCourses from './components/ProCourses';
+import FreeCourses from './components/FreeCourses';
+import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import CoursePage from './pages/CoursePage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id_here';
 
@@ -16,6 +20,7 @@ const MainLayout = () => (
     <main className="main-content">
       <Outlet />
     </main>
+    <Footer />
   </div>
 );
 
@@ -43,14 +48,15 @@ function App() {
               <Route path="/" element={
                 <>
                   <BannerCarousel />
-                  <div style={{ padding: '40px 80px' }}><h2>Welcome to the Learning Platform!</h2></div>
+                  <ProCourses />
+                  <FreeCourses />
                 </>
               } />
               <Route path="/courses" element={<div><h2>Course List</h2></div>} />
               <Route path="/student-dashboard" element={<div><h2>Student Dashboard</h2></div>} />
               <Route path="/instructor-dashboard" element={<div><h2>Instructor Dashboard</h2></div>} />
               <Route path="/admin-dashboard" element={<div><h2>Admin Dashboard</h2></div>} />
-              <Route path="/course/:id" element={<div><h2>Course Detail</h2></div>} />
+              <Route path="/course/:id" element={<CoursePage />} />
             </Route>
           </Routes>
         </Router>

@@ -74,14 +74,13 @@ const googleLogin = async (req, res) => {
         user.avatar = user.avatar || avatar;
         await user.save();
       } else {
-        // Create new user
+        // Create new user (no password for social login)
         user = await User.create({
           name,
           email,
           googleId,
           avatar,
           provider: 'google',
-          password: null,
         });
       }
     }
@@ -123,7 +122,6 @@ const facebookLogin = async (req, res) => {
           facebookId,
           avatar,
           provider: 'facebook',
-          password: null,
         });
       }
     }

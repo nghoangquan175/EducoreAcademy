@@ -1,0 +1,183 @@
+/* ─── Footer Section ──────────────────────────────────────────────────────── */
+.footer-section {
+  background: #181821;
+  /* Nền tối đậm giống ảnh */
+  color: #a9b3bb;
+  /* Màu text phụ */
+  padding-top: 60px;
+  font-family: inherit;
+}
+
+.footer-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr 2fr;
+  /* 4 cột với tỷ lệ phù hợp */
+  gap: 40px;
+  margin-bottom: 50px;
+}
+
+/* ─── Cột 1: Logo & Liên hệ ─────────────────────────────────────────────── */
+.footer-logo {
+  margin-bottom: 24px;
+}
+
+.footer-logo .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.footer-logo .logo-icon {
+  color: #2563eb;
+}
+
+.footer-logo .logo span {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+.footer-contact {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.footer-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.badge-dmca {
+  height: 24px;
+  width: auto;
+}
+
+.badge-bct {
+  height: 36px;
+  width: auto;
+}
+
+/* ─── Cột 2 & 3: Links ──────────────────────────────────────────────────── */
+.footer-heading {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 24px 0;
+  text-transform: uppercase;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.footer-links li a {
+  color: #a9b3bb;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.footer-links li a:hover {
+  color: #fff;
+}
+
+/* ─── Cột 4: Company Info ───────────────────────────────────────────────── */
+.footer-company-name {
+  line-height: 1.5;
+}
+
+.footer-company-info {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Footer Bottom ─────────────────────────────────────────────────────── */
+.footer-bottom {
+  padding: 24px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-bottom-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-bottom-container p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.footer-socials {
+  display: flex;
+  gap: 10px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #2a2a35;
+  color: #fff;
+  transition: all 0.2s;
+}
+
+.social-btn:hover {
+  background: #3f3f4e;
+}
+
+.btn-youtube:hover {
+  color: #ff0000;
+}
+
+.btn-facebook:hover {
+  color: #1877f2;
+}
+
+.btn-tiktok:hover {
+  color: #00f2fe;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .footer-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer-container {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-bottom-container {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+}

@@ -46,21 +46,24 @@ const LoginPage = () => {
 
   const handleFacebookLogin = () => {
     if (typeof window.FB === 'undefined') {
-      setError('Facebook SDK chưa được tải. Vui lòng thử lại.');
+      setError('Facebook SDK chưa được tải. Vui lòng thử lại sau.');
       return;
     }
-    window.FB.login(async (response) => {
+    // FB.login callback MUST be a regular (non-async) function
+    window.FB.login((response) => {
       if (response.authResponse) {
         setLoading(true);
-        try {
-          const { data } = await facebookLoginAPI(response.authResponse.accessToken);
-          login(data);
-          navigate('/');
-        } catch (err) {
-          setError(err.response?.data?.message || 'Đăng nhập Facebook thất bại');
-        } finally {
-          setLoading(false);
-        }
+        (async () => {
+          try {
+            const { data } = await facebookLoginAPI(response.authResponse.accessToken);
+            login(data);
+            navigate('/');
+          } catch (err) {
+            setError(err.response?.data?.message || 'Đăng nhập Facebook thất bại');
+          } finally {
+            setLoading(false);
+          }
+        })();
       }
     }, { scope: 'public_profile,email' });
   };

@@ -1,0 +1,45 @@
+/* ─── FreeCourses overrides for ProCourses ────────────────────────────── */
+
+/* Background section slightly different */
+.fc-section {
+  /* background: #ffffff; Hoàn toàn trắng */
+  padding-top: 40px; /* Sát với khóa học Pro hơn */
+}
+
+/* Badge (Free) - Green gradient */
+.fc-badge {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}
+
+/* Tab active - Green gradient */
+.fc-tab--active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+/* Category pill inside card - Emerald text */
+.fc-category-pill {
+  color: #10b981;
+}
+
+/* Price - Emerald text */
+.fc-price {
+  background: linear-gradient(135deg, #10b981, #059669);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enroll button - Emerald theme */
+.fc-enroll-btn {
+  color: #059669;
+  background: #ecfdf5;
+}
+
+.fc-enroll-btn:hover {
+  background: #d1fae5;
+  color: #047857;
+}
+
+

@@ -5,36 +5,53 @@ const Course = sequelize.define('Course', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
-    primaryKey: true
+    primaryKey: true,
   },
   title: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
   },
   description: {
     type: DataTypes.TEXT,
-    allowNull: false
+    allowNull: false,
   },
   price: {
     type: DataTypes.FLOAT,
-    defaultValue: 0
+    defaultValue: 0,
   },
   category: {
-    type: DataTypes.STRING
+    type: DataTypes.STRING(100),
+    allowNull: true,
   },
   thumbnail: {
-    type: DataTypes.STRING
+    type: DataTypes.STRING(512),
+    allowNull: true,
+  },
+  level: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'Beginner',
+  },
+  rating: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+  },
+  studentsCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  duration: {
+    type: DataTypes.STRING(50), // e.g. "12 giờ", "8.5 giờ"
+    allowNull: true,
   },
   published: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false
-  }
+    defaultValue: false,
+  },
 }, {
   indexes: [
-    {
-      fields: ['title']
-    }
-  ]
+    { fields: ['title'] },
+    { fields: ['category'] },
+  ],
 });
 
 module.exports = Course;
