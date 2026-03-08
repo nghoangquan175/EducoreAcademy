@@ -19,10 +19,10 @@ const connectDB = async () => {
     console.log('SQL Server Database Connected...');
 
     // Sync models
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log('Database synced');
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('Unable to connect to the database:', error.message);
     process.exit(1);
   }
 };

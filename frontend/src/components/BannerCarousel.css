@@ -1,0 +1,230 @@
+/* ─── Wrapper ─────────────────────────────────────────── */
+.banner-wrapper {
+  position: relative;
+  /* Break out of main-content's max-width constraint */
+  width: 80vw;
+  margin-left: calc(50% - 40vw);
+  /* reserve space at bottom for pagination */
+  padding-bottom: 48px;
+}
+
+/* ─── Swiper shell ────────────────────────────────────── */
+.banner-swiper {
+  width: 100%;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* ─── Individual slide ────────────────────────────────── */
+.banner-slide {
+  display: flex;
+  align-items: center;
+  min-height: 480px;
+  padding: 60px 80px;
+  gap: 48px;
+  box-sizing: border-box;
+}
+
+/* ─── Left column — content ───────────────────────────── */
+.banner-content {
+  flex: 0 0 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #ffffff;
+}
+
+.banner-tag {
+  display: inline-block;
+  width: fit-content;
+  padding: 4px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+.banner-title {
+  margin: 0;
+  font-size: clamp(28px, 3.5vw, 44px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.banner-desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 420px;
+}
+
+/* CTA button — pill / transparent */
+.banner-btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 13px 28px;
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  background: transparent;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, transform 0.2s;
+}
+
+.banner-btn-cta:hover {
+  background: #ffffff;
+  color: #1e293b;
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  transition: transform 0.2s;
+}
+.banner-btn-cta:hover .btn-icon {
+  transform: translateX(4px);
+}
+
+/* ─── Right column — image ────────────────────────────── */
+.banner-image-col {
+  flex: 0 0 50%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+}
+
+.banner-image {
+  max-height: 380px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  /* subtle drop-shadow so cut-out image pops */
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.35));
+  border-radius: 12px;
+  transition: transform 0.6s ease;
+}
+
+.banner-swiper .swiper-slide-active .banner-image {
+  transform: translateY(-8px);
+}
+
+/* ─── Navigation buttons ──────────────────────────────── */
+.banner-nav-btn {
+  position: absolute;
+  /* vertically centre within the slide area, not the total wrapper */
+  top: calc((100% - 48px) / 2 - 12px);
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.banner-nav-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Position buttons exactly on the left/right edge of the carousel */
+.banner-btn-prev {
+  left: 0;
+  transform: translateX(-50%);
+}
+.banner-btn-prev:hover {
+  transform: translateX(-50%) scale(1.1);
+}
+
+.banner-btn-next {
+  right: 0;
+  transform: translateX(50%);
+}
+.banner-btn-next:hover {
+  transform: translateX(50%) scale(1.1);
+}
+
+/* ─── Pagination ──────────────────────────────────────── */
+.banner-pagination-wrapper {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+}
+
+/* Override Swiper default bullets → pill shapes */
+.banner-pagination .swiper-pagination-bullet,
+.banner-pagination .banner-bullet {
+  display: inline-block;
+  width: 28px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #94a3b8;
+  opacity: 1;
+  margin: 0 4px;
+  cursor: pointer;
+  transition: width 0.3s, background 0.3s;
+}
+
+.banner-pagination .swiper-pagination-bullet-active,
+.banner-pagination .banner-bullet.swiper-pagination-bullet-active {
+  width: 44px;
+  background: #475569;
+}
+
+/* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .banner-slide {
+    flex-direction: column;
+    padding: 40px 24px 32px;
+    min-height: auto;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .banner-content {
+    flex: unset;
+    width: 100%;
+    order: 1;
+  }
+
+  .banner-image-col {
+    flex: unset;
+    width: 100%;
+    order: 2;
+    justify-content: center;
+  }
+
+  .banner-image {
+    max-height: 220px;
+    border-radius: 10px;
+  }
+
+  .banner-nav-btn {
+    display: none;
+  }
+
+  .banner-title {
+    font-size: 24px;
+  }
+}

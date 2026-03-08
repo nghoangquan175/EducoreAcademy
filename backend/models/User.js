@@ -19,16 +19,33 @@ const User = sequelize.define('User', {
   },
   password: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true // nullable for social login users
   },
   role: {
     type: DataTypes.ENUM('student', 'instructor', 'admin'),
     defaultValue: 'student'
+  },
+  // Social login fields
+  googleId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  facebookId: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  provider: {
+    type: DataTypes.ENUM('local', 'google', 'facebook'),
+    defaultValue: 'local'
+  },
+  avatar: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   hooks: {
     beforeSave: async (user, options) => {
-      if (user.changed('password')) {
+      if (user.changed('password') && user.password) {
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
       }
@@ -37,6 +54,7 @@ const User = sequelize.define('User', {
 });
 
 User.prototype.matchPassword = async function(enteredPassword) {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

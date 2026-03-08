@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-const Course = sequelize.define('Course', {
+const Article = sequelize.define('Article', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -11,16 +11,9 @@ const Course = sequelize.define('Course', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  description: {
+  content: {
     type: DataTypes.TEXT,
     allowNull: false
-  },
-  price: {
-    type: DataTypes.FLOAT,
-    defaultValue: 0
-  },
-  category: {
-    type: DataTypes.STRING
   },
   thumbnail: {
     type: DataTypes.STRING
@@ -37,4 +30,4 @@ const Course = sequelize.define('Course', {
   ]
 });
 
-module.exports = Course;
+module.exports = Article;

@@ -17,6 +17,8 @@ app.use(express.json());
 // Routes setup
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/courses', require('./routes/courseRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/search', require('./routes/searchRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');

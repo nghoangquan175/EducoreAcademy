@@ -4,6 +4,8 @@ const Lesson = require('./Lesson');
 const Enrollment = require('./Enrollment');
 const Progress = require('./Progress');
 const Review = require('./Review');
+const Notification = require('./Notification');
+const Article = require('./Article');
 
 // Define Associations
 
@@ -36,11 +38,21 @@ Review.belongsTo(Course, { foreignKey: 'courseId' });
 User.hasMany(Review, { foreignKey: 'userId' });
 Review.belongsTo(User, { foreignKey: 'userId' });
 
+// A User can have many Notifications
+User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
+Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// A User (author) can have many Articles
+User.hasMany(Article, { foreignKey: 'authorId', as: 'articles' });
+Article.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
+
 module.exports = {
   User,
   Course,
   Lesson,
   Enrollment,
   Progress,
-  Review
+  Review,
+  Notification,
+  Article
 };
