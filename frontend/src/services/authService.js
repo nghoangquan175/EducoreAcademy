@@ -13,3 +13,9 @@ export const googleLoginAPI = (credential) =>
 
 export const facebookLoginAPI = (accessToken) =>
   axios.post(`${API}/auth/facebook`, { accessToken });
+
+export const sendOtpAPI = (name, email, password) =>
+  axios.post(`${API}/send-otp`, { name, email, password });
+
+export const verifyOtpAPI = (email, otp) =>
+  axios.post(`${API}/verify-otp`, { email, otp });

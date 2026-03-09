@@ -1,6 +1,7 @@
 /* ─── Page Layout ─────────────────────────────────────── */
 .auth-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   font-family: 'Inter', system-ui, sans-serif;
 }
@@ -8,11 +9,12 @@
 /* ─── Left Decorative Panel ───────────────────────────── */
 .auth-panel-left {
   flex: 0 0 42%;
+  height: 100%;
   background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #1d4ed8 100%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 48px 56px;
+  padding: 36px 48px;
   position: relative;
   overflow: hidden;
   color: #ffffff;
@@ -26,9 +28,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
+  text-decoration: none;
 }
 
 .auth-panel-content {
@@ -36,17 +39,17 @@
 }
 
 .auth-panel-content h2 {
-  font-size: 36px;
+  font-size: 30px;
   font-weight: 800;
   line-height: 1.2;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
 }
 
 .auth-panel-content p {
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.6;
   color: rgba(255, 255, 255, 0.8);
-  max-width: 340px;
+  max-width: 320px;
 }
 
 /* Decorative circles */
@@ -70,33 +73,35 @@
 /* ─── Right Panel — Form ──────────────────────────────── */
 .auth-panel-right {
   flex: 1;
+  height: 100%;
   background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 32px;
+  padding: 24px 32px;
+  overflow-y: auto;
 }
 
 .auth-card {
   background: #ffffff;
   border-radius: 20px;
-  padding: 48px 44px;
+  padding: 32px 40px;
   width: 100%;
   max-width: 460px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 .auth-title {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   color: #0f172a;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .auth-subtitle {
-  font-size: 15px;
+  font-size: 14px;
   color: #64748b;
-  margin: 0 0 28px;
+  margin: 0 0 20px;
 }
 
 .auth-link {
@@ -124,7 +129,7 @@
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 
 .form-group {
@@ -165,8 +170,8 @@
   border: none;
   background: transparent;
   outline: none;
-  padding: 13px 10px;
-  font-size: 15px;
+  padding: 10px 10px;
+  font-size: 14px;
   color: #1e293b;
 }
 
@@ -189,6 +194,47 @@
   color: #475569;
 }
 
+/* ─── Password Rules ──────────────────────────────────── */
+.password-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.rule-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  transition: color 0.3s;
+}
+
+.rule-item.pending {
+  color: #64748b;
+}
+
+.rule-item.passed {
+  color: #10b981;
+}
+
+.rule-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  flex-shrink: 0;
+}
+
+.rule-icon {
+  flex-shrink: 0;
+}
+
+
 /* ─── Forgot password link ────────────────────────────── */
 .auth-forgot {
   text-align: right;
@@ -198,19 +244,19 @@
 /* ─── Primary Button ──────────────────────────────────── */
 .btn-primary-auth {
   width: 100%;
-  padding: 14px;
+  padding: 11px;
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: opacity 0.2s, transform 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 50px;
+  min-height: 44px;
 }
 
 .btn-primary-auth:hover:not(:disabled) {
@@ -242,7 +288,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 24px 0;
+  margin: 14px 0;
   color: #94a3b8;
   font-size: 13px;
 }
@@ -260,17 +306,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.google-btn-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-/* Override Google button width */
-.google-btn-wrapper > div {
-  width: 100% !important;
 }
 
 .btn-social {
@@ -305,6 +340,16 @@
   background: #eff6ff;
 }
 
+.btn-google {
+  color: #1e293b;
+  border-color: #dadce0;
+}
+
+.btn-google:hover {
+  background: #f8f9fa;
+  border-color: #c6c6c6;
+}
+
 /* ─── Terms ───────────────────────────────────────────── */
 .auth-terms {
   font-size: 13px;
@@ -312,6 +357,123 @@
   text-align: center;
   margin-top: 20px;
   line-height: 1.6;
+}
+
+/* ─── Success Banner ──────────────────────────────────── */
+.auth-success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #15803d;
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+/* ─── OTP Step ────────────────────────────────────────── */
+.otp-header {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.otp-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  background: #eff6ff;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  align-items: center;
+  margin: 0 auto 14px;
+}
+
+.otp-inputs {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.otp-box {
+  width: 46px;
+  height: 52px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: transparent;
+}
+
+.otp-box:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.otp-timer {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: -4px;
+}
+
+.otp-countdown {
+  color: #2563eb;
+}
+
+.otp-expired {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.otp-resend {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.otp-resend-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.otp-resend-btn:disabled {
+  color: #94a3b8;
+  text-decoration: none;
+  cursor: default;
+}
+
+.otp-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 13px;
+  margin: 8px auto 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.otp-back-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
 }
 
 /* ─── Responsive ──────────────────────────────────────── */
