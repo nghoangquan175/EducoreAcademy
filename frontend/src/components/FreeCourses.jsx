@@ -19,12 +19,17 @@ const StarRating = ({ rating }) => (
 );
 
 const CourseCard = ({ course, onClick }) => (
-  <div className="pc-card" onClick={() => onClick(course.id)} role="button" tabIndex={0}
+  <div className="fc-card" onClick={() => onClick(course.id)} role="button" tabIndex={0}
     onKeyDown={(e) => e.key === 'Enter' && onClick(course.id)}>
     {/* Thumbnail */}
-    <div className="pc-card-thumb">
-      <img src={course.thumbnail} alt={course.title} loading="lazy" />
-      <span className={`pc-level pc-level--${course.level?.toLowerCase()}`}>{course.level}</span>
+    <div className="fc-card-thumb">
+      <img 
+        src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'} 
+        alt={course.title} 
+        loading="lazy" 
+        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'; }}
+      />
+      <span className={`fc-level fc-level--${course.level?.toLowerCase()}`}>{course.level}</span>
     </div>
 
     {/* Body */}

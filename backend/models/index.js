@@ -1,8 +1,7 @@
 const Banner = require('./Banner');
-
-// Re-export with existing models
 const User = require('./User');
 const Course = require('./Course');
+const Chapter = require('./Chapter');
 const Lesson = require('./Lesson');
 const Enrollment = require('./Enrollment');
 const Progress = require('./Progress');
@@ -10,48 +9,50 @@ const Review = require('./Review');
 const Notification = require('./Notification');
 const Article = require('./Article');
 
-// Define Associations
+// ─── Associations ───────────────────────────────────────────
 
-// A User (instructor) can author many Courses
+// User (instructor) <--> Course
 User.hasMany(Course, { foreignKey: 'instructorId', as: 'instructedCourses' });
 Course.belongsTo(User, { foreignKey: 'instructorId', as: 'instructor' });
 
-// A Course has many Lessons
-Course.hasMany(Lesson, { foreignKey: 'courseId' });
-Lesson.belongsTo(Course, { foreignKey: 'courseId' });
+// Course <--> Chapter (1 khóa học có nhiều chương)
+Course.hasMany(Chapter, { foreignKey: 'courseId', as: 'chapters', onDelete: 'CASCADE' });
+Chapter.belongsTo(Course, { foreignKey: 'courseId' });
 
-// A User can enroll in many Courses (Enrollment)
+// Chapter <--> Lesson (1 chương có nhiều bài học)
+Chapter.hasMany(Lesson, { foreignKey: 'chapterId', as: 'lessons', onDelete: 'CASCADE' });
+Lesson.belongsTo(Chapter, { foreignKey: 'chapterId' });
+
+// Enrollment
 User.hasMany(Enrollment, { foreignKey: 'userId' });
 Enrollment.belongsTo(User, { foreignKey: 'userId' });
-
 Course.hasMany(Enrollment, { foreignKey: 'courseId' });
 Enrollment.belongsTo(Course, { foreignKey: 'courseId' });
 
-// An Enrollment has many Progress records (one per lesson)
+// Progress (gắn trực tiếp vào Lesson, không cần Course trung gian)
 Enrollment.hasMany(Progress, { foreignKey: 'enrollmentId' });
 Progress.belongsTo(Enrollment, { foreignKey: 'enrollmentId' });
-
 Lesson.hasMany(Progress, { foreignKey: 'lessonId' });
 Progress.belongsTo(Lesson, { foreignKey: 'lessonId' });
 
-// A Course can have many Reviews
+// Review
 Course.hasMany(Review, { foreignKey: 'courseId' });
 Review.belongsTo(Course, { foreignKey: 'courseId' });
-
 User.hasMany(Review, { foreignKey: 'userId' });
 Review.belongsTo(User, { foreignKey: 'userId' });
 
-// A User can have many Notifications
+// Notification
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// A User (author) can have many Articles
+// Article
 User.hasMany(Article, { foreignKey: 'authorId', as: 'articles' });
 Article.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 
 module.exports = {
   User,
   Course,
+  Chapter,
   Lesson,
   Enrollment,
   Progress,

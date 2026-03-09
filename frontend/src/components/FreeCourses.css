@@ -23,6 +23,22 @@
   color: #10b981;
 }
 
+/* Card title - prevent awkward text cut-offs */
+.fc-card-title {
+  font-size: 0.975rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 2.9em;
+}
+
 /* Price - Emerald text */
 .fc-price {
   background: linear-gradient(135deg, #10b981, #059669);

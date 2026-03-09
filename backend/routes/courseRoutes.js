@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Course, User } = require('../models');
+const { Course, Chapter, Lesson, User } = require('../models');
 const { Op } = require('sequelize');
 const { protect, instructor } = require('../middleware/authMiddleware');
 
@@ -82,6 +82,63 @@ router.post('/', protect, instructor, async (req, res) => {
       instructorId: req.user.id,
     });
     res.status(201).json(course);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── GET /api/courses/:id/curriculum — Public: get full curriculum (chapters + lessons) ──
+router.get('/:id/curriculum', async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'instructor', attributes: ['name', 'avatar'] },
+        {
+          model: Chapter,
+          as: 'chapters',
+          order: [['chapterOrder', 'ASC']],
+          include: [
+            {
+              model: Lesson,
+              as: 'lessons',
+              attributes: ['id', 'title', 'duration', 'isFree', 'lessonOrder'],
+              order: [['lessonOrder', 'ASC']],
+            }
+          ]
+        }
+      ],
+      order: [
+        [{ model: Chapter, as: 'chapters' }, 'chapterOrder', 'ASC'],
+        [{ model: Chapter, as: 'chapters' }, { model: Lesson, as: 'lessons' }, 'lessonOrder', 'ASC'],
+      ]
+    });
+    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    res.json(course);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/:id/chapters — Instructor: add a chapter ───────────────
+router.post('/:id/chapters', protect, instructor, async (req, res) => {
+  try {
+    const { title, chapterOrder } = req.body;
+    const chapter = await Chapter.create({ title, chapterOrder, courseId: req.params.id });
+    res.status(201).json(chapter);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/chapters/:chapterId/lessons — Instructor: add a lesson ─
+router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res) => {
+  try {
+    const { title, videoUrl, content, lessonOrder, duration, isFree } = req.body;
+    const lesson = await Lesson.create({
+      title, videoUrl, content, lessonOrder, duration, isFree,
+      chapterId: req.params.chapterId,
+    });
+    res.status(201).json(lesson);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

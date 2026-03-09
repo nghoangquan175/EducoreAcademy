@@ -27,6 +27,10 @@ const Course = sequelize.define('Course', {
     type: DataTypes.STRING(512),
     allowNull: true,
   },
+  previewVideoUrl: {
+    type: DataTypes.STRING(1024),
+    allowNull: true,
+  },
   level: {
     type: DataTypes.STRING(50),
     defaultValue: 'Beginner',

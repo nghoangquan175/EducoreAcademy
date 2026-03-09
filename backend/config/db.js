@@ -15,12 +15,11 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
 
 const connectDB = async () => {
   try {
-    await sequelize.authenticate();
-    console.log('SQL Server Database Connected...');
-
-    // Sync models
-    await sequelize.sync();
+    // Sync — force:false to avoid dropping existing data.
+    // New tables (like Chapter) will be created automatically.
+    await sequelize.sync({ force: false });
     console.log('Database synced');
+    
   } catch (error) {
     console.error('Unable to connect to the database:', error.message);
     process.exit(1);

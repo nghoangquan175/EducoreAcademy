@@ -19,7 +19,12 @@ const CourseCard = ({ course, onClick }) => (
     onKeyDown={(e) => e.key === 'Enter' && onClick(course.id)}>
     {/* Thumbnail */}
     <div className="pc-card-thumb">
-      <img src={course.thumbnail} alt={course.title} loading="lazy" />
+      <img 
+        src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'} 
+        alt={course.title} 
+        loading="lazy" 
+        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'; }}
+      />
       <span className={`pc-level pc-level--${course.level?.toLowerCase()}`}>{course.level}</span>
     </div>
 

@@ -10,6 +10,13 @@ import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CoursePage from './pages/CoursePage';
+import LearningPage from './pages/LearningPage';
+import InstructorDashboard from './pages/InstructorDashboard';
+import CourseEditor from './pages/CourseEditor';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import StaffLogin from './pages/StaffLogin';
+import CheckoutPage from './pages/CheckoutPage';
+import PrivateRoute from './components/PrivateRoute';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id_here';
 
@@ -31,6 +38,13 @@ const AuthLayout = () => (
   </div>
 );
 
+// Layout for Learning — no standard Header/Footer
+const LearningLayout = () => (
+  <div className="learning-app-container">
+    <Outlet />
+  </div>
+);
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -41,6 +55,7 @@ function App() {
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/staff/login" element={<StaffLogin />} />
             </Route>
 
             {/* Main pages — with header */}
@@ -53,10 +68,38 @@ function App() {
                 </>
               } />
               <Route path="/courses" element={<div><h2>Course List</h2></div>} />
-              <Route path="/student-dashboard" element={<div><h2>Student Dashboard</h2></div>} />
-              <Route path="/instructor-dashboard" element={<div><h2>Instructor Dashboard</h2></div>} />
-              <Route path="/admin-dashboard" element={<div><h2>Admin Dashboard</h2></div>} />
               <Route path="/course/:id" element={<CoursePage />} />
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              <Route path="/checkout/:courseId" element={<CheckoutPage />} />
+
+              {/* ----- INSTRUCTOR ROUTES ----- */}
+              <Route path="/instructor-dashboard" element={
+                <PrivateRoute allowedRoles={['instructor', 'admin']}>
+                  <InstructorDashboard />
+                </PrivateRoute>
+              } />
+              <Route path="/instructor/course/create" element={
+                <PrivateRoute allowedRoles={['instructor', 'admin']}>
+                  <CourseEditor />
+                </PrivateRoute>
+              } />
+              <Route path="/instructor/course/:id/edit" element={
+                <PrivateRoute allowedRoles={['instructor', 'admin']}>
+                  <CourseEditor />
+                </PrivateRoute>
+              } />
+
+              {/* ----- ADMIN ROUTES ----- */}
+              <Route path="/admin-dashboard" element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <div><h2>Admin Dashboard</h2></div>
+                </PrivateRoute>
+              } />
+            </Route>
+
+            {/* Learning pages — custom layout */}
+            <Route element={<LearningLayout />}>
+              <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPage />} />
             </Route>
           </Routes>
         </Router>
