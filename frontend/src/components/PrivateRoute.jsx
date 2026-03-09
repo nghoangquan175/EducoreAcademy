@@ -11,8 +11,12 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   }
 
   if (!user) {
+    // Determine the appropriate login portal
+    const isStaffRoute = allowedRoles && (allowedRoles.includes('admin') || allowedRoles.includes('instructor'));
+    const loginPath = isStaffRoute ? '/staff/login' : '/login';
+    
     // Chưa đăng nhập, chuyển hướng về trang login kèm địa chỉ dự định đến
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

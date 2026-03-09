@@ -14,12 +14,40 @@ const CourseEditor = () => {
   });
   
   const [loading, setLoading] = useState(isEditMode);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
   
   // Tạm thời bỏ qua load data cũ nếu Edit mode, tập trung làm UI Create trước
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setCourse({ ...course, [name]: value });
+  };
+
+  const handleThumbnailUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setUploadingThumb(true);
+    try {
+       // Need the token for the protected route
+       const token = localStorage.getItem('token');
+       const res = await axios.post('http://localhost:5000/api/upload/image', formData, {
+         headers: {
+           'Content-Type': 'multipart/form-data',
+           Authorization: `Bearer ${token}`
+         }
+       });
+       
+       setCourse({ ...course, thumbnail: res.data.url });
+    } catch (error) {
+       console.error("Upload error:", error);
+       alert('Tải ảnh bìa thất bại: ' + (error.response?.data?.message || error.message));
+    } finally {
+       setUploadingThumb(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -31,15 +59,6 @@ const CourseEditor = () => {
     } catch (error) {
       alert('Có lỗi xảy ra khi lưu');
     }
-  };
-
-  // Cloudinary Widget Handler (Mockup UI for now, logic later)
-  const openCloudinaryWidget = (field) => {
-     alert('Cloudinary Upload Widget sẽ hiện ra ở đây!');
-     // Mocking upload success
-     if (field === 'thumbnail') {
-       setCourse({ ...course, thumbnail: 'https://via.placeholder.com/800x450?text=Uploaded+Image' })
-     }
   };
 
   if (loading) return <div className="editor-loading">Đang tải...</div>;
@@ -104,15 +123,35 @@ const CourseEditor = () => {
              {/* Upload Component */}
              <div className="form-group upload-group">
                 <label>Ảnh bìa (Thumbnail)</label>
-                <div className="upload-box" onClick={() => openCloudinaryWidget('thumbnail')}>
-                  {course.thumbnail ? (
-                    <img src={course.thumbnail} alt="Thumbnail preview" className="preview-image" />
-                  ) : (
-                    <div className="upload-placeholder">
-                      <Plus size={24} />
-                      <span>Nhấn để Upload ảnh bìa lên Cloudinary</span>
-                    </div>
-                  )}
+                <div className="upload-box">
+                  <input 
+                    type="file" 
+                    id="thumbnail-upload" 
+                    accept="image/*" 
+                    onChange={handleThumbnailUpload} 
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="thumbnail-upload" className="upload-label-area">
+                    {uploadingThumb ? (
+                      <div className="uploading-state">
+                        <div className="spinner-border"></div>
+                        <span>Đang tải ảnh lên...</span>
+                      </div>
+                    ) : course.thumbnail ? (
+                      <div className="image-preview-wrapper">
+                        <img src={course.thumbnail} alt="Thumbnail preview" className="preview-image" />
+                        <div className="preview-overlay">
+                          <Plus size={24} />
+                          <span>Đổi ảnh khác</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="upload-placeholder">
+                        <Plus size={24} />
+                        <span>Nhấn để chọn ảnh từ máy rính (JPG, PNG, WEBP)</span>
+                      </div>
+                    )}
+                  </label>
                 </div>
              </div>
 

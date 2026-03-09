@@ -4,7 +4,6 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const { connectDB } = require('./config/db');
-console.log("DB USER:", process.env.DB_USER);
 
 // Connect to database
 connectDB();
@@ -20,6 +19,7 @@ app.use('/api/courses', require('./routes/courseRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/banners', require('./routes/bannerRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');

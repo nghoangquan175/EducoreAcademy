@@ -20,26 +20,26 @@ const StaffLogin = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axios.post('http://localhost:5000/api/users/login', {
         email,
         password,
       });
 
-      const { user, token } = response.data;
+      const data = response.data;
       
       // Chặn nếu là học viên (student)
-      if (user.role === 'student') {
+      if (data.role === 'student') {
          setError('Tài khoản dành cho Học viên vui lòng đăng nhập ở trang chính!');
          setIsLoading(false);
          return;
       }
 
-      login({ ...user, token });
+      login(data);
       
       // Chuyển hướng theo role
-      if (user.role === 'admin') {
+      if (data.role === 'admin') {
          navigate('/admin-dashboard');
-      } else if (user.role === 'instructor') {
+      } else if (data.role === 'instructor') {
          navigate('/instructor-dashboard');
       }
 

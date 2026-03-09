@@ -7,6 +7,7 @@ const { Course, Article } = require('../models');
 const searchContent = async (req, res) => {
   try {
     const query = req.query.q;
+    const instructorId = req.query.instructorId;
 
     if (!query || query.length < 2) {
       return res.status(400).json({ message: 'Search query must be at least 2 characters long' });
@@ -15,27 +16,40 @@ const searchContent = async (req, res) => {
     // Search max 5-10 records total to be efficient
     const limitPerType = 5;
 
+    // Build the course where clause
+    const courseWhere = {
+      title: {
+        [Op.substring]: query
+      }
+    };
+    
+    // If instructorId is provided, filter by it and don't restrict to published only (they can search drafts)
+    if (instructorId) {
+      courseWhere.instructorId = instructorId;
+    } else {
+      courseWhere.published = true; // Usually we only want to search published content for public
+    }
+
     const courses = await Course.findAll({
-      where: {
-        title: {
-          [Op.substring]: query
-        },
-        published: true // Usually we only want to search published content
-      },
+      where: courseWhere,
       limit: limitPerType,
       attributes: ['id', 'title', 'thumbnail', 'category']
     });
 
-    const articles = await Article.findAll({
-      where: {
-        title: {
-          [Op.substring]: query
+    let articles = [];
+    // Only search articles if not strictly searching instructor courses
+    if (!instructorId) {
+      articles = await Article.findAll({
+        where: {
+          title: {
+            [Op.substring]: query
+          },
+          published: true
         },
-        published: true
-      },
-      limit: limitPerType,
-      attributes: ['id', 'title', 'thumbnail']
-    });
+        limit: limitPerType,
+        attributes: ['id', 'title', 'thumbnail']
+      });
+    }
 
     // Formatting output
     const formattedCourses = courses.map(c => ({

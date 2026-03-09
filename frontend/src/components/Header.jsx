@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, User, Settings, LogOut, BookOpen, CheckCircle, FileText, PlayCircle } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,7 +33,10 @@ const timeAgo = (dateString) => {
 const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const isLoggedIn = !!user;
+  
+  const isInstructorRoute = location.pathname.startsWith('/instructor');
   
   // Notification states
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
@@ -55,7 +58,11 @@ const Header = () => {
       if (searchTerm.trim().length >= 2) {
         setIsSearching(true);
         try {
-          const res = await axios.get(`http://localhost:5000/api/search?q=${encodeURIComponent(searchTerm)}`);
+          let url = `http://localhost:5000/api/search?q=${encodeURIComponent(searchTerm)}`;
+          if (isInstructorRoute && user) {
+            url += `&instructorId=${user.id}`;
+          }
+          const res = await axios.get(url);
           setSearchResults(res.data);
           setShowSearchDropdown(true);
         } catch (error) {
@@ -228,7 +235,9 @@ const Header = () => {
           </div>
         ) : (
           <div className="user-actions">
-            <Link to="/student-dashboard" className="my-courses-link">Khóa học của tôi</Link>
+            {!isInstructorRoute && (
+              <Link to="/student-dashboard" className="my-courses-link">Khóa học của tôi</Link>
+            )}
             
             {/* Notifications */}
             <div className="notification-container" ref={dropdownRef}>

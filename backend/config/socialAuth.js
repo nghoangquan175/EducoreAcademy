@@ -7,11 +7,26 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
  * Verify a Google ID token and return the user profile payload.
  */
 const verifyGoogleToken = async (credential) => {
-  const ticket = await googleClient.verifyIdToken({
-    idToken: credential,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
-  return ticket.getPayload();
+  try {
+    // Attempt 1: Try treating it as an access_token (from useGoogleLogin)
+    const { data } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${credential}` }
+    });
+    // Map the response fields to match the id_token payload format
+    return {
+      sub: data.sub,
+      name: data.name,
+      email: data.email,
+      picture: data.picture,
+    };
+  } catch (err) {
+    // Attempt 2: Fallback to verifyIdToken if it's an id_token (from GoogleLogin component)
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    return ticket.getPayload();
+  }
 };
 
 /**

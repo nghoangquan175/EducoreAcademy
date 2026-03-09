@@ -23,6 +23,11 @@ const LoginPage = () => {
       setLoading(true);
       try {
         const { data } = await googleLoginAPI(tokenResponse.access_token);
+        if (data.role !== 'student') {
+          setError('Email hoặc mật khẩu không đúng');
+          setLoading(false);
+          return;
+        }
         login(data);
         navigate('/');
       } catch (err) {
@@ -40,6 +45,11 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const { data } = await loginAPI(email, password);
+      if (data.role !== 'student') {
+        setError('Email hoặc mật khẩu không đúng');
+        setLoading(false);
+        return;
+      }
       login(data);
       navigate('/');
     } catch (err) {
@@ -54,6 +64,11 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const { data } = await googleLoginAPI(credentialResponse.credential);
+      if (data.role !== 'student') {
+        setError('Email hoặc mật khẩu không đúng');
+        setLoading(false);
+        return;
+      }
       login(data);
       navigate('/');
     } catch (err) {
@@ -75,6 +90,11 @@ const LoginPage = () => {
         (async () => {
           try {
             const { data } = await facebookLoginAPI(response.authResponse.accessToken);
+            if (data.role !== 'student') {
+              setError('Email hoặc mật khẩu không đúng');
+              setLoading(false);
+              return;
+            }
             login(data);
             navigate('/');
           } catch (err) {
