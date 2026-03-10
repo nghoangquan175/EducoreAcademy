@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, Eye, EyeOff, BookOpen } from 'lucide-react';
+import axios from 'axios';
 import { loginAPI, googleLoginAPI, facebookLoginAPI } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import './AuthPage.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const location = useLocation();
   const registered = new URLSearchParams(location.search).get('registered') === '1';
   const [email, setEmail] = useState('');
@@ -16,6 +17,32 @@ const LoginPage = () => {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
+
+  const handleLoginSuccess = async (data) => {
+    login(data);
+    if (location.state?.action === 'enroll_free' && location.state?.courseId) {
+      try {
+        await axios.post(`http://localhost:5000/api/courses/${location.state.courseId}/enroll`, {}, {
+          headers: { Authorization: `Bearer ${data.token}` }
+        });
+        navigate(location.state.returnUrl || `/learn/${location.state.courseId}`);
+      } catch (err) {
+        console.error('Lỗi khi đăng ký khóa học tự động:', err);
+        navigate(location.state.returnUrl || '/');
+      }
+    } else if (location.state?.returnUrl) {
+      navigate(location.state.returnUrl);
+    } else {
+      navigate('/');
+    }
+  };
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -28,8 +55,7 @@ const LoginPage = () => {
           setLoading(false);
           return;
         }
-        login(data);
-        navigate('/');
+        await handleLoginSuccess(data);
       } catch (err) {
         setError(err.response?.data?.message || 'Đăng nhập Google thất bại');
       } finally {
@@ -50,8 +76,7 @@ const LoginPage = () => {
         setLoading(false);
         return;
       }
-      login(data);
-      navigate('/');
+      await handleLoginSuccess(data);
     } catch (err) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại');
     } finally {
@@ -69,8 +94,7 @@ const LoginPage = () => {
         setLoading(false);
         return;
       }
-      login(data);
-      navigate('/');
+      await handleLoginSuccess(data);
     } catch (err) {
       setError(err.response?.data?.message || 'Đăng nhập Google thất bại');
     } finally {
@@ -95,8 +119,7 @@ const LoginPage = () => {
               setLoading(false);
               return;
             }
-            login(data);
-            navigate('/');
+            await handleLoginSuccess(data);
           } catch (err) {
             setError(err.response?.data?.message || 'Đăng nhập Facebook thất bại');
           } finally {
@@ -106,6 +129,8 @@ const LoginPage = () => {
       }
     }, { scope: 'public_profile,email' });
   };
+
+  if (user) return null;
 
   return (
     <div className="auth-page">

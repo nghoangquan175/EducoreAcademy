@@ -19,10 +19,10 @@ const StarRating = ({ rating }) => (
 );
 
 const CourseCard = ({ course, onClick }) => (
-  <div className="fc-card" onClick={() => onClick(course.id)} role="button" tabIndex={0}
+  <div className="pc-card fc-card" onClick={() => onClick(course.id)} role="button" tabIndex={0}
     onKeyDown={(e) => e.key === 'Enter' && onClick(course.id)}>
     {/* Thumbnail */}
-    <div className="fc-card-thumb">
+    <div className="pc-card-thumb fc-card-thumb">
       <img 
         src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'} 
         alt={course.title} 

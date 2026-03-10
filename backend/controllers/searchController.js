@@ -22,12 +22,12 @@ const searchContent = async (req, res) => {
         [Op.substring]: query
       }
     };
-    
+
     // If instructorId is provided, filter by it and don't restrict to published only (they can search drafts)
     if (instructorId) {
       courseWhere.instructorId = instructorId;
     } else {
-      courseWhere.published = true; // Usually we only want to search published content for public
+      courseWhere.published = 2; // 2 = Published
     }
 
     const courses = await Course.findAll({

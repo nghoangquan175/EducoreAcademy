@@ -9,10 +9,13 @@ const InstructorDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Tạm thời lấy tất cả khóa học (Sau này sẽ có token/API riêng trả về khóa học của Giảng viên đăng nhập)
+    // Gọi API lấy khóa học của giảng viên đang đăng nhập
     const fetchMyCourses = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5000/api/courses'); // Giả định lấy tạm
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get('http://localhost:5000/api/courses/instructor/my-courses', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setCourses(data);
         setLoading(false);
       } catch (error) {
@@ -78,8 +81,11 @@ const InstructorDashboard = () => {
                        <td>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(course.price)}</td>
                        <td>{course.studentsCount}</td>
                        <td>
-                         <span className={`status-badge ${course.published ? 'published' : 'draft'}`}>
-                           {course.published ? 'Đã xuất bản' : 'Bản nháp'}
+                         <span className={`status-badge ${Number(course.published) === 2 ? 'published' : Number(course.published) === 1 ? 'pending' : Number(course.published) === 3 ? 'rejected' : 'draft'}`}>
+                           {Number(course.published) === 2 && 'Đã xuất bản'}
+                           {Number(course.published) === 0 && 'Bản nháp'}
+                           {Number(course.published) === 1 && 'Đang chờ duyệt'}
+                           {Number(course.published) === 3 && 'Bị từ chối'}
                          </span>
                        </td>
                        <td>

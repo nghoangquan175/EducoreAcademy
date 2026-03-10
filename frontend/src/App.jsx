@@ -67,7 +67,7 @@ function App() {
                   <FreeCourses />
                 </>
               } />
-              <Route path="/courses" element={<div><h2>Course List</h2></div>} />
+
               <Route path="/course/:id" element={<CoursePage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
               <Route path="/checkout/:courseId" element={<CheckoutPage />} />

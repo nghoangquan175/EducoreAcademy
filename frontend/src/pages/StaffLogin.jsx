@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +12,16 @@ const StaffLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') navigate('/admin-dashboard');
+      else if (user.role === 'instructor') navigate('/instructor-dashboard');
+      else navigate('/');
+    }
+  }, [user, navigate]);
+  
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,6 +60,8 @@ const StaffLogin = () => {
       setIsLoading(false);
     }
   };
+
+  if (user) return null;
 
   return (
     <div className="staff-login-container">

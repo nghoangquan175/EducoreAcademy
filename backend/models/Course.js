@@ -48,6 +48,10 @@ const Course = sequelize.define('Course', {
     allowNull: true,
   },
   published: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0, // 0 = Draft, 1 = Pending, 2 = Published, 3 = Rejected
+  },
+  isPro: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
@@ -55,6 +59,7 @@ const Course = sequelize.define('Course', {
   indexes: [
     { fields: ['title'] },
     { fields: ['category'] },
+    { fields: ['published'] },
   ],
 });
 

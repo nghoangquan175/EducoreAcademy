@@ -47,22 +47,34 @@ const CoursePage = () => {
     );
   };
 
-  const handleEnroll = () => {
+  const handleEnroll = async () => {
     if (!user) {
-      // Báo user phải đăng nhập, kèm link để lúc login xong quay về đây
-      // (Tính năng quay về tuỳ server/auth context hỗ trợ, ở đây tạm pass state)
-      navigate('/login', { state: { from: location } });
+      const firstLessonLink = course.chapters?.[0]?.lessons?.[0] 
+        ? `/learn/${course.id}/lesson/${course.chapters[0].lessons[0].id}`
+        : '#';
+      navigate('/login', { 
+        state: { 
+          returnUrl: course.price === 0 ? firstLessonLink : `/checkout/${course.id}`,
+          action: course.price === 0 ? 'enroll_free' : 'checkout',
+          courseId: course.id
+        } 
+      });
       return;
     }
 
     if (course.price === 0) {
-      // Khóa miễn phí -> Vào học ngay
-      const firstLessonLink = course.chapters?.[0]?.lessons?.[0] 
-        ? `/learn/${course.id}/lesson/${course.chapters[0].lessons[0].id}`
-        : '#';
-      navigate(firstLessonLink);
+      try {
+        await axios.post(`http://localhost:5000/api/courses/${course.id}/enroll`, {}, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        });
+        const firstLessonLink = course.chapters?.[0]?.lessons?.[0] 
+          ? `/learn/${course.id}/lesson/${course.chapters[0].lessons[0].id}`
+          : '#';
+        navigate(firstLessonLink);
+      } catch (err) {
+        alert(err.response?.data?.message || 'Lỗi khi đăng ký khóa học');
+      }
     } else {
-      // Khóa trả phí -> Thanh toán
       navigate(`/checkout/${course.id}`);
     }
   };
@@ -74,10 +86,14 @@ const CoursePage = () => {
   // Calculate total lessons dynamically
   const totalLessons = course.chapters ? course.chapters.reduce((acc, chap) => acc + (chap.lessons ? chap.lessons.length : 0), 0) : 0;
   // Use course.previewVideoUrl, fallback to first lesson, then fallback to dummy video
-  const previewVideoUrl = course.previewVideoUrl || 
+  let previewVideoUrl = course.previewVideoUrl || 
                           (course.chapters && course.chapters[0] && course.chapters[0].lessons[0] 
                             ? course.chapters[0].lessons[0].videoUrl 
-                            : 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4');
+                            : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4');
+  
+  if (previewVideoUrl && previewVideoUrl.startsWith('http://')) {
+    previewVideoUrl = previewVideoUrl.replace('http://', 'https://');
+  }
   
   return (
     <div className="course-detail-container">
@@ -88,8 +104,7 @@ const CoursePage = () => {
           {/* Moved from Header Banner */}
           <div className="course-header-content">
             <div className="breadcrumb">
-              <Link to="/">Trang chủ</Link> <span>/</span> 
-              <Link to="/courses">Khóa học</Link> <span>/</span> 
+              <Link to="/">Trang chủ</Link> <span>/</span>               <span>Khóa học</span> <span>/</span> 
               <span className="current">{course.category || 'Phát triển Web'}</span>
             </div>
             <h1 className="course-main-title">{course.title}</h1>
@@ -162,13 +177,19 @@ const CoursePage = () => {
           {/* VIDEO LÊN ĐẦU, NGOÀI BOX MUA HÀNG */}
           <div className="sidebar-video-section">
             <div className="video-player-wrapper">
-              <ReactPlayer 
-                url={previewVideoUrl} 
-                controls={true}
+              <video 
+                src={previewVideoUrl} 
+                controls
                 width="100%"
                 height="100%"
-                className="react-player"
-                light={false} 
+                style={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover' 
+                }}
               />
             </div>
           </div>

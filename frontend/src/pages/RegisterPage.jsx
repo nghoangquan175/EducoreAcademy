@@ -10,7 +10,7 @@ const OTP_EXPIRY_SEC = 600; // 10 phút
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
 
   // ── Step 1: form state ──────────────────────────────────
   const [step, setStep] = useState(1); // 1 = form, 2 = OTP
@@ -40,6 +40,13 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
 
   // Countdown timer khi ở step 2
   useEffect(() => {
@@ -197,6 +204,8 @@ const RegisterPage = () => {
       }
     }, { scope: 'public_profile,email' });
   };
+
+  if (user) return null;
 
   return (
     <div className="auth-page">

@@ -19,7 +19,7 @@ const connectDB = async () => {
     // New tables (like Chapter) will be created automatically.
     await sequelize.sync({ force: false });
     console.log('Database synced');
-    
+
   } catch (error) {
     console.error('Unable to connect to the database:', error.message);
     process.exit(1);

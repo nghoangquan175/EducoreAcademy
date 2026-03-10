@@ -7,16 +7,16 @@ const { protect, instructor } = require('../middleware/authMiddleware');
 // ── GET /api/courses — Public: list published courses (optional ?category=, ?type=pro/free) ──
 router.get('/', async (req, res) => {
   try {
-    const where = { published: true };
+    const where = { published: 2 };
     // Category filter
     if (req.query.category && req.query.category !== 'Tất cả') {
       where.category = req.query.category;
     }
-    // Type filter: 'free' (price 0/null) or 'pro' (price > 0)
+    // Type filter: 'free' or 'pro' relies on isPro boolean now
     if (req.query.type === 'free') {
-      where.price = { [Op.or]: [0, null] };
+      where.isPro = false;
     } else if (req.query.type === 'pro') {
-      where.price = { [Op.gt]: 0 };
+      where.isPro = true;
     }
 
     const courses = await Course.findAll({
@@ -33,15 +33,15 @@ router.get('/', async (req, res) => {
 // ── GET /api/courses/categories — Public: list available categories (optional ?type=pro/free) ───────────
 router.get('/categories', async (req, res) => {
   try {
-    const where = { 
-      published: true, 
-      category: { [Op.not]: null, [Op.ne]: '' } 
+    const where = {
+      published: 2, // 2 = Published
+      category: { [Op.not]: null, [Op.ne]: '' }
     };
 
     if (req.query.type === 'free') {
-      where.price = { [Op.or]: [0, null] };
+      where.isPro = false;
     } else if (req.query.type === 'pro') {
-      where.price = { [Op.gt]: 0 };
+      where.isPro = true;
     }
 
     const categories = await Course.findAll({
@@ -50,9 +50,22 @@ router.get('/categories', async (req, res) => {
       group: ['category'],
       order: [['category', 'ASC']],
     });
-    
+
     const categoryList = categories.map(c => c.category);
     res.json(['Tất cả', ...categoryList]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── GET /api/courses/instructor/my-courses — Instructor: get own courses (including drafts) ──
+router.get('/instructor/my-courses', protect, instructor, async (req, res) => {
+  try {
+    const courses = await Course.findAll({
+      where: { instructorId: req.user.id },
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -64,7 +77,7 @@ router.get('/:id', async (req, res) => {
     const course = await Course.findByPk(req.params.id, {
       include: [{ model: User, as: 'instructor', attributes: ['name', 'avatar'] }],
     });
-    if (!course || !course.published) {
+    if (!course || course.published !== 2) {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
     res.json(course);
@@ -76,9 +89,9 @@ router.get('/:id', async (req, res) => {
 // ── POST /api/courses — Instructor: create a course ──────────────────────────
 router.post('/', protect, instructor, async (req, res) => {
   try {
-    const { title, description, price, category, thumbnail, level, duration } = req.body;
+    const { title, description, price, category, thumbnail, previewVideoUrl, level, duration, isPro } = req.body;
     const course = await Course.create({
-      title, description, price, category, thumbnail, level, duration,
+      title, description, price, category, thumbnail, previewVideoUrl, level, duration, isPro,
       instructorId: req.user.id,
     });
     res.status(201).json(course);
@@ -112,7 +125,9 @@ router.get('/:id/curriculum', async (req, res) => {
         [{ model: Chapter, as: 'chapters' }, { model: Lesson, as: 'lessons' }, 'lessonOrder', 'ASC'],
       ]
     });
-    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    if (!course || course.published !== 2) {
+      return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    }
     res.json(course);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -139,6 +154,33 @@ router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res
       chapterId: req.params.chapterId,
     });
     res.status(201).json(lesson);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/:id/enroll — Student: enroll in a free course ──────────
+router.post('/:id/enroll', protect, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) {
+      return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    }
+
+    const { Enrollment } = require('../models');
+    const existingEnrollment = await Enrollment.findOne({
+      where: { userId: req.user.id, courseId: course.id }
+    });
+
+    if (!existingEnrollment) {
+      await Enrollment.create({
+        userId: req.user.id,
+        courseId: course.id,
+        status: 'active'
+      });
+    }
+
+    res.status(200).json({ message: 'Đăng ký khoá học thành công', courseId: course.id });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
