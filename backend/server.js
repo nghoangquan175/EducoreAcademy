@@ -20,6 +20,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/banners', require('./routes/bannerRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');

@@ -14,7 +14,7 @@ const CoursePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +65,7 @@ const CoursePage = () => {
     if (course.price === 0) {
       try {
         await axios.post(`http://localhost:5000/api/courses/${course.id}/enroll`, {}, {
-          headers: { Authorization: `Bearer ${user.token}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const firstLessonLink = course.chapters?.[0]?.lessons?.[0] 
           ? `/learn/${course.id}/lesson/${course.chapters[0].lessons[0].id}`

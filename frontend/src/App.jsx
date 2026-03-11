@@ -12,6 +12,7 @@ import RegisterPage from './pages/RegisterPage';
 import CoursePage from './pages/CoursePage';
 import LearningPage from './pages/LearningPage';
 import InstructorDashboard from './pages/InstructorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import CourseEditor from './pages/CourseEditor';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import StaffLogin from './pages/StaffLogin';
@@ -71,31 +72,21 @@ function App() {
               <Route path="/course/:id" element={<CoursePage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
               <Route path="/checkout/:courseId" element={<CheckoutPage />} />
-
-              {/* ----- INSTRUCTOR ROUTES ----- */}
-              <Route path="/instructor-dashboard" element={
-                <PrivateRoute allowedRoles={['instructor', 'admin']}>
-                  <InstructorDashboard />
-                </PrivateRoute>
-              } />
-              <Route path="/instructor/course/create" element={
-                <PrivateRoute allowedRoles={['instructor', 'admin']}>
-                  <CourseEditor />
-                </PrivateRoute>
-              } />
-              <Route path="/instructor/course/:id/edit" element={
-                <PrivateRoute allowedRoles={['instructor', 'admin']}>
-                  <CourseEditor />
-                </PrivateRoute>
-              } />
-
-              {/* ----- ADMIN ROUTES ----- */}
-              <Route path="/admin-dashboard" element={
-                <PrivateRoute allowedRoles={['admin']}>
-                  <div><h2>Admin Dashboard</h2></div>
-                </PrivateRoute>
-              } />
             </Route>
+
+            {/* ----- INSTRUCTOR ROUTES (Full Screen) ----- */}
+            <Route path="/instructor-dashboard" element={
+              <PrivateRoute allowedRoles={['instructor', 'admin']}>
+                <InstructorDashboard />
+              </PrivateRoute>
+            } />
+
+            {/* Admin Dashboard — no header/footer */}
+            <Route path="/admin-dashboard" element={
+              <PrivateRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </PrivateRoute>
+            } />
 
             {/* Learning pages — custom layout */}
             <Route element={<LearningLayout />}>

@@ -1,0 +1,271 @@
+.curriculum-editor-container {
+    padding: 10px;
+}
+
+.curriculum-loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--inst-text-muted);
+}
+
+.chapters-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.chapter-edit-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.chapter-edit-card:hover {
+    border-color: #cbd5e1;
+}
+
+.chapter-edit-header {
+    background: #f8fafc;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.chapter-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #1e293b;
+    flex: 1;
+}
+
+.chapter-title-group h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.drag-handle {
+    color: #94a3b8;
+    cursor: grab;
+}
+
+.chapter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.chapter-action-btn {
+    border: none;
+    background: transparent;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chapter-action-btn.delete { color: #ef4444; }
+.chapter-action-btn.delete:hover { background: #fee2e2; }
+
+/* Inline Edit */
+.inline-edit-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.inline-input {
+    padding: 6px 10px;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    flex: 1;
+    outline: none;
+}
+
+.icon-save-btn { background: #10b981; color: white; border: none; border-radius: 4px; padding: 4px; cursor: pointer; }
+.icon-cancel-btn { background: #94a3b8; color: white; border: none; border-radius: 4px; padding: 4px; cursor: pointer; }
+
+/* Lessons List */
+.lessons-edit-list {
+    padding: 10px 20px 20px 50px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lesson-edit-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.lesson-edit-item:hover {
+    border-color: #e2e8f0;
+    background: #f9fafb;
+}
+
+.lesson-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    color: #475569;
+}
+
+.lesson-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.lesson-icon {
+    color: #6366f1;
+}
+
+.badge.preview {
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.lesson-time {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-left: auto;
+    margin-right: 15px;
+}
+
+.lesson-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.lesson-action-btn {
+    border: none;
+    background: transparent;
+    padding: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.lesson-action-btn:hover { background: #f1f5f9; color: #1e293b; }
+.lesson-action-btn.delete:hover { color: #ef4444; background: #fee2e2; }
+
+/* Add Lesson Button */
+.add-lesson-btn {
+    align-self: flex-start;
+    background: transparent;
+    border: 1px dashed #cbd5e1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-top: 5px;
+    transition: all 0.2s;
+}
+
+.add-lesson-btn:hover {
+    border-color: #6366f1;
+    color: #6366f1;
+    background: #f5f3ff;
+}
+
+/* Lesson Edit Form */
+.lesson-full-edit-form {
+    width: 100%;
+}
+
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.form-grid input {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.flex-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.free-preview-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.lesson-edit-footer {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-small {
+    padding: 6px 15px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-small.save { background: #3b82f6; color: white; }
+.btn-small.cancel { background: #f1f5f9; color: #475569; }
+
+/* Foot section for adding chapter */
+.add-chapter-foot {
+    background: #fff;
+    padding: 15px 25px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #e2e8f0;
+    position: sticky;
+    bottom: 20px;
+}
+
+.add-chapter-foot input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.add-chapter-foot input:focus {
+    border-color: #3b82f6;
+}

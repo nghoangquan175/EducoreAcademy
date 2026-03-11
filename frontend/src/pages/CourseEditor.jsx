@@ -1,29 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Save, Plus, Trash2, Video, ArrowLeft } from 'lucide-react';
 import './CourseEditor.css';
 
-const CourseEditor = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const isEditMode = Boolean(id);
+const CourseEditor = ({ courseId, onClose, onSuccess }) => {
+  const isEditMode = Boolean(courseId);
 
   const [course, setCourse] = useState({
-    title: '', description: '', price: 0, category: 'Phát triển Web', thumbnail: '', previewVideoUrl: '', level: 'Beginner', isPro: false
+    title: '', 
+    description: '', 
+    price: 0, 
+    category: 'Phát triển Web', 
+    thumbnail: '', 
+    previewVideoUrl: '', 
+    level: 'Beginner', 
+    isPro: false
   });
   
   const [loading, setLoading] = useState(isEditMode);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   
-  // Tạm thời bỏ qua load data cũ nếu Edit mode, tập trung làm UI Create trước
+  useEffect(() => {
+    if (isEditMode) {
+      fetchCourseData();
+    }
+  }, [courseId]);
+
+  const fetchCourseData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/courses/instructor/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCourse(data);
+    } catch (error) {
+      console.error("Lỗi khi tải dữ liệu khóa học:", error);
+      alert('Không thể tải dữ liệu khóa học');
+      if (onClose) onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     if (type === 'checkbox') {
        if (name === 'isPro' && !checked) {
-          setCourse({ ...course, isPro: false, price: 0 }); // Force price 0 when reverting to Free
+          setCourse({ ...course, isPro: false, price: 0 }); 
        } else {
           setCourse({ ...course, [name]: checked });
        }
@@ -41,7 +66,6 @@ const CourseEditor = () => {
 
     setUploadingThumb(true);
     try {
-       // Need the token for the protected route
        const token = localStorage.getItem('token');
        const res = await axios.post('http://localhost:5000/api/upload/image', formData, {
          headers: {
@@ -49,7 +73,6 @@ const CourseEditor = () => {
            Authorization: `Bearer ${token}`
          }
        });
-       
        setCourse({ ...course, thumbnail: res.data.url });
     } catch (error) {
        console.error("Upload error:", error);
@@ -63,7 +86,6 @@ const CourseEditor = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check size limit (e.g., 100MB)
     if (file.size > 100 * 1024 * 1024) {
       alert('File video quá lớn. Vui lòng chọn file dưới 100MB.');
       return;
@@ -81,7 +103,6 @@ const CourseEditor = () => {
            Authorization: `Bearer ${token}`
          }
        });
-       
        setCourse({ ...course, previewVideoUrl: res.data.url });
     } catch (error) {
        console.error("Upload video error:", error);
@@ -96,11 +117,18 @@ const CourseEditor = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/courses', course, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Đã lưu thông tin khóa học thành công!');
-      navigate('/instructor-dashboard');
+      if (isEditMode) {
+        await axios.patch(`http://localhost:5000/api/courses/${courseId}`, course, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        alert('Đã cập nhật thông tin khóa học thành công!');
+      } else {
+        await axios.post('http://localhost:5000/api/courses', course, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        alert('Đã tạo khóa học thành công!');
+      }
+      if (onSuccess) onSuccess();
     } catch (error) {
       alert('Có lỗi xảy ra khi lưu: ' + (error.response?.data?.message || error.message));
     } finally {
@@ -111,16 +139,16 @@ const CourseEditor = () => {
   if (loading) return <div className="editor-loading">Đang tải...</div>;
 
   return (
-    <div className="course-editor-wrapper">
-      <div className="editor-container">
-        
-        <div className="editor-header">
-           <button className="btn-back" onClick={() => navigate('/instructor-dashboard')}>
-             <ArrowLeft size={18} /> Quay lại
+    <div className="inst-content-fade-in">
+        <div className="inst-section-header">
+           <button className="inst-btn view" onClick={onClose} title="Quay lại">
+             <ArrowLeft size={18} />
            </button>
-           <h1>{isEditMode ? 'Chỉnh sửa Khóa học' : 'Tạo Khóa học mới'}</h1>
-           <button className="btn-save" type="submit" form="course-form">
-             <Save size={18} /> Lưu Khóa Học
+           <h2 className="inst-content-title" style={{ margin: 0 }}>
+             {isEditMode ? 'Chỉnh sửa Khóa học' : 'Tạo Khóa học mới'}
+           </h2>
+           <button className="inst-add-btn primary" type="submit" form="course-form">
+             <Save size={18} /> Lưu thông tin
            </button>
         </div>
 
@@ -171,9 +199,9 @@ const CourseEditor = () => {
                     min="0" 
                     disabled={!course.isPro} 
                     required={course.isPro}
-                    style={!course.isPro ? { backgroundColor: 'var(--bg-elevated)', opacity: 0.6, cursor: 'not-allowed' } : {}}
+                    style={!course.isPro ? { backgroundColor: '#f1f5f9', opacity: 0.6, cursor: 'not-allowed' } : {}}
                   />
-                  {!course.isPro && <small style={{color: 'var(--text-muted)'}}>Khóa học miễn phí không yêu cầu nhập giá.</small>}
+                  {!course.isPro && <small style={{color: '#64748b'}}>Khóa học miễn phí không yêu cầu nhập giá.</small>}
                </div>
              </div>
 
@@ -199,10 +227,7 @@ const CourseEditor = () => {
                     <option value="Marketing" />
                   </datalist>
                </div>
-             </div>
-
-             <div className="form-row">
-               <div className="form-group full">
+                <div className="form-group half">
                   <label>Cấp độ</label>
                   <select name="level" value={course.level} onChange={handleChange}>
                     <option value="Beginner">Beginner (Cơ bản)</option>
@@ -213,7 +238,6 @@ const CourseEditor = () => {
                </div>
              </div>
 
-             {/* Upload Component */}
              <div className="form-row">
                <div className="form-group upload-group half">
                   <label>Ảnh bìa (Thumbnail)</label>
@@ -225,24 +249,19 @@ const CourseEditor = () => {
                       onChange={handleThumbnailUpload} 
                       style={{ display: 'none' }}
                     />
-                    <label htmlFor="thumbnail-upload" className="upload-label-area">
+                    <label htmlFor="thumbnail-upload" className="upload-label-area" style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', cursor: 'pointer', display: 'block', transition: 'all 0.2s' }}>
                       {uploadingThumb ? (
-                        <div className="uploading-state">
-                          <div className="spinner-border"></div>
+                        <div className="uploading-state" style={{ padding: '40px', textAlign: 'center' }}>
                           <span>Đang tải ảnh lên...</span>
                         </div>
                       ) : course.thumbnail ? (
-                        <div className="image-preview-wrapper" style={{ height: '160px' }}>
-                          <img src={course.thumbnail} alt="Thumbnail preview" className="preview-image" />
-                          <div className="preview-overlay">
-                            <Plus size={24} />
-                            <span>Đổi ảnh khác</span>
-                          </div>
+                        <div className="image-preview-wrapper" style={{ height: '160px', position: 'relative' }}>
+                          <img src={course.thumbnail} alt="Thumbnail preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} />
                         </div>
                       ) : (
-                        <div className="upload-placeholder" style={{ height: '160px', padding: '15px' }}>
+                        <div className="upload-placeholder" style={{ height: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#64748b' }}>
                           <Plus size={24} />
-                          <span style={{ fontSize: '0.85rem' }}>Nhấn để chọn ảnh từ máy (JPG, PNG, WEBP)</span>
+                          <span style={{ fontSize: '0.85rem' }}>Nhấn để chọn ảnh</span>
                         </div>
                       )}
                     </label>
@@ -250,7 +269,7 @@ const CourseEditor = () => {
                </div>
 
                <div className="form-group upload-group half">
-                  <label>Video giới thiệu khóa học</label>
+                  <label>Video giới thiệu</label>
                   <div className="upload-box">
                     <input 
                       type="file" 
@@ -259,44 +278,35 @@ const CourseEditor = () => {
                       onChange={handleVideoUpload} 
                       style={{ display: 'none' }}
                     />
-                    <label htmlFor="video-upload" className="upload-label-area">
+                    <label htmlFor="video-upload" className="upload-label-area" style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', cursor: 'pointer', display: 'block', transition: 'all 0.2s' }}>
                       {uploadingVideo ? (
-                        <div className="uploading-state">
-                          <div className="spinner-border"></div>
+                        <div className="uploading-state" style={{ padding: '40px', textAlign: 'center' }}>
                           <span>Đang tải video lên...</span>
                         </div>
                       ) : course.previewVideoUrl ? (
-                        <div className="video-preview-wrapper" style={{ height: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0fdf4', color: '#166534', borderRadius: '8px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+                        <div className="video-preview-wrapper" style={{ height: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0fdf4', color: '#10b981', borderRadius: '10px' }}>
                            <Video size={48} />
-                           <span style={{ marginTop: '8px', fontWeight: 'bold' }}>Đã tải lên Video</span>
-                           <div className="preview-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', color: 'white', opacity: 0, transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
-                             <Plus size={24} />
-                             <span>Đổi video khác</span>
-                           </div>
+                           <span style={{ marginTop: '8px', fontWeight: 'bold' }}>Video đã sẵn sàng</span>
                         </div>
                       ) : (
-                        <div className="upload-placeholder" style={{ height: '160px', padding: '15px' }}>
+                        <div className="upload-placeholder" style={{ height: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#64748b' }}>
                           <Video size={24} />
-                          <span style={{ fontSize: '0.85rem' }}>Nhấn để chọn video từ máy (MP4, MOV) - Tối đa 100MB</span>
+                          <span style={{ fontSize: '0.85rem' }}>Nhấn để chọn video</span>
                         </div>
                       )}
                     </label>
                   </div>
                </div>
              </div>
-
           </form>
           
-          {/* Note: In a real app, Curriculum is usually edited after the basic course is created to secure a courseId first */}
           {isEditMode && (
-             <div className="curriculum-editor-section">
-                <h2>Cấu trúc Khóa học (Chương & Bài học)</h2>
-                <div className="alert-info">Tính năng thêm Chương và Upload Video bài giảng sẽ có mặt sau khi thiết lập Cloudinary API Key.</div>
+             <div className="curriculum-editor-section" style={{ marginTop: '30px', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '10px' }}>Cấu trúc Khóa học</h3>
+                <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Tính năng quản lý chương và bài giảng (Content Management) có thể truy cập qua nút "Bài giảng" ở danh sách chính để có trải nghiệm tốt nhất.</p>
              </div>
           )}
-
         </div>
-      </div>
     </div>
   );
 };
