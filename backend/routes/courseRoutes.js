@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { Course, Chapter, Lesson, User } = require('../models');
+const { Course, Chapter, Lesson, User, Enrollment, Quiz } = require('../models');
 const { Op } = require('sequelize');
 const { protect, instructor } = require('../middleware/authMiddleware');
+const { notifyAdmins } = require('../utils/notificationUtils');
 
 // ── GET /api/courses — Public: list published courses (optional ?category=, ?type=pro/free) ──
 router.get('/', async (req, res) => {
@@ -170,6 +171,15 @@ router.patch('/:id', protect, instructor, async (req, res) => {
     course.isPro = isPro !== undefined ? isPro : course.isPro;
 
     await course.save();
+
+    // Notify admins if course is already published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Cập nhật khóa học đã xuất bản',
+        `Giảng viên ${req.user.name} vừa cập nhật nội dung cho khóa học: "${course.title}" (ID: ${course.id})`
+      );
+    }
+
     res.json(course);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -189,7 +199,7 @@ router.get('/:id/curriculum', async (req, res) => {
             {
               model: Lesson,
               as: 'lessons',
-              attributes: ['id', 'title', 'duration', 'isFree', 'lessonOrder'],
+              attributes: ['id', 'title', 'duration', 'isFree', 'lessonOrder', 'videoUrl'],
             }
           ]
         }
@@ -207,6 +217,51 @@ router.get('/:id/curriculum', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ── GET /api/courses/:id/learn — Enrolled: get full curriculum for learning ──
+router.get('/:id/learn', protect, async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user.id;
+
+    const course = await Course.findByPk(courseId, {
+      include: [
+        { model: User, as: 'instructor', attributes: ['name', 'avatar'] },
+        {
+          model: Chapter,
+          as: 'chapters',
+          include: [{ 
+            model: Lesson, 
+            as: 'lessons',
+            include: [{ model: Quiz, as: 'quiz', attributes: ['id'] }]
+          }]
+        }
+      ],
+      order: [
+        [{ model: Chapter, as: 'chapters' }, 'chapterOrder', 'ASC'],
+        [{ model: Chapter, as: 'chapters' }, { model: Lesson, as: 'lessons' }, 'lessonOrder', 'ASC'],
+      ]
+    });
+
+    if (!course || course.published !== 2) {
+      return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    }
+
+    // Check enrollment
+    const enrollment = await Enrollment.findOne({ where: { courseId, userId } });
+    const isOwner = course.instructorId === userId;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!enrollment && !isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
+    }
+
+    res.json(course);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 // ── GET /api/courses/instructor/:id/full-curriculum — Instructor: get full curriculum for editing ──
 router.get('/instructor/:id/full-curriculum', protect, instructor, async (req, res) => {
@@ -232,6 +287,34 @@ router.get('/instructor/:id/full-curriculum', protect, instructor, async (req, r
   }
 });
 
+// ── POST /api/courses/:id/chapters — Instructor: create chapter ──────────
+router.post('/:id/chapters', protect, instructor, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
+
+    const { title, chapterOrder } = req.body;
+    const chapter = await Chapter.create({
+      title,
+      chapterOrder,
+      courseId: course.id
+    });
+
+    // Notify admins if course is published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Thêm chương mới',
+        `Giảng viên ${req.user.name} vừa thêm chương "${title}" vào khóa học: "${course.title}"`
+      );
+    }
+
+    res.status(201).json(chapter);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ── PATCH /api/courses/chapters/:id — Instructor: update chapter ──────────────
 router.patch('/chapters/:id', protect, instructor, async (req, res) => {
   try {
@@ -246,7 +329,50 @@ router.patch('/chapters/:id', protect, instructor, async (req, res) => {
     chapter.title = title !== undefined ? title : chapter.title;
     chapter.chapterOrder = chapterOrder !== undefined ? chapterOrder : chapter.chapterOrder;
     await chapter.save();
+
+    // Notify admins if course is published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Cập nhật nội dung chương',
+        `Giảng viên ${req.user.name} vừa cập nhật chương "${chapter.title}" trong khóa học: "${course.title}"`
+      );
+    }
+
     res.json(chapter);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/chapters/:chapterId/lessons — Instructor: create lesson ───
+router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res) => {
+  try {
+    const chapter = await Chapter.findByPk(req.params.chapterId);
+    if (!chapter) return res.status(404).json({ message: 'Chương không tồn tại' });
+    
+    const course = await Course.findByPk(chapter.courseId);
+    if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
+
+    const { title, lessonOrder, isFree, videoUrl, content, duration } = req.body;
+    const lesson = await Lesson.create({
+      title,
+      lessonOrder,
+      isFree,
+      videoUrl,
+      content,
+      duration,
+      chapterId: chapter.id
+    });
+
+    // Notify admins if course is published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Thêm bài học mới',
+        `Giảng viên ${req.user.name} vừa thêm bài học "${title}" vào khóa học: "${course.title}"`
+      );
+    }
+
+    res.status(201).json(lesson);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -262,6 +388,15 @@ router.delete('/chapters/:id', protect, instructor, async (req, res) => {
     if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
 
     await chapter.destroy();
+
+    // Notify admins if course is published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Xóa chương học',
+        `Giảng viên ${req.user.name} vừa xóa một chương trong khóa học: "${course.title}"`
+      );
+    }
+
     res.json({ message: 'Đã xóa chương' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -287,6 +422,15 @@ router.patch('/lessons/:id', protect, instructor, async (req, res) => {
     lesson.isFree = isFree !== undefined ? isFree : lesson.isFree;
 
     await lesson.save();
+
+    // Notify admins if course is published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Cập nhật nội dung bài học',
+        `Giảng viên ${req.user.name} vừa cập nhật bài học "${lesson.title}" trong khóa học: "${course.title}"`
+      );
+    }
+
     res.json(lesson);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -304,6 +448,15 @@ router.delete('/lessons/:id', protect, instructor, async (req, res) => {
     if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
 
     await lesson.destroy();
+
+    // Notify admins if course is published
+    if (course.published === 2) {
+      await notifyAdmins(
+        'Xóa bài học',
+        `Giảng viên ${req.user.name} vừa xóa một bài học trong khóa học: "${course.title}"`
+      );
+    }
+
     res.json({ message: 'Đã xóa bài học' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -361,7 +514,38 @@ router.patch('/:id/submit', protect, instructor, async (req, res) => {
     course.published = 1; // 1 = Pending
     await course.save();
 
+    // Notify admins of new submission
+    await notifyAdmins(
+      'Yêu cầu phê duyệt khóa học mới',
+      `Giảng viên ${req.user.name} vừa gửi yêu cầu phê duyệt cho khóa học: "${course.title}" (ID: ${course.id})`
+    );
+
     res.status(200).json({ message: 'Gửi yêu cầu phê duyệt thành công', published: course.published });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── DELETE /api/courses/:id — Instructor: delete course ────────────
+router.delete('/:id', protect, instructor, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) {
+      return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    }
+
+    // Auth check: only owner can delete
+    if (course.instructorId !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền thực hiện thao tác này' });
+    }
+
+    // Restriction: Cannot delete published courses
+    if (course.published === 2) {
+      return res.status(400).json({ message: 'Không thể xóa khóa học đã được xuất bản' });
+    }
+
+    await course.destroy();
+    res.json({ message: 'Đã xóa khóa học thành công' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

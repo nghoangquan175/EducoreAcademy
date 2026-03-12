@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ReactPlayer from 'react-player';
 import axios from 'axios';
 import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock } from 'react-icons/fa';
+import QuizPlayer from './QuizPlayer';
 import './LearningPage.css';
 
 const LearningPage = () => {
@@ -15,17 +16,65 @@ const LearningPage = () => {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeChapters, setActiveChapters] = useState([]); 
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [passedLessons, setPassedLessons] = useState([]);
+  const [latestAttempt, setLatestAttempt] = useState(null);
+  const [videoFinished, setVideoFinished] = useState(false);
+  const [quizInitialMode, setQuizInitialMode] = useState(false); // false = take, true = review
+
+  // Flatten lessons for sequence tracking
+  const allLessons = useMemo(() => {
+    if (!course || !course.chapters) return [];
+    const flat = [];
+    course.chapters.forEach(chapter => {
+      if (chapter.lessons) {
+        chapter.lessons.forEach(lesson => {
+          flat.push({ ...lesson, chapterId: chapter.id });
+        });
+      }
+    });
+    return flat;
+  }, [course]);
+
+  // Derived state for current lesson and chapter title
+  const { currentLesson, currentChapterTitle } = useMemo(() => {
+    let lesson = null;
+    let title = "";
+    if (course?.chapters) {
+      for (const chapter of course.chapters) {
+        if (chapter.lessons) {
+          const found = chapter.lessons.find(l => l.id.toString() === lessonId);
+          if (found) {
+            lesson = found;
+            title = chapter.title;
+            break;
+          }
+        }
+      }
+    }
+    return { currentLesson: lesson, currentChapterTitle: title };
+  }, [course, lessonId]);
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/courses/${courseId}/curriculum`);
-        setCourse(data);
+        const token = localStorage.getItem('token');
+        const [courseRes, passedRes] = await Promise.all([
+            axios.get(`http://localhost:5000/api/courses/${courseId}/learn`, {
+                headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get(`http://localhost:5000/api/quizzes/course/${courseId}/passed-lessons`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+        ]);
+        
+        setCourse(courseRes.data);
+        setPassedLessons(passedRes.data || []);
         
         // Open the chapter that contains the current lesson
         let foundChapterId = null;
-        if (data.chapters) {
-          for (const chap of data.chapters) {
+        if (courseRes.data.chapters) {
+          for (const chap of courseRes.data.chapters) {
             if (chap.lessons && chap.lessons.find(l => l.id.toString() === lessonId)) {
               foundChapterId = chap.id;
               break;
@@ -34,8 +83,8 @@ const LearningPage = () => {
         }
         if (foundChapterId) {
           setActiveChapters([foundChapterId]);
-        } else if (data.chapters && data.chapters.length > 0) {
-          setActiveChapters([data.chapters[0].id]);
+        } else if (courseRes.data.chapters && courseRes.data.chapters.length > 0) {
+          setActiveChapters([courseRes.data.chapters[0].id]);
         }
         
         setLoading(false);
@@ -47,31 +96,35 @@ const LearningPage = () => {
     fetchCourse();
   }, [courseId, lessonId]);
 
+  useEffect(() => {
+    const fetchLatestAttempt = async () => {
+      if (!currentLesson?.quiz) return;
+      try {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(`http://localhost:5000/api/quizzes/lesson/${currentLesson.id}/latest-attempt`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setLatestAttempt(data);
+      } catch (err) {
+        console.error("Lỗi khi tải kết quả gần nhất:", err);
+      }
+    };
+    if (currentLesson) fetchLatestAttempt();
+  }, [currentLesson, showQuiz]);
+
   if (loading) return <div style={{ color: 'white', padding: '40px', textAlign: 'center' }}>Đang tải dữ liệu khóa học...</div>;
   if (error) return <div style={{ color: 'red', padding: '40px', textAlign: 'center' }}>{error}</div>;
   if (!course) return null;
-
-  // Tìm lesson hiện tại từ API data
-  let currentLesson = null;
-  let currentChapterTitle = "";
-
-  if (course.chapters) {
-    for (const chapter of course.chapters) {
-      if (chapter.lessons) {
-        const found = chapter.lessons.find(l => l.id.toString() === lessonId);
-        if (found) {
-          currentLesson = found;
-          currentChapterTitle = chapter.title;
-          break;
-        }
-      }
-    }
-  }
 
   // Fallback nếu không tìm thấy bài học
   if (!currentLesson) {
     return <div style={{ color: 'white', padding: '20px' }}>Không tìm thấy bài học này!</div>;
   }
+
+  const isYouTubeUrl = (url) => {
+    if (!url) return false;
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  };
 
   const toggleChapter = (chapterId) => {
     setActiveChapters(prev => 
@@ -88,7 +141,21 @@ const LearningPage = () => {
   const handleLessonSelect = (lesson) => {
     // Tạm thời chưa xử lý khóa ở frontend cho admin/người dạy.
     // Nếu có logic "isLocked" thật, thì check ở đây.
+    setShowQuiz(false);
+    setVideoFinished(false);
+    setLatestAttempt(null);
     navigate(`/learn/${courseId}/lesson/${lesson.id}`);
+  };
+
+  const handleNextLesson = () => {
+    const currentIndex = allLessons.findIndex(l => l.id.toString() === lessonId);
+    if (currentIndex !== -1 && currentIndex < allLessons.length - 1) {
+      const nextLesson = allLessons[currentIndex + 1];
+      setShowQuiz(false);
+      setVideoFinished(false);
+      setLatestAttempt(null);
+      navigate(`/learn/${courseId}/lesson/${nextLesson.id}`);
+    }
   };
 
   return (
@@ -100,7 +167,7 @@ const LearningPage = () => {
             <FaChevronLeft />
           </Link>
           <div className="topbar-brand-title">
-            <span className="brand-logo">EA.</span>
+            {/* <span className="brand-logo">EA.</span> */}
             <span className="course-title">{course.title}</span>
           </div>
         </div>
@@ -115,23 +182,111 @@ const LearningPage = () => {
       {/* MAIN CONTENT AREA */}
       <div className={`learning-main-wrapper ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         
-        {/* LEFT COLUMN: VIDEO PLAYER */}
+        {/* LEFT COLUMN: VIDEO PLAYER OR QUIZ */}
         <div className="learning-content-area">
-          <div className="learning-video-container">
-             <ReactPlayer 
-                url={currentLesson.videoUrl} 
-                controls={true}
-                width="100%"
-                height="100%"
-                className="learning-react-player"
-                playing={true} // Tự động chạy
-              />
-          </div>
-          
-          <div className="learning-lesson-info">
-            <h1 className="learning-lesson-title">{currentLesson.title}</h1>
-            <p className="learning-chapter-title">Thuộc: {currentChapterTitle}</p>
-          </div>
+          {showQuiz && currentLesson.quiz ? (
+            <QuizPlayer 
+              lessonId={currentLesson.id} 
+              initialReviewMode={quizInitialMode}
+              onPass={() => {
+                setPassedLessons([...passedLessons, currentLesson.id]);
+              }} 
+              onNextLesson={handleNextLesson}
+            />
+          ) : (
+            <>
+              <div className="learning-video-container">
+                {currentLesson.videoUrl ? (
+                  isYouTubeUrl(currentLesson.videoUrl) ? (
+                    <ReactPlayer 
+                      url={currentLesson.videoUrl}
+                      className="learning-react-player"
+                      controls
+                      playing
+                      width="100%"
+                      height="100%"
+                      onEnded={() => setVideoFinished(true)}
+                    />
+                  ) : (
+                    <video 
+                      key={currentLesson.videoUrl}
+                      controls 
+                      autoPlay 
+                      className="native-video-player"
+                      onEnded={() => setVideoFinished(true)}
+                    >
+                      <source src={currentLesson.videoUrl} type="video/mp4" />
+                      Trình duyệt của bạn không hỗ trợ thẻ video.
+                    </video>
+                  )
+                ) : (
+                  <div className="no-video-placeholder">
+                    <FaPlayCircle size={64} />
+                    <p>Bài học này chưa có nội dung video.</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="learning-lesson-info">
+                <div className="lesson-header-flex">
+                  <h1 className="learning-lesson-title">{currentLesson.title}</h1>
+                  {currentLesson.quiz && (
+                    <div className="quiz-status-pill">
+                      {latestAttempt ? (
+                        <div className={`attempt-summary ${latestAttempt.status}`}>
+                          Đã làm: {latestAttempt.score}% ({latestAttempt.status === 'passed' ? 'Đạt' : 'Chưa đạt'})
+                        </div>
+                      ) : (
+                        <div className="no-attempt">Chưa làm bài kiểm tra</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <p className="learning-chapter-title">Thuộc: {currentChapterTitle}</p>
+                
+                {/* Manual Quiz Start Logic */}
+                {currentLesson.quiz && (videoFinished || latestAttempt) && (
+                  <div className="quiz-entry-card">
+                    <h3>Bài kiểm tra: {currentLesson.title}</h3>
+                    <p>Hoàn thành để củng cố kiến thức đã học trong video này.</p>
+                    <div className="quiz-entry-actions">
+                      <button 
+                        className="btn-take-quiz-now" 
+                        onClick={() => {
+                          setQuizInitialMode(false);
+                          setShowQuiz(true);
+                        }}
+                      >
+                        {latestAttempt ? 'Làm lại bài kiểm tra' : 'Bắt đầu làm bài kiểm tra'}
+                      </button>
+
+                      {latestAttempt && (
+                        <button 
+                          className="btn-review-quiz-manual" 
+                          onClick={() => {
+                            setQuizInitialMode(true);
+                            setShowQuiz(true);
+                          }}
+                        >
+                          Xem lại kết quả
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mark as finished if no quiz */}
+                {!currentLesson.quiz && videoFinished && !passedLessons.includes(currentLesson.id) && (
+                   <div className="no-quiz-completion">
+                      <p>Bạn đã xem xong video!</p>
+                      <button className="btn-mark-finished" onClick={() => setPassedLessons([...passedLessons, currentLesson.id])}>
+                         Đánh dấu hoàn thành bài học
+                      </button>
+                   </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* RIGHT COLUMN: SIDEBAR CURRICULUM */}
@@ -158,16 +313,23 @@ const LearningPage = () => {
                       <div className="learning-chapter-body">
                         {chapter.lessons.map(lesson => {
                           const isActive = lesson.id.toString() === lessonId;
+                          const lessonIndex = allLessons.findIndex(l => l.id === lesson.id);
                           
-                          // Mock status do DB Progress chưa ghép
-                          const isCompleted = false; 
-                          const isLocked = !lesson.isFree && !isCompleted; 
+                          const isPassed = passedLessons.includes(lesson.id);
+                          const isCompleted = isPassed; 
+                          
+                          // Unlock conditions:
+                          const isFirstOverall = lessonIndex === 0;
+                          const isFree = lesson.isFree;
+                          const prevLessonPassed = lessonIndex > 0 && passedLessons.includes(allLessons[lessonIndex - 1].id);
+                          
+                          const isLocked = !isFirstOverall && !isFree && !prevLessonPassed && !isPassed; 
                           
                           return (
                             <div 
                               key={lesson.id} 
                               className={`learning-lesson-item ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
-                              onClick={() => handleLessonSelect(lesson)}
+                              onClick={() => !isLocked && handleLessonSelect(lesson)}
                             >
                               <div className="lesson-icon-state">
                                 {isCompleted ? (

@@ -1,0 +1,236 @@
+.quiz-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.quiz-modal-content {
+    background: white;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.quiz-modal-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.quiz-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quiz-modal-header .close-btn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.quiz-modal-header .close-btn:hover {
+    color: #0f172a;
+}
+
+.quiz-modal-body {
+    padding: 32px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.quiz-config {
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #f8fafc;
+    padding: 15px 20px;
+    border-radius: 12px;
+}
+
+.quiz-config label {
+    font-weight: 600;
+    color: #475569;
+}
+
+.quiz-config input {
+    width: 80px;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-weight: 700;
+}
+
+.questions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.question-item {
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: white;
+}
+
+.question-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.question-item-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.remove-q-btn {
+    background: #fef2f2;
+    color: #ef4444;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.question-item textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: none;
+    margin-bottom: 20px;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.option-input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f8fafc;
+    padding: 10px 15px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.option-input-group:focus-within {
+    border-color: #6366f1;
+    background: white;
+}
+
+.option-input-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #6366f1;
+    cursor: pointer;
+}
+
+.option-input-group input[type="text"] {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 0.9rem;
+}
+
+.add-q-btn {
+    width: 100%;
+    margin-top: 24px;
+    padding: 16px;
+    background: white;
+    border: 2px dashed #e2e8f0;
+    border-radius: 16px;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
+}
+
+.add-q-btn:hover {
+    background: #f8fafc;
+    border-color: #6366f1;
+    color: #6366f1;
+}
+
+.quiz-modal-footer {
+    padding: 24px 32px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+}
+
+.btn-cancel {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.btn-save {
+    padding: 10px 24px;
+    border-radius: 10px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-save:hover {
+    background: #1e293b;
+}
+
+.btn-save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -17,7 +17,8 @@ import {
   ChevronDown,
   UserCheck,
   GraduationCap,
-  Plus
+  Plus,
+  Bell
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,6 +33,8 @@ const AdminDashboard = () => {
   const [pendingCourses, setPendingCourses] = useState([]);
   const [banners, setBanners] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [newBanner, setNewBanner] = useState({
@@ -65,6 +68,7 @@ const AdminDashboard = () => {
     { id: 'categories', label: 'Danh mục', icon: <Layers size={20} /> },
     { id: 'banners', label: 'Banners', icon: <ImageIcon size={20} /> },
     { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
+    { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} /> },
   ];
 
   useEffect(() => {
@@ -94,6 +98,12 @@ const AdminDashboard = () => {
         const { data } = await axios.get('http://localhost:5000/api/banners/all', { headers });
         setBanners(data);
       }
+      
+      // Always fetch notifications to update unread count
+      const { data: notifs } = await axios.get('http://localhost:5000/api/notifications', { headers });
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter(n => !n.isRead).length);
+      
     } catch (error) {
       console.error('Lỗi khi tải dữ liệu:', error);
     } finally {
@@ -194,6 +204,32 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       alert('Thêm banner thất bại: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+
+  
+  const handleMarkAsRead = async (notifId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/notifications/${notifId}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu đã đọc:', error);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put('http://localhost:5000/api/notifications/read-all', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Lỗi khi đánh dấu tất cả đã đọc:', error);
     }
   };
 
@@ -440,6 +476,46 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
+      case 'notifications':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+                <h2 className="content-title">Thông báo hệ thống</h2>
+                {notifications.some(n => !n.isRead) && (
+                    <button className="add-btn secondary" onClick={handleMarkAllRead}>
+                        Đánh dấu tất cả đã đọc
+                    </button>
+                )}
+            </div>
+            <p className="section-desc">Theo dõi các hoạt động quan trọng từ giảng viên và hệ thống.</p>
+            
+            <div className="notifications-list">
+                {notifications.length > 0 ? notifications.map(notif => (
+                    <div key={notif.id} className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}>
+                        <div className="notif-content">
+                            <div className="notif-header">
+                                <span className="notif-title">{notif.title}</span>
+                                <span className="notif-time">
+                                    {new Date(notif.createdAt).toLocaleString('vi-VN')}
+                                </span>
+                            </div>
+                            <p className="notif-message">{notif.message}</p>
+                        </div>
+                        {!notif.isRead && (
+                            <button className="mark-read-mark-btn" onClick={() => handleMarkAsRead(notif.id)} title="Đánh dấu đã đọc">
+                                <Check size={16} />
+                            </button>
+                        )}
+                    </div>
+                )) : (
+                    <div className="empty-state">
+                        <Bell size={48} />
+                        <p>Bạn không có thông báo nào</p>
+                    </div>
+                )}
+            </div>
+          </div>
+        );
       default:
         return (
           <div className="admin-content-fade-in">
@@ -482,6 +558,9 @@ const AdminDashboard = () => {
               >
                 <span className="item-icon">{item.icon}</span>
                 <span className="item-label">{item.label}</span>
+                {item.id === 'notifications' && unreadCount > 0 && (
+                  <span className="notif-badge">{unreadCount}</span>
+                )}
                 {item.hasSubmenu ? (
                   <ChevronDown size={16} className={`arrow-icon ${isUsersMenuOpen ? 'rotated' : ''}`} />
                 ) : (

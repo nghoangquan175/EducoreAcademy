@@ -1,13 +1,13 @@
 /* LearningPage.css */
 
 .learning-container {
-  height: 100vh;
-  width: 100vw;
+  width: 100%;
+  /* height: 100vh; */
   display: flex;
   flex-direction: column;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  overflow: hidden; /* Ngăn cuộn toàn trang */
+  overflow: hidden;
 }
 
 /* TOPBAR */
@@ -78,7 +78,8 @@
 /* MAIN WRAPPER (Responsive Grid) */
 .learning-main-wrapper {
   display: flex;
-  flex: 1; /* Chiếm hết chiều cao còn lại */
+  flex: 1;
+  /* Chiếm hết chiều cao còn lại */
   overflow: hidden;
   transition: all 0.3s ease;
 }
@@ -87,7 +88,9 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Video + Nội dung dưới tự cuộn */
+  overflow-y: auto;
+  padding: 30px 40px;
+  /* Balanced spacing from sides and top */
 }
 
 .learning-sidebar {
@@ -108,11 +111,50 @@
 /* VIDEO LAYER */
 .learning-video-container {
   width: 100%;
+  max-width: 1100px;
+  /* Ensure it stays at a comfortable viewing size */
+  margin: 0 auto;
+  /* Keep it centered */
   background-color: #000;
   position: relative;
-  /* Giới hạn max-height để video không quá to trên màn hình lớn */
-  max-height: calc(100vh - 60px - 140px);
   aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.native-video-player {
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.no-video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #1e293b;
+  color: #64748b;
+  gap: 16px;
+}
+
+.btn-start-quiz-manual {
+  margin-top: 20px;
+  padding: 10px 24px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-start-quiz-manual:hover {
+  background: #2563eb;
 }
 
 .learning-react-player {
@@ -122,17 +164,113 @@
 }
 
 .learning-lesson-info {
-  padding: 32px;
-  max-width: 1200px;
+  padding: 30px 0;
+  /* Padding top/bottom, 0 sides because parent has padding */
+  max-width: 1100px;
+  /* Match video container max-width */
   margin: 0 auto;
   width: 100%;
 }
 
+.lesson-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
 .learning-lesson-title {
+  margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
-  margin-bottom: 8px;
   color: var(--text-primary);
+}
+
+.attempt-summary {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.attempt-summary.passed {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.attempt-summary.failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.no-attempt {
+  padding: 6px 12px;
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.quiz-entry-card,
+.no-quiz-completion {
+  margin-top: 30px;
+  background: #1e293b;
+  padding: 30px;
+  border-radius: 16px;
+  border: 1px solid #334155;
+  animation: slideUp 0.4s ease-out;
+}
+
+.quiz-entry-card h3 {
+  margin: 0 0 10px 0;
+  color: #f1f5f9;
+}
+
+.quiz-entry-card p {
+  color: #94a3b8;
+  margin-bottom: 24px;
+}
+
+.btn-take-quiz-now,
+.btn-mark-finished {
+  padding: 14px 28px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quiz-entry-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-review-quiz-manual {
+  padding: 14px 28px;
+  background: transparent;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-review-quiz-manual:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.btn-take-quiz-now:hover,
+.btn-mark-finished:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
 }
 
 .learning-chapter-title {
@@ -214,7 +352,8 @@
 }
 
 .icon-completed {
-  color: #22c55e; /* Green */
+  color: #22c55e;
+  /* Green */
 }
 
 .icon-locked {
@@ -226,7 +365,8 @@
 }
 
 .learning-lesson-item.active .icon-playable {
-  color: #0ea5e9; /* Nổi bật icon khi đang active */
+  color: #0ea5e9;
+  /* Nổi bật icon khi đang active */
 }
 
 .lesson-text-info {
@@ -260,6 +400,6 @@
     top: 60px;
     bottom: 0;
     z-index: 40;
-    box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
   }
 }

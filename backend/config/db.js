@@ -16,9 +16,24 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
 const connectDB = async () => {
   try {
     // Sync — force:false to avoid dropping existing data.
-    // New tables (like Chapter) will be created automatically.
     await sequelize.sync({ force: false });
     console.log('Database synced');
+
+    // Manual migration for MSSQL since alter: true has syntax issues
+    try {
+      await sequelize.query(`
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[dbo].[QuizAttempts]') 
+          AND name = 'userAnswers'
+        )
+        BEGIN
+          ALTER TABLE [dbo].[QuizAttempts] ADD [userAnswers] NVARCHAR(MAX) NULL
+        END
+      `);
+    } catch (err) {
+      console.log('Manual migration notice: userAnswers column check completed.');
+    }
 
   } catch (error) {
     console.error('Unable to connect to the database:', error.message);

@@ -212,7 +212,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
                     type="text" 
                     name="category" 
                     list="category-suggestions" 
-                    value={course.category} 
+                    // value={course.category} 
                     onChange={handleChange} 
                     placeholder="Chọn hoặc nhập danh mục mới..." 
                     required 

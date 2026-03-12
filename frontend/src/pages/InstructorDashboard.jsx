@@ -69,6 +69,21 @@ const InstructorDashboard = () => {
     }
   };
 
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa khóa học này? Thao tác này không thể hoàn tác.')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Đã xóa khóa học thành công!');
+      fetchMyCourses();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi xóa khóa học');
+    }
+  };
+
   const handleSubmitForReview = async (courseId) => {
     if (!window.confirm('Bạn có chắc chắn muốn gửi yêu cầu phê duyệt cho khóa học này?')) return;
     
@@ -227,9 +242,15 @@ const InstructorDashboard = () => {
                                         >
                                             <BookOpen size={16} />
                                         </button>
-                                        <button className="inst-btn reject" title="Xóa">
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {![1, 2].includes(course.published) && (
+                                            <button 
+                                                className="inst-btn reject" 
+                                                title="Xóa"
+                                                onClick={() => handleDeleteCourse(course.id)}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

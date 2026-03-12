@@ -8,6 +8,9 @@ const Progress = require('./Progress');
 const Review = require('./Review');
 const Notification = require('./Notification');
 const Article = require('./Article');
+const Quiz = require('./Quiz');
+const Question = require('./Question');
+const QuizAttempt = require('./QuizAttempt');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -49,6 +52,19 @@ Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(Article, { foreignKey: 'authorId', as: 'articles' });
 Article.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
 
+// Quiz
+Lesson.hasOne(Quiz, { foreignKey: 'lessonId', as: 'quiz', onDelete: 'CASCADE' });
+Quiz.belongsTo(Lesson, { foreignKey: 'lessonId' });
+
+Quiz.hasMany(Question, { foreignKey: 'quizId', as: 'questions', onDelete: 'CASCADE' });
+Question.belongsTo(Quiz, { foreignKey: 'quizId' });
+
+User.hasMany(QuizAttempt, { foreignKey: 'userId', as: 'quizAttempts' });
+QuizAttempt.belongsTo(User, { foreignKey: 'userId' });
+
+Quiz.hasMany(QuizAttempt, { foreignKey: 'quizId', as: 'attempts' });
+QuizAttempt.belongsTo(Quiz, { foreignKey: 'quizId' });
+
 module.exports = {
   User,
   Course,
@@ -60,4 +76,7 @@ module.exports = {
   Notification,
   Article,
   Banner,
+  Quiz,
+  Question,
+  QuizAttempt,
 };

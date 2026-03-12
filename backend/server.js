@@ -21,6 +21,7 @@ app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/banners', require('./routes/bannerRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/quizzes', require('./routes/quizRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');

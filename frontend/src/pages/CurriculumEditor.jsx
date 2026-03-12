@@ -5,13 +5,25 @@ import {
   ChevronDown, ChevronUp, PlayCircle, FileText, Video
 } from 'lucide-react';
 import './CurriculumEditor.css';
+import QuizModal from './QuizModal';
 
 const CurriculumEditor = ({ courseId, onClose }) => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingChapterId, setEditingChapterId] = useState(null);
   const [editingLessonId, setEditingLessonId] = useState(null);
+  const [selectedLessonId, setSelectedLessonId] = useState(null);
+  const [showQuizModal, setShowQuizModal] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('');
+  const [addingLessonToChapterId, setAddingLessonToChapterId] = useState(null);
+  const [newLesson, setNewLesson] = useState({
+    title: '',
+    duration: '',
+    isFree: false,
+    videoUrl: '',
+    videoSource: 'link' // 'link' or 'upload'
+  });
+  const [uploadingLessonVideo, setUploadingLessonVideo] = useState(false);
   const [tempData, setTempData] = useState({}); // For inline editing titles
 
   useEffect(() => {
@@ -79,20 +91,52 @@ const CurriculumEditor = ({ courseId, onClose }) => {
 
   // --- LESSON HANDLERS ---
   const handleAddLesson = async (chapterId) => {
-    const title = window.prompt("Nhập tên bài học mới:");
-    if (!title) return;
+    if (!newLesson.title.trim()) return;
     try {
       const token = localStorage.getItem('token');
       const chapter = course.chapters.find(c => c.id === chapterId);
       const order = chapter.lessons ? chapter.lessons.length + 1 : 1;
       await axios.post(`http://localhost:5000/api/courses/chapters/${chapterId}/lessons`, {
-        title,
-        lessonOrder: order,
-        isFree: false
+        ...newLesson,
+        lessonOrder: order
       }, { headers: { Authorization: `Bearer ${token}` }});
+      
+      setNewLesson({
+        title: '',
+        duration: '',
+        isFree: false,
+        videoUrl: '',
+        videoSource: 'link'
+      });
+      setAddingLessonToChapterId(null);
       fetchFullCurriculum();
     } catch (error) {
       alert("Lỗi khi thêm bài học");
+    }
+  };
+
+  const handleLessonVideoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('video', file);
+
+    setUploadingLessonVideo(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post('http://localhost:5000/api/upload/video', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setNewLesson({ ...newLesson, videoUrl: res.data.url });
+    } catch (error) {
+      console.error("Upload video error:", error);
+      alert('Tải video thất bại');
+    } finally {
+      setUploadingLessonVideo(false);
     }
   };
 
@@ -225,13 +269,103 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                       <button className="lesson-action-btn delete" onClick={() => handleDeleteLesson(lesson.id)}>
                         <Trash2 size={16} />
                       </button>
+                      <button 
+                        className="lesson-action-btn quiz" 
+                        title="Quản lý bài kiểm tra"
+                        onClick={() => {
+                          setSelectedLessonId(lesson.id);
+                          setShowQuizModal(true);
+                        }}
+                      >
+                        <FileText size={16} />
+                      </button>
                     </div>
                   )}
                 </div>
               ))}
-              <button className="add-lesson-btn" onClick={() => handleAddLesson(chapter.id)}>
-                <Plus size={16} /> Thêm bài học mới
-              </button>
+              
+              {addingLessonToChapterId === chapter.id ? (
+                <div className="add-lesson-inline-form-full">
+                  <div className="form-grid">
+                    <div className="form-group-row">
+                      <input 
+                        autoFocus
+                        placeholder="Tên bài học mới..."
+                        value={newLesson.title}
+                        onChange={(e) => setNewLesson({ ...newLesson, title: e.target.value })}
+                        className="title-input"
+                      />
+                      <input 
+                        placeholder="Thời lượng (vd: 12:45)"
+                        value={newLesson.duration}
+                        onChange={(e) => setNewLesson({ ...newLesson, duration: e.target.value })}
+                        className="duration-input"
+                      />
+                    </div>
+                    
+                    <div className="video-source-box">
+                      <div className="source-tabs">
+                        <button 
+                          className={`source-tab ${newLesson.videoSource === 'link' ? 'active' : ''}`}
+                          onClick={() => setNewLesson({ ...newLesson, videoSource: 'link', videoUrl: '' })}
+                        >
+                          Dán link video
+                        </button>
+                        <button 
+                          className={`source-tab ${newLesson.videoSource === 'upload' ? 'active' : ''}`}
+                          onClick={() => setNewLesson({ ...newLesson, videoSource: 'upload', videoUrl: '' })}
+                        >
+                          Tải lên video
+                        </button>
+                      </div>
+                      
+                      {newLesson.videoSource === 'link' ? (
+                        <input 
+                          placeholder="Dán link video (Cloudinary/YouTube...)"
+                          value={newLesson.videoUrl}
+                          onChange={(e) => setNewLesson({ ...newLesson, videoUrl: e.target.value })}
+                        />
+                      ) : (
+                        <div className="lesson-upload-area">
+                          <input 
+                            type="file" 
+                            id="lesson-video-upload" 
+                            accept="video/*" 
+                            onChange={handleLessonVideoUpload} 
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="lesson-video-upload" className="lesson-upload-label">
+                            {uploadingLessonVideo ? 'Đang tải lên...' : newLesson.videoUrl ? 'Đã tải xong' : 'Chọn video'}
+                          </label>
+                          {newLesson.videoUrl && <span className="upload-success-check"><Check size={16} /></span>}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="form-footer-row">
+                      <label className="free-preview-toggle">
+                        <input 
+                          type="checkbox" 
+                          checked={newLesson.isFree} 
+                          onChange={(e) => setNewLesson({ ...newLesson, isFree: e.target.checked })}
+                        />
+                        Học thử
+                      </label>
+                      <div className="add-lesson-actions">
+                        <button className="btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo}>Thêm Bài Học</button>
+                        <button className="btn-small cancel" onClick={() => setAddingLessonToChapterId(null)}>Hủy</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button className="add-lesson-btn" onClick={() => {
+                  setAddingLessonToChapterId(chapter.id);
+                  setNewLesson({ title: '', duration: '', isFree: false, videoUrl: '', videoSource: 'link' });
+                }}>
+                  <Plus size={16} /> Thêm bài học mới
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -248,6 +382,15 @@ const CurriculumEditor = ({ courseId, onClose }) => {
           <Plus size={18} /> Thêm Chương
         </button>
       </div>
+      {showQuizModal && (
+        <QuizModal 
+          lessonId={selectedLessonId} 
+          onClose={() => {
+            setShowQuizModal(false);
+            setSelectedLessonId(null);
+          }} 
+        />
+      )}
     </div>
   );
 };

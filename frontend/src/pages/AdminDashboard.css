@@ -780,3 +780,130 @@
         width: 100%;
     }
 }
+
+
+.notif-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.nav-item:hover .notif-badge {
+    transform: scale(1.1);
+}
+
+/* Notifications Styling */
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.notification-item {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border-left: 4px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.notification-item.unread {
+    border-left-color: #6366f1;
+    background: rgba(99, 102, 241, 0.02);
+}
+
+.notification-item.read {
+    opacity: 0.8;
+}
+
+.notification-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.notif-content {
+    flex: 1;
+}
+
+.notif-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.notif-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+}
+
+.notif-time {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.notif-message {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.mark-read-mark-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 16px;
+}
+
+.mark-read-mark-btn:hover {
+    background: #6366f1;
+    color: white;
+    transform: scale(1.1);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: #94a3b8;
+    gap: 16px;
+}
+
+.empty-state p {
+    font-weight: 500;
+}
+
+.add-btn.secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.add-btn.secondary:hover {
+    background: #e2e8f0;
+    box-shadow: none;
+}
