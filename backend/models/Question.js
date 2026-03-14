@@ -20,7 +20,14 @@ const Question = sequelize.define('Question', {
     allowNull: false,
     get() {
       const rawValue = this.getDataValue('options');
-      return rawValue ? JSON.parse(rawValue) : [];
+      if (!rawValue) return [];
+      try {
+        const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.error("Error parsing options JSON:", err);
+        return [];
+      }
     },
     set(value) {
       this.setDataValue('options', JSON.stringify(value));

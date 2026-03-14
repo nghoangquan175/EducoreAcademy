@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Quiz, Question, QuizAttempt, Lesson, Chapter, Course } = require('../models');
+const { Quiz, Question, QuizAttempt, Lesson, Chapter, Course, Progress, Enrollment } = require('../models');
 const { protect, instructor } = require('../middleware/authMiddleware');
 
 // @desc    Get quiz for a lesson
@@ -98,6 +98,26 @@ router.post('/:quizId/submit', protect, async (req, res) => {
             userAnswers: answers // Saved via setter
         });
 
+        if (status === 'passed') {
+            // Find lesson to get courseId
+            const lesson = await Lesson.findByPk(quiz.lessonId, {
+                include: [{ model: Chapter }]
+            });
+            
+            if (lesson) {
+                const enrollment = await Enrollment.findOne({
+                    where: { userId: req.user.id, courseId: lesson.Chapter.courseId }
+                });
+
+                if (enrollment) {
+                    await Progress.findOrCreate({
+                        where: { enrollmentId: enrollment.id, lessonId: lesson.id },
+                        defaults: { completed: true, completedAt: new Date() }
+                    });
+                }
+            }
+        }
+
         res.json(attempt);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -126,22 +146,22 @@ router.get('/course/:courseId/passed-lessons', protect, async (req, res) => {
             return res.json([]);
         }
 
-        // 2. Find passed attempts for these lessons
-        const passedAttempts = await QuizAttempt.findAll({
+        // 2. Find progress for this user and these lessons
+        const progress = await Progress.findAll({
             where: { 
-                userId, 
-                status: 'passed' 
+                lessonId: lessonIds,
+                completed: true
             },
             include: [{
-                model: Quiz,
+                model: Enrollment,
                 required: true,
-                where: { lessonId: lessonIds }
+                where: { userId }
             }]
         });
 
-        const passedLessonIds = passedAttempts.map(attempt => attempt.Quiz.lessonId);
+        const completedLessonIds = progress.map(p => p.lessonId);
 
-        res.json([...new Set(passedLessonIds)]);
+        res.json([...new Set(completedLessonIds)]);
     } catch (error) {
         console.error("Error in GET /passed-lessons:", error);
         res.status(500).json({ message: error.message });

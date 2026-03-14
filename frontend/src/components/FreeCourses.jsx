@@ -80,7 +80,7 @@ const FreeCourses = () => {
   // Load courses whenever category or page changes
   useEffect(() => {
     setLoading(true);
-    fetchCoursesAPI(activeCategory, 'free', currentPage, limit)
+    fetchCoursesAPI(activeCategory, 'free', currentPage, limit, true)
       .then(({ data }) => {
         setCourses(data.courses);
         setTotalPages(data.totalPages);

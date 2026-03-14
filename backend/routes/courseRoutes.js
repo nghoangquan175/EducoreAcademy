@@ -1,18 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const { Course, Chapter, Lesson, User, Enrollment, Quiz } = require('../models');
+const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress } = require('../models');
 const { Op } = require('sequelize');
-const { protect, instructor } = require('../middleware/authMiddleware');
+const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
 const { notifyAdmins } = require('../utils/notificationUtils');
 
-// ── GET /api/courses — Public: list published courses (optional ?category=, ?type=pro/free) ──
-router.get('/', async (req, res) => {
+// ── GET /api/courses — Public/Enrolled-aware: list published courses ──
+router.get('/', optionalProtect, async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 8;
     const offset = (page - 1) * limit;
 
     const where = { published: 2 };
+    
+    // Logic mới: Lọc bỏ các khóa học đã đăng ký nếu được yêu cầu
+    if (req.query.excludeEnrolled === 'true' && req.user) {
+      const enrolledCourses = await Enrollment.findAll({
+        where: { userId: req.user.id },
+        attributes: ['courseId']
+      });
+      const enrolledIds = enrolledCourses.map(e => e.courseId);
+      if (enrolledIds.length > 0) {
+        where.id = { [Op.notIn]: enrolledIds };
+      }
+    }
     // Category filter
     if (req.query.category && req.query.category !== 'Tất cả') {
       where.category = req.query.category;
@@ -199,10 +211,11 @@ router.patch('/:id', protect, instructor, async (req, res) => {
   }
 });
 
-// ── GET /api/courses/:id/curriculum — Public: get full curriculum (chapters + lessons) ──
-router.get('/:id/curriculum', async (req, res) => {
+// ── GET /api/courses/:id/curriculum — Public/Enrolled-aware: get full curriculum ──
+router.get('/:id/curriculum', optionalProtect, async (req, res) => {
   try {
-    const course = await Course.findByPk(req.params.id, {
+    const courseId = req.params.id;
+    const course = await Course.findByPk(courseId, {
       include: [
         { model: User, as: 'instructor', attributes: ['name', 'avatar'] },
         {
@@ -225,7 +238,14 @@ router.get('/:id/curriculum', async (req, res) => {
     if (!course || course.published !== 2) {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
-    res.json(course);
+
+    let isEnrolled = false;
+    if (req.user) {
+      const enrollment = await Enrollment.findOne({ where: { userId: req.user.id, courseId } });
+      isEnrolled = !!enrollment;
+    }
+
+    res.json({ ...course.toJSON(), isEnrolled });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -559,6 +579,48 @@ router.delete('/:id', protect, instructor, async (req, res) => {
 
     await course.destroy();
     res.json({ message: 'Đã xóa khóa học thành công' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/lessons/:id/complete — Student: Mark lesson as completed ──
+router.post('/lessons/:id/complete', protect, async (req, res) => {
+  try {
+    const lessonId = req.params.id;
+    const userId = req.user.id;
+
+    // Find the lesson and its course
+    const lesson = await Lesson.findByPk(lessonId, {
+      include: [{ model: Chapter, include: [{ model: Course }] }]
+    });
+
+    if (!lesson) return res.status(404).json({ message: 'Bài học không tồn tại' });
+
+    const courseId = lesson.Chapter.Course.id;
+
+    // Find enrollment
+    const enrollment = await Enrollment.findOne({
+      where: { userId, courseId }
+    });
+
+    if (!enrollment) {
+      return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
+    }
+
+    // Create or find progress
+    const [progress, created] = await Progress.findOrCreate({
+      where: { enrollmentId: enrollment.id, lessonId },
+      defaults: { completed: true, completedAt: new Date() }
+    });
+
+    if (!created && !progress.completed) {
+      progress.completed = true;
+      progress.completedAt = new Date();
+      await progress.save();
+    }
+
+    res.json({ message: 'Đã đánh dấu hoàn thành bài học', progress });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -17,6 +17,8 @@ import CourseEditor from './pages/CourseEditor';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import StaffLogin from './pages/StaffLogin';
 import CheckoutPage from './pages/CheckoutPage';
+import StudentDashboard from './pages/StudentDashboard';
+import CourseCongrats from './pages/CourseCongrats';
 import PrivateRoute from './components/PrivateRoute';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id_here';
@@ -74,6 +76,13 @@ function App() {
               <Route path="/checkout/:courseId" element={<CheckoutPage />} />
             </Route>
 
+            {/* ----- STUDENT ROUTES (Full Screen) ----- */}
+            <Route path="/student-dashboard" element={
+              <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                <StudentDashboard />
+              </PrivateRoute>
+            } />
+
             {/* ----- INSTRUCTOR ROUTES (Full Screen) ----- */}
             <Route path="/instructor-dashboard" element={
               <PrivateRoute allowedRoles={['instructor', 'admin']}>
@@ -90,7 +99,9 @@ function App() {
 
             {/* Learning pages — custom layout */}
             <Route element={<LearningLayout />}>
+              <Route path="/learn/:courseId" element={<LearningPage />} />
               <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPage />} />
+              <Route path="/course-completed/:courseId" element={<CourseCongrats />} />
             </Route>
           </Routes>
         </Router>

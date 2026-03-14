@@ -55,6 +55,11 @@ const LearningPage = () => {
     return { currentLesson: lesson, currentChapterTitle: title };
   }, [course, lessonId]);
 
+  const isLastLesson = useMemo(() => {
+    if (allLessons.length === 0) return false;
+    return allLessons[allLessons.length - 1].id.toString() === lessonId;
+  }, [allLessons, lessonId]);
+
   useEffect(() => {
     const fetchCourse = async () => {
       try {
@@ -69,8 +74,22 @@ const LearningPage = () => {
         ]);
         
         setCourse(courseRes.data);
+        
+        // Fetch completed lessons from backend (Progress table)
+        // Note: Using the same endpoint but it should ideally return all Progress.
+        // For now, I'll ensure passedRes.data includes all completed lessons.
         setPassedLessons(passedRes.data || []);
         
+        // If no lessonId provided, find the first lesson of the course and redirect
+        if (!lessonId && courseRes.data.chapters && courseRes.data.chapters.length > 0) {
+          const firstChapter = courseRes.data.chapters[0];
+          if (firstChapter.lessons && firstChapter.lessons.length > 0) {
+            const firstLesson = firstChapter.lessons[0];
+            navigate(`/learn/${courseId}/lesson/${firstLesson.id}`, { replace: true });
+            return;
+          }
+        }
+
         // Open the chapter that contains the current lesson
         let foundChapterId = null;
         if (courseRes.data.chapters) {
@@ -138,6 +157,21 @@ const LearningPage = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const handleMarkFinished = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/courses/lessons/${lessonId}/complete`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!passedLessons.includes(parseInt(lessonId))) {
+        setPassedLessons([...passedLessons, parseInt(lessonId)]);
+      }
+    } catch (err) {
+      console.error("Lỗi khi đánh dấu hoàn thành bài học:", err);
+      alert("Không thể đánh dấu hoàn thành bài học này.");
+    }
+  };
+
   const handleLessonSelect = (lesson) => {
     // Tạm thời chưa xử lý khóa ở frontend cho admin/người dạy.
     // Nếu có logic "isLocked" thật, thì check ở đây.
@@ -147,7 +181,22 @@ const LearningPage = () => {
     navigate(`/learn/${courseId}/lesson/${lesson.id}`);
   };
 
-  const handleNextLesson = () => {
+  const handleNextLesson = async () => {
+    // Nếu là bài học video, tự động đánh dấu hoàn thành trước khi sang bài mới
+    if (!currentLesson.quiz) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post(`http://localhost:5000/api/courses/lessons/${lessonId}/complete`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!passedLessons.includes(parseInt(lessonId))) {
+          setPassedLessons([...passedLessons, parseInt(lessonId)]);
+        }
+      } catch (err) {
+        console.error("Lỗi khi đánh dấu hoàn thành bài học:", err);
+      }
+    }
+
     const currentIndex = allLessons.findIndex(l => l.id.toString() === lessonId);
     if (currentIndex !== -1 && currentIndex < allLessons.length - 1) {
       const nextLesson = allLessons[currentIndex + 1];
@@ -156,6 +205,10 @@ const LearningPage = () => {
       setLatestAttempt(null);
       navigate(`/learn/${courseId}/lesson/${nextLesson.id}`);
     }
+  };
+
+  const handleCompleteCourse = () => {
+    navigate(`/course-completed/${courseId}`);
   };
 
   return (
@@ -180,19 +233,29 @@ const LearningPage = () => {
       </div>
 
       {/* MAIN CONTENT AREA */}
-      <div className={`learning-main-wrapper ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      <div className={`learning-main-wrapper ${(isSidebarOpen && !showQuiz) ? 'sidebar-open' : 'sidebar-closed'}`}>
         
         {/* LEFT COLUMN: VIDEO PLAYER OR QUIZ */}
         <div className="learning-content-area">
           {showQuiz && currentLesson.quiz ? (
-            <QuizPlayer 
-              lessonId={currentLesson.id} 
-              initialReviewMode={quizInitialMode}
-              onPass={() => {
-                setPassedLessons([...passedLessons, currentLesson.id]);
-              }} 
-              onNextLesson={handleNextLesson}
-            />
+            <div className="quiz-focused-container">
+              <div className="quiz-header-minimal">
+                <span className="quiz-label">Đang làm bài kiểm tra</span>
+                <h1 className="learning-lesson-title">{currentLesson.title}</h1>
+                <p className="learning-chapter-title">Chương: {currentChapterTitle}</p>
+              </div>
+              <QuizPlayer 
+                lessonId={currentLesson.id} 
+                initialReviewMode={quizInitialMode}
+                onPass={() => {
+                  setPassedLessons([...passedLessons, currentLesson.id]);
+                }} 
+                onNextLesson={handleNextLesson}
+                onBackToVideo={() => setShowQuiz(false)}
+                isLastLesson={isLastLesson}
+                onCompleteCourse={handleCompleteCourse}
+              />
+            </div>
           ) : (
             <>
               <div className="learning-video-container">
@@ -205,7 +268,10 @@ const LearningPage = () => {
                       playing
                       width="100%"
                       height="100%"
-                      onEnded={() => setVideoFinished(true)}
+                      onEnded={() => {
+                        setVideoFinished(true);
+                        handleMarkFinished();
+                      }}
                     />
                   ) : (
                     <video 
@@ -213,7 +279,10 @@ const LearningPage = () => {
                       controls 
                       autoPlay 
                       className="native-video-player"
-                      onEnded={() => setVideoFinished(true)}
+                      onEnded={() => {
+                        setVideoFinished(true);
+                        handleMarkFinished();
+                      }}
                     >
                       <source src={currentLesson.videoUrl} type="video/mp4" />
                       Trình duyệt của bạn không hỗ trợ thẻ video.
@@ -245,7 +314,7 @@ const LearningPage = () => {
                 <p className="learning-chapter-title">Thuộc: {currentChapterTitle}</p>
                 
                 {/* Manual Quiz Start Logic */}
-                {currentLesson.quiz && (videoFinished || latestAttempt) && (
+                {currentLesson.quiz && (videoFinished || latestAttempt || passedLessons.includes(parseInt(lessonId)) || passedLessons.includes(currentLesson.id)) && (
                   <div className="quiz-entry-card">
                     <h3>Bài kiểm tra: {currentLesson.title}</h3>
                     <p>Hoàn thành để củng cố kiến thức đã học trong video này.</p>
@@ -279,7 +348,7 @@ const LearningPage = () => {
                 {!currentLesson.quiz && videoFinished && !passedLessons.includes(currentLesson.id) && (
                    <div className="no-quiz-completion">
                       <p>Bạn đã xem xong video!</p>
-                      <button className="btn-mark-finished" onClick={() => setPassedLessons([...passedLessons, currentLesson.id])}>
+                      <button className="btn-mark-finished" onClick={handleMarkFinished}>
                          Đánh dấu hoàn thành bài học
                       </button>
                    </div>
@@ -290,70 +359,72 @@ const LearningPage = () => {
         </div>
 
         {/* RIGHT COLUMN: SIDEBAR CURRICULUM */}
-        <div className="learning-sidebar">
-          <div className="sidebar-header">
-            <h3>Nội dung khóa học</h3>
-          </div>
-          <div className="sidebar-curriculum-content">
-            {course.chapters && course.chapters.map((chapter) => {
-               const isOpen = activeChapters.includes(chapter.id);
-               return (
-                 <div key={chapter.id} className="learning-chapter-item">
-                    <div 
-                      className="learning-chapter-header" 
-                      onClick={() => toggleChapter(chapter.id)}
-                    >
-                      <div className="title-group">
-                        {isOpen ? <FaAngleUp /> : <FaAngleDown />}
-                        <h4>{chapter.title}</h4>
+        {!showQuiz && (
+          <div className="learning-sidebar">
+            <div className="sidebar-header">
+              <h3>Nội dung khóa học</h3>
+            </div>
+            <div className="sidebar-curriculum-content">
+              {course.chapters && course.chapters.map((chapter) => {
+                 const isOpen = activeChapters.includes(chapter.id);
+                 return (
+                   <div key={chapter.id} className="learning-chapter-item">
+                      <div 
+                        className="learning-chapter-header" 
+                        onClick={() => toggleChapter(chapter.id)}
+                      >
+                        <div className="title-group">
+                          {isOpen ? <FaAngleUp /> : <FaAngleDown />}
+                          <h4>{chapter.title}</h4>
+                        </div>
                       </div>
-                    </div>
-                    
-                    {isOpen && chapter.lessons && (
-                      <div className="learning-chapter-body">
-                        {chapter.lessons.map(lesson => {
-                          const isActive = lesson.id.toString() === lessonId;
-                          const lessonIndex = allLessons.findIndex(l => l.id === lesson.id);
-                          
-                          const isPassed = passedLessons.includes(lesson.id);
-                          const isCompleted = isPassed; 
-                          
-                          // Unlock conditions:
-                          const isFirstOverall = lessonIndex === 0;
-                          const isFree = lesson.isFree;
-                          const prevLessonPassed = lessonIndex > 0 && passedLessons.includes(allLessons[lessonIndex - 1].id);
-                          
-                          const isLocked = !isFirstOverall && !isFree && !prevLessonPassed && !isPassed; 
-                          
-                          return (
-                            <div 
-                              key={lesson.id} 
-                              className={`learning-lesson-item ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
-                              onClick={() => !isLocked && handleLessonSelect(lesson)}
-                            >
-                              <div className="lesson-icon-state">
-                                {isCompleted ? (
-                                  <FaCheckCircle className="icon-completed" />
-                                ) : isLocked ? (
-                                  <FaLock className="icon-locked" />
-                                ) : (
-                                  <FaPlayCircle className="icon-playable" />
-                                )}
+                      
+                      {isOpen && chapter.lessons && (
+                        <div className="learning-chapter-body">
+                          {chapter.lessons.map(lesson => {
+                            const isActive = lesson.id.toString() === lessonId;
+                            const lessonIndex = allLessons.findIndex(l => l.id === lesson.id);
+                            
+                            const isPassed = passedLessons.includes(lesson.id);
+                            const isCompleted = isPassed; 
+                            
+                            // Unlock conditions:
+                            const isFirstOverall = lessonIndex === 0;
+                            const isFree = lesson.isFree;
+                            const prevLessonPassed = lessonIndex > 0 && passedLessons.includes(allLessons[lessonIndex - 1].id);
+                            
+                            const isLocked = !isFirstOverall && !isFree && !prevLessonPassed && !isPassed; 
+                            
+                            return (
+                              <div 
+                                key={lesson.id} 
+                                className={`learning-lesson-item ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
+                                onClick={() => !isLocked && handleLessonSelect(lesson)}
+                              >
+                                <div className="lesson-icon-state">
+                                  {isCompleted ? (
+                                    <FaCheckCircle className="icon-completed" />
+                                  ) : isLocked ? (
+                                    <FaLock className="icon-locked" />
+                                  ) : (
+                                    <FaPlayCircle className="icon-playable" />
+                                  )}
+                                </div>
+                                <div className="lesson-text-info">
+                                  <span className="lesson-name">{lesson.title}</span>
+                                  <span className="lesson-length">{lesson.duration || '00:00'}</span>
+                                </div>
                               </div>
-                              <div className="lesson-text-info">
-                                <span className="lesson-name">{lesson.title}</span>
-                                <span className="lesson-length">{lesson.duration || '00:00'}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                 </div>
-               );
-            })}
+                            );
+                          })}
+                        </div>
+                      )}
+                   </div>
+                 );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

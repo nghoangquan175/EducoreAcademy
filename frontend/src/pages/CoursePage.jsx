@@ -10,6 +10,8 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
+import { fetchCurriculumAPI } from '../services/courseService';
+
 const CoursePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,7 +26,14 @@ const CoursePage = () => {
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/courses/${id}/curriculum`);
+        const { data } = await fetchCurriculumAPI(id);
+        
+        // Logic mới: Nếu đã đăng ký rồi thì vào student-dashboard
+        if (data.isEnrolled) {
+          navigate('/student-dashboard');
+          return;
+        }
+
         setCourse(data);
         // Default open the first chapter
         if (data.chapters && data.chapters.length > 0) {
@@ -37,7 +46,7 @@ const CoursePage = () => {
       }
     };
     fetchCourse();
-  }, [id]);
+  }, [id, navigate]);
 
   const toggleChapter = (chapterId) => {
     setActiveChapters(prev => 
@@ -208,7 +217,7 @@ const CoursePage = () => {
             >
               {course.price === 0 ? 'VÀO HỌC NGAY' : 'ĐĂNG KÝ NGAY'}
             </button>
-            <p className="guarantee-text">Đảm bảo hoàn tiền trong 30 ngày</p>
+            {course.price > 0 && <p className="guarantee-text">Đảm bảo hoàn tiền trong 30 ngày</p>}
 
             <div className="course-features">
               <h3 className="features-title">Khóa học này bao gồm:</h3>

@@ -1,0 +1,215 @@
+.congrats-container {
+    width: 100%;
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+}
+
+.congrats-glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 40px;
+    padding: 40px 60px;
+    width: 100%;
+    max-width: 750px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.trophy-wrapper {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trophy-glow {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%);
+    filter: blur(20px);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 0.8; }
+}
+
+.trophy-icon {
+    color: #fbce1c;
+    filter: drop-shadow(0 0 15px rgba(251, 206, 28, 0.4));
+    animation: bounce 3s infinite ease-in-out;
+    z-index: 2;
+    width: 80px;
+    height: 80px;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+.award-badge {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: #3b82f6;
+    color: white;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);
+    z-index: 3;
+    border: 4px solid #0f172a;
+}
+
+.main-congrats-title {
+    font-size: 2.8rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    background: linear-gradient(to bottom, #ffffff, #94a3b8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+}
+
+.sub-congrats-text {
+    color: #94a3b8;
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.course-completed-title {
+    color: #3b82f6;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 24px;
+    line-height: 1.2;
+}
+
+.stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 32px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.congrats-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.btn-dashboard-back, .btn-review-shared {
+    padding: 16px 32px;
+    border-radius: 16px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+}
+
+.btn-dashboard-back {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+}
+
+.btn-dashboard-back:hover {
+    background: #2563eb;
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+}
+
+.btn-review-shared {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-review-shared:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-3px);
+}
+
+.btn-share-achievement {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+    transition: color 0.2s;
+}
+
+.btn-share-achievement:hover {
+    color: #94a3b8;
+}
+
+.congrats-status {
+    width: 100%;
+    min-height: 100vh;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+    .congrats-glass-card {
+        padding: 40px 20px;
+    }
+    .main-congrats-title {
+        font-size: 2.2rem;
+    }
+    .congrats-actions {
+        flex-direction: column;
+    }
+    .course-completed-title {
+        font-size: 1.6rem;
+    }
+}

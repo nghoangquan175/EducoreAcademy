@@ -76,7 +76,7 @@ const ProCourses = () => {
   // Load courses whenever category or page changes
   useEffect(() => {
     setLoading(true);
-    fetchCoursesAPI(activeCategory, 'pro', currentPage, limit)
+    fetchCoursesAPI(activeCategory, 'pro', currentPage, limit, true)
       .then(({ data }) => {
         setCourses(data.courses);
         setTotalPages(data.totalPages);

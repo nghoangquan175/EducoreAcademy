@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, User, Settings, LogOut, BookOpen, CheckCircle, FileText, PlayCircle } from 'lucide-react';
+import { Search, Bell, User, Settings, LogOut, BookOpen, CheckCircle, FileText, PlayCircle, LayoutDashboard } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import './Header.css';
@@ -295,6 +295,10 @@ const Header = () => {
                 }
               </div>
               <div className="avatar-dropdown">
+                <Link to="/student-dashboard" className="dropdown-item">
+                  <LayoutDashboard size={18} />
+                  <span>Dashboard</span>
+                </Link>
                 <Link to="/profile" className="dropdown-item">
                   <User size={18} />
                   <span>Trang cá nhân</span>

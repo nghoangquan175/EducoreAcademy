@@ -392,6 +392,55 @@
   color: var(--text-secondary);
 }
 
+/* Focused Quiz Mode */
+.quiz-focused-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.quiz-header-minimal {
+  /* margin-bottom: 30px; */
+  border-bottom: 1px solid var(--border-color);
+  /* padding-bottom: 20px; */
+}
+
+.quiz-label {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+
+.quiz-header-minimal .learning-lesson-title {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+.quiz-header-minimal .learning-chapter-title {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Responsiveness */
 @media (max-width: 1024px) {
   .learning-sidebar {

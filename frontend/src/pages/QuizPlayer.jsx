@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, ArrowRight, HelpCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, HelpCircle, Trophy } from 'lucide-react';
 import axios from 'axios';
 import './QuizPlayer.css';
 
-const QuizPlayer = ({ lessonId, onPass, onNextLesson, initialReviewMode }) => {
+const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesson, onCompleteCourse, initialReviewMode }) => {
   const [loading, setLoading] = useState(true);
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -106,10 +106,16 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, initialReviewMode }) => {
               <button className="btn-retry" onClick={handleRetake}>
                 Làm lại bài
               </button>
-              {onNextLesson && (
-                <button className="btn-continue" onClick={onNextLesson}>
-                  Bài học tiếp theo <ArrowRight size={18} />
+              {isLastLesson ? (
+                <button className="btn-continue btn-finish-gold" onClick={onCompleteCourse}>
+                  Hoàn thành khóa học <Trophy size={18} />
                 </button>
+              ) : (
+                onNextLesson && (
+                  <button className="btn-continue" onClick={onNextLesson}>
+                    Bài học tiếp theo <ArrowRight size={18} />
+                  </button>
+                )
               )}
             </div>
           </div>
@@ -136,11 +142,32 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, initialReviewMode }) => {
   return (
     <div className="quiz-player-container">
       <div className="quiz-player-header">
-        <HelpCircle size={24} />
-        <div>
-          <h3>{reviewMode ? 'Xem lại bài kiểm tra' : 'Kiểm tra kiến thức'}</h3>
-          <p>{reviewMode ? `Điểm đạt được: ${result.score}%` : `Hoàn thành đúng trên ${quiz.passingScore}% để tiếp tục`}</p>
+        <div className="header-main">
+          <HelpCircle size={24} />
+          <div>
+            <h3>{reviewMode ? 'Xem lại bài kiểm tra' : 'Kiểm tra kiến thức'}</h3>
+            <p>{reviewMode ? `Điểm đạt được: ${result.score}%` : `Hoàn thành đúng trên ${quiz.passingScore}% để tiếp tục`}</p>
+          </div>
         </div>
+        
+        {reviewMode && (
+          <div className="review-navigation-actions">
+            <button className="btn-nav-secondary" onClick={onBackToVideo}>
+              Xem lại video bài học
+            </button>
+            {isLastLesson ? (
+              <button className="btn-nav-primary btn-gold-nav" onClick={onCompleteCourse}>
+                Hoàn thành khóa học <Trophy size={16} />
+              </button>
+            ) : (
+              onNextLesson && (
+                <button className="btn-nav-primary" onClick={onNextLesson}>
+                  Bài học tiếp theo <ArrowRight size={16} />
+                </button>
+              )
+            )}
+          </div>
+        )}
       </div>
 
       <div className="quiz-questions">
@@ -151,7 +178,7 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, initialReviewMode }) => {
             <div key={qIndex} className={`quiz-question-card ${reviewMode ? (isCorrect ? 'correct' : 'incorrect') : ''}`}>
               <h4>Câu {qIndex + 1}: {q.text}</h4>
               <div className="quiz-options">
-                {q.options.map((opt, oIndex) => {
+                {Array.isArray(q.options) && q.options.map((opt, oIndex) => {
                   let statusClass = "";
                   if (reviewMode) {
                     if (oIndex === q.correctOptionIndex) statusClass = "correct-opt";

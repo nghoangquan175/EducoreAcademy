@@ -40,7 +40,17 @@ const LoginPage = () => {
     } else if (location.state?.returnUrl) {
       navigate(location.state.returnUrl);
     } else {
-      navigate('/');
+      // Logic mới: Nếu student chưa đăng ký khóa học thì về Home (/)
+      // Nếu đã đăng ký rồi thì vào Dashboard (/student-dashboard)
+      if (data.role === 'student') {
+        if (data.hasEnrolledCourses) {
+          navigate('/student-dashboard');
+        } else {
+          navigate('/');
+        }
+      } else {
+        navigate('/');
+      }
     }
   };
 

@@ -3,11 +3,16 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Fetch published courses — optional category & type ('pro' or 'free')
-export const fetchCoursesAPI = (category = '', type = '', page = 1, limit = 8) => {
+export const fetchCoursesAPI = (category = '', type = '', page = 1, limit = 8, excludeEnrolled = false) => {
   const params = { page, limit };
   if (category && category !== 'Tất cả') params.category = category;
   if (type) params.type = type;
-  return axios.get(`${API_URL}/courses`, { params });
+  if (excludeEnrolled) params.excludeEnrolled = true;
+  
+  const token = localStorage.getItem('token');
+  const config = token ? { params, headers: { Authorization: `Bearer ${token}` } } : { params };
+  
+  return axios.get(`${API_URL}/courses`, config);
 };
 
 // Fetch available categories list
@@ -17,4 +22,15 @@ export const fetchCategoriesAPI = (type = '') => {
 };
 
 // Fetch single course by ID
-export const fetchCourseByIdAPI = (id) => axios.get(`${API_URL}/courses/${id}`);
+export const fetchCourseByIdAPI = (id) => {
+  const token = localStorage.getItem('token');
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  return axios.get(`${API_URL}/courses/${id}`, config);
+};
+
+// Fetch curriculum (with enrollment status)
+export const fetchCurriculumAPI = (id) => {
+  const token = localStorage.getItem('token');
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  return axios.get(`${API_URL}/courses/${id}/curriculum`, config);
+};
