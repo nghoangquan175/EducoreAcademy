@@ -36,9 +36,8 @@ const StaffLogin = () => {
 
       const data = response.data;
       
-      // Chặn nếu là học viên (student)
       if (data.role === 'student') {
-         setError('Tài khoản dành cho Học viên vui lòng đăng nhập ở trang chính!');
+         setError('Tài khoản này là tài khoản Học viên. Vui lòng đăng nhập tại trang chủ.');
          setIsLoading(false);
          return;
       }

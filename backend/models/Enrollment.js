@@ -14,6 +14,10 @@ const Enrollment = sequelize.define('Enrollment', {
   enrolledAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  lastAccessedAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
 });
 

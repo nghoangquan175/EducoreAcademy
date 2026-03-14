@@ -219,7 +219,7 @@ const googleLogin = async (req, res) => {
       }
     }
 
-    res.json(buildUserResponse(user));
+    res.json(await buildUserResponse(user));
   } catch (error) {
     console.error('Google login error:', error);
     res.status(401).json({ message: 'Xác thực Google thất bại', error: error.message });
@@ -260,7 +260,7 @@ const facebookLogin = async (req, res) => {
       }
     }
 
-    res.json(buildUserResponse(user));
+    res.json(await buildUserResponse(user));
   } catch (error) {
     console.error('Facebook login error:', error);
     res.status(401).json({ message: 'Xác thực Facebook thất bại', error: error.message });

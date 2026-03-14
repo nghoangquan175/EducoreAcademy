@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -28,6 +28,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 import './StudentDashboard.css';
 
 const StudentDashboard = () => {
@@ -45,6 +46,9 @@ const StudentDashboard = () => {
   const [courseSearch, setCourseSearch] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [quizAttempts, setQuizAttempts] = useState([]);
+  const [pendingQuizzes, setPendingQuizzes] = useState([]);
+  const [upcomingGoals, setUpcomingGoals] = useState([]);
+  const [leaderboard, setLeaderboard] = useState({ top5: [], myRank: { rank: '?', points: 0 } });
   
   // Helper to get local YYYY-MM-DD
   const getLocalDateString = (date) => {
@@ -59,6 +63,7 @@ const StudentDashboard = () => {
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoal, setNewGoal] = useState({ title: '', type: 'Task', time: '09:00', color: '#3b82f6' });
   
+  const hasGreeted = useRef(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -75,6 +80,13 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    if (user?.name && !hasGreeted.current) {
+      toast.success(`Welcome back, ${user.name}!`, {
+        icon: '👋',
+        duration: 4000
+      });
+      hasGreeted.current = true;
+    }
   }, []);
 
   useEffect(() => {
@@ -99,15 +111,23 @@ const StudentDashboard = () => {
       const token = localStorage.getItem('token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      const [statsRes, coursesRes, quizRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/users/student/stats', config),
-        axios.get('http://localhost:5000/api/users/student/enrolled-courses', config),
-        axios.get('http://localhost:5000/api/users/student/quiz-attempts', config)
-      ]);
+      const safeFetch = async (url, setter) => {
+        try {
+          const res = await axios.get(url, config);
+          setter(res.data);
+        } catch (err) {
+          console.error(`Error fetching ${url}:`, err);
+        }
+      };
 
-      setStats(statsRes.data);
-      setCourses(coursesRes.data);
-      setQuizAttempts(quizRes.data);
+      await Promise.all([
+        safeFetch('http://localhost:5000/api/users/student/stats', setStats),
+        safeFetch('http://localhost:5000/api/users/student/enrolled-courses', setCourses),
+        safeFetch('http://localhost:5000/api/users/student/quiz-attempts', setQuizAttempts),
+        safeFetch('http://localhost:5000/api/users/student/pending-quizzes', setPendingQuizzes),
+        safeFetch('http://localhost:5000/api/users/student/upcoming-study-goals', setUpcomingGoals),
+        safeFetch('http://localhost:5000/api/users/student/leaderboard', setLeaderboard)
+      ]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -151,6 +171,12 @@ const StudentDashboard = () => {
       setIsAddingGoal(false);
       setNewGoal({ title: '', type: 'Task', time: '09:00', color: '#3b82f6' });
       fetchGoalsSummary();
+      // Refetch upcomings for the side रेल
+      const token2 = localStorage.getItem('token');
+      const upcomingRes = await axios.get('http://localhost:5000/api/users/student/upcoming-study-goals', {
+        headers: { Authorization: `Bearer ${token2}` }
+      });
+      setUpcomingGoals(upcomingRes.data);
     } catch (error) {
       console.error('Error adding study goal:', error);
       alert('Failed to add study goal. Please check your connection or try again.');
@@ -178,6 +204,8 @@ const StudentDashboard = () => {
       });
       setStudyGoals(studyGoals.filter(g => g.id !== id));
       fetchGoalsSummary();
+      // Refetch upcomings for the side रेल
+      setUpcomingGoals(upcomingGoals.filter(g => g.id !== id));
     } catch (error) {
       console.error('Error deleting goal:', error);
     }
@@ -188,23 +216,16 @@ const StudentDashboard = () => {
     navigate('/login');
   };
 
+  const recentlyActive = [...courses]
+    .sort((a, b) => new Date(b.lastAccessedAt || 0) - new Date(a.lastAccessedAt || 0))[0] || courses[0];
+
   const renderOverview = () => (
     <div className="std-content-fade-in">
-      {/* Welcome Banner */}
-      <div className="std-welcome-card">
-        <div className="std-welcome-text">
-          <h2>Welcome back, {user?.name}!</h2>
-          <p>You have {courses.length} courses in progress. Keep up the good work and reach your study goals today!</p>
-          <button className="std-continue-btn" onClick={() => setActiveTab('courses')}>Continue Study</button>
-        </div>
-        
-      </div>
-
       {/* Analytics Row */}
       <div className="std-analytics-row">
         <div className="std-card">
           <div className="std-card-header">
-            <span>Statistics</span>
+            <span>Platform Statistics</span>
           </div>
           <div className="std-stats-grid">
              <div className="std-stat-item">
@@ -222,6 +243,30 @@ const StudentDashboard = () => {
           </div>
         </div>
 
+        {/* Recently Active Card integrated into Overview */}
+        {recentlyActive && (
+          <div className="std-card std-hero-card-compact" onClick={() => navigate(`/learn/${recentlyActive.id}`)}>
+             <div className="std-card-header">Recently Active</div>
+             <div className="hero-compact-body">
+                <div className="hero-compact-thumb-wrap">
+                   <img src={recentlyActive.thumbnail || 'https://via.placeholder.com/100x60'} alt="Course" />
+                </div>
+                <div className="hero-compact-info">
+                   <h4>{recentlyActive.title}</h4>
+                   <div className="hero-compact-progress">
+                      <div className="progress-bar-mini">
+                         <div className="progress-fill-mini" style={{ width: `${recentlyActive.progressPercent}%` }}></div>
+                      </div>
+                      <span>{recentlyActive.progressPercent}%</span>
+                   </div>
+                </div>
+             </div>
+             <button className="std-resume-btn-mini">Resume Project <ChevronRight size={14} /></button>
+          </div>
+        )}
+      </div>
+
+      <div className="std-suggested-row">
         <div className="std-card">
           <div className="std-card-header">Learning Activity</div>
           <div className="mock-circle-chart">
@@ -236,20 +281,31 @@ const StudentDashboard = () => {
         <div className="std-card">
           <div className="std-card-header">Top Performance</div>
           <div className="std-perf-list">
-            <div className="perf-item">
-               <div className="perf-user">
-                  <div className="perf-rank rank-1">1</div>
-                  <span className="perf-name">Rahul</span>
+            {leaderboard?.top5?.map((item) => (
+               <div key={item.userId} className={`perf-item ${item.userId === user?.id ? 'personal' : ''}`}>
+                  <div className="perf-user">
+                     <div className={`perf-rank rank-${item.rank}`}>
+                        {item.rank === 1 ? <Trophy size={14} /> : item.rank}
+                     </div>
+                     <span className="perf-name">{item.name}</span>
+                  </div>
+                  <span className="perf-score">{item.points} pts</span>
                </div>
-               <span className="perf-score">48/50</span>
-            </div>
-            <div className="perf-item personal">
-               <div className="perf-user">
-                  <div className="perf-rank rank-me">?</div>
-                  <span className="perf-name">{user?.name}</span>
-               </div>
-               <span className="perf-score">{stats.points} pts</span>
-            </div>
+            ))}
+            
+            {/* Show my rank if not in top 5 */}
+            {leaderboard?.top5 && !leaderboard.top5.some(item => item.userId === user?.id) && (
+               <>
+                  <div style={{ textAlign: 'center', color: '#cbd5e1', fontSize: '10px', margin: '4px 0' }}>•••</div>
+                  <div className="perf-item personal">
+                     <div className="perf-user">
+                        <div className="perf-rank rank-me">{leaderboard.myRank.rank}</div>
+                        <span className="perf-name">{user?.name} (You)</span>
+                     </div>
+                     <span className="perf-score">{leaderboard.myRank.points} pts</span>
+                  </div>
+               </>
+            )}
           </div>
         </div>
       </div>
@@ -306,38 +362,8 @@ const StudentDashboard = () => {
       return matchesSearch;
     });
 
-    // Recently Active (highest progress but not 100%, or just the first one if all 0 or all 100)
-    const recentlyActive = [...courses]
-      .filter(c => c.progressPercent < 100)
-      .sort((a, b) => b.progressPercent - a.progressPercent)[0] || courses[0];
-
     return (
       <div className="std-content-fade-in">
-         {/* Recently Active Hero */}
-         {recentlyActive && (
-            <div className="std-recent-hero">
-               <div className="hero-content">
-                  <span className="hero-tag">Recently Active</span>
-                  <h2 className="hero-title">{recentlyActive.title}</h2>
-                  <div className="hero-progress-wrapper">
-                     <div className="hero-progress-info">
-                        <span>Progress</span>
-                        <span>{recentlyActive.progressPercent}%</span>
-                     </div>
-                     <div className="hero-progress-bar">
-                        <div className="hero-progress-fill" style={{ width: `${recentlyActive.progressPercent}%` }}></div>
-                     </div>
-                  </div>
-                  <button onClick={() => navigate(`/learn/${recentlyActive.id}`)} className="std-continue-hero-btn">
-                     Resume Learning <ChevronRight size={18} />
-                  </button>
-               </div>
-               <div className="hero-image-box">
-                  <img src={recentlyActive.thumbnail || 'https://via.placeholder.com/400x250'} alt="Course" />
-               </div>
-            </div>
-         )}
-
          {/* Filter & Search Bar */}
          <div className="std-courses-controls">
             <div className="std-filter-tabs">
@@ -666,46 +692,50 @@ const StudentDashboard = () => {
                  <div className="std-right-section-title">
                     <ShieldCheck size={20} className="text-accent" /> Upcomings
                  </div>
-                 <div className="std-upcoming-item">
-                    <div className="upcoming-header">
-                       <h4 className="upcoming-title">Corporate Accounting</h4>
-                       <span className="upcoming-date">19 October</span>
+                 {upcomingGoals.length === 0 ? (
+                    <div className="std-empty-state-mini" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                       <Calendar size={32} style={{ marginBottom: '10px', opacity: 0.5 }} />
+                       <p style={{ fontSize: '13px' }}>No upcoming study goals. Set some goals to stay on track!</p>
                     </div>
-                    <p className="upcoming-desc">Class Text 2</p>
-                 </div>
-                 <div className="std-upcoming-item">
-                    <div className="upcoming-header">
-                       <h4 className="upcoming-title">Advanced Web Design</h4>
-                       <span className="upcoming-date">22 October</span>
-                    </div>
-                    <p className="upcoming-desc">Module 4 Test</p>
-                 </div>
-                 <button className="std-all-events-btn">See All Events</button>
+                 ) : (
+                    upcomingGoals.map(goal => (
+                       <div key={goal.id} className="std-upcoming-item">
+                          <div className="upcoming-header">
+                             <h4 className="upcoming-title">{goal.title}</h4>
+                             <span className="upcoming-date">
+                                {new Date(goal.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                             </span>
+                          </div>
+                          <p className="upcoming-desc">{goal.type} • {goal.time}</p>
+                       </div>
+                    ))
+                 )}
+                 <button className="std-all-events-btn" onClick={() => setShowCalendar(true)}>Manage Schedule</button>
               </section>
 
               <section>
                  <div className="std-right-section-title">Assignments</div>
-                 <div className="std-assignment-item">
-                    <div className="check-box-filled"><Check size={14} /></div>
-                    <div className="std-assignment-info">
-                       <h4>React Project</h4>
-                       <span className="status-submitted">13 Jun • Submitted</span>
+                 {pendingQuizzes.length === 0 ? (
+                    <div className="std-empty-state-mini" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                       <BookMarked size={32} style={{ marginBottom: '10px', opacity: 0.5 }} />
+                       <p style={{ fontSize: '13px' }}>You've finished all quizzes! Great job!</p>
                     </div>
-                 </div>
-                 <div className="std-assignment-item">
-                    <div className="check-box-empty"></div>
-                    <div className="std-assignment-info">
-                       <h4>Database Design</h4>
-                       <span className="status-urgent">12 Oct • Due Tomorrow</span>
-                    </div>
-                 </div>
-                 <div className="std-assignment-item">
-                    <div className="check-box-empty"></div>
-                    <div className="std-assignment-info">
-                       <h4>UI/UX Case Study</h4>
-                       <span className="status-warning">14 Oct • Due in 2 days</span>
-                    </div>
-                 </div>
+                 ) : (
+                    pendingQuizzes.map(quiz => (
+                       <div 
+                         key={quiz.id} 
+                         className="std-assignment-item" 
+                         onClick={() => navigate(`/learn/${quiz.courseId}/lesson/${quiz.lessonId}?quiz=true`)}
+                         style={{ cursor: 'pointer' }}
+                       >
+                          <div className="check-box-empty"></div>
+                          <div className="std-assignment-info">
+                             <h4>{quiz.lessonTitle}</h4>
+                             <span className="status-urgent">{quiz.courseTitle} • Pending Quiz</span>
+                          </div>
+                       </div>
+                    ))
+                 )}
               </section>
            </aside>
         </div>

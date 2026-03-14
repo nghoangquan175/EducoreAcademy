@@ -61,7 +61,7 @@ const LoginPage = () => {
       try {
         const { data } = await googleLoginAPI(tokenResponse.access_token);
         if (data.role !== 'student') {
-          setError('Email hoặc mật khẩu không đúng');
+          setError('Tài khoản này là tài khoản Giảng viên/Admin. Vui lòng đăng nhập tại cổng nội bộ.');
           setLoading(false);
           return;
         }
@@ -82,7 +82,7 @@ const LoginPage = () => {
     try {
       const { data } = await loginAPI(email, password);
       if (data.role !== 'student') {
-        setError('Email hoặc mật khẩu không đúng');
+        setError('Tài khoản này là tài khoản Giảng viên/Admin. Vui lòng đăng nhập tại cổng nội bộ.');
         setLoading(false);
         return;
       }
@@ -100,7 +100,7 @@ const LoginPage = () => {
     try {
       const { data } = await googleLoginAPI(credentialResponse.credential);
       if (data.role !== 'student') {
-        setError('Email hoặc mật khẩu không đúng');
+        setError('Tài khoản này là tài khoản Giảng viên/Admin. Vui lòng đăng nhập tại cổng nội bộ.');
         setLoading(false);
         return;
       }
@@ -125,7 +125,7 @@ const LoginPage = () => {
           try {
             const { data } = await facebookLoginAPI(response.authResponse.accessToken);
             if (data.role !== 'student') {
-              setError('Email hoặc mật khẩu không đúng');
+              setError('Tài khoản này là tài khoản Giảng viên/Admin. Vui lòng đăng nhập tại cổng nội bộ.');
               setLoading(false);
               return;
             }

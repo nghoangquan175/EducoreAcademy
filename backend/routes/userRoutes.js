@@ -9,7 +9,10 @@ const {
   getStudyGoalsSummary,
   addStudyGoal,
   updateStudyGoal,
-  deleteStudyGoal 
+  deleteStudyGoal,
+  getPendingQuizzes,
+  getUpcomingStudyGoals,
+  getLeaderboard
 } = require('../controllers/studentController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -34,6 +37,9 @@ router.get('/profile', protect, (req, res) => {
 router.get('/student/stats', protect, getStudentStats);
 router.get('/student/enrolled-courses', protect, getEnrolledCourses);
 router.get('/student/quiz-attempts', protect, getQuizAttempts);
+router.get('/student/pending-quizzes', protect, getPendingQuizzes);
+router.get('/student/upcoming-study-goals', protect, getUpcomingStudyGoals);
+router.get('/student/leaderboard', protect, getLeaderboard);
 
 // Study Goals
 router.get('/student/study-goals', protect, getStudyGoals);

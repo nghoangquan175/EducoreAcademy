@@ -21,6 +21,7 @@ const connectDB = async () => {
 
     // Manual migration for MSSQL since alter: true has syntax issues
     try {
+      // QuizAttempts userAnswers
       await sequelize.query(`
         IF NOT EXISTS (
           SELECT * FROM sys.columns 
@@ -31,8 +32,42 @@ const connectDB = async () => {
           ALTER TABLE [dbo].[QuizAttempts] ADD [userAnswers] NVARCHAR(MAX) NULL
         END
       `);
+
+      // Enrollments lastAccessedAt
+      // First, drop if it exists to ensure type correctness (DATETIME -> DATETIME2)
+      try {
+        await sequelize.query(`
+          IF EXISTS (
+            SELECT * FROM sys.columns 
+            WHERE object_id = OBJECT_ID(N'[dbo].[Enrollments]') 
+            AND name = 'lastAccessedAt'
+          )
+          AND EXISTS (
+             SELECT * FROM sys.types t 
+             JOIN sys.columns c ON t.user_type_id = c.user_type_id 
+             WHERE c.object_id = OBJECT_ID(N'[dbo].[Enrollments]') 
+             AND c.name = 'lastAccessedAt' AND t.name = 'datetime'
+          )
+          BEGIN
+            ALTER TABLE [dbo].[Enrollments] DROP COLUMN [lastAccessedAt]
+          END
+        `);
+      } catch (e) {
+        console.log('Minor issue dropping column:', e.message);
+      }
+
+      await sequelize.query(`
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[dbo].[Enrollments]') 
+          AND name = 'lastAccessedAt'
+        )
+        BEGIN
+          ALTER TABLE [dbo].[Enrollments] ADD [lastAccessedAt] DATETIME2 NULL
+        END
+      `);
     } catch (err) {
-      console.log('Manual migration notice: userAnswers column check completed.');
+      console.log('Manual migration notice: schema check completed.');
     }
 
   } catch (error) {

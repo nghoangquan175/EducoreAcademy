@@ -289,7 +289,29 @@ router.get('/:id/learn', protect, async (req, res) => {
       return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
     }
 
+    // Update lastAccessedAt if it's a student
+    if (enrollment) {
+      enrollment.lastAccessedAt = new Date();
+      await enrollment.save();
+    }
     res.json(course);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/:id/activity — Update last activity ──
+router.post('/:id/activity', protect, async (req, res) => {
+  try {
+    const { id: courseId } = req.params;
+    const userId = req.user.id;
+    const enrollment = await Enrollment.findOne({ where: { courseId, userId } });
+    if (enrollment) {
+      enrollment.lastAccessedAt = new Date();
+      await enrollment.save();
+      return res.json({ success: true });
+    }
+    res.status(404).json({ message: 'Enrollment not found' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -619,6 +641,10 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
       progress.completedAt = new Date();
       await progress.save();
     }
+
+    // Also update enrollment activity
+    enrollment.lastAccessedAt = new Date();
+    await enrollment.save();
 
     res.json({ message: 'Đã đánh dấu hoàn thành bài học', progress });
   } catch (error) {

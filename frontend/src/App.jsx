@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './contexts/AuthContext';
 import Header from './components/Header';
@@ -20,6 +20,9 @@ import CheckoutPage from './pages/CheckoutPage';
 import StudentDashboard from './pages/StudentDashboard';
 import CourseCongrats from './pages/CourseCongrats';
 import PrivateRoute from './components/PrivateRoute';
+import { BookOpen, X } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
+
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id_here';
 
@@ -48,10 +51,32 @@ const LearningLayout = () => (
   </div>
 );
 
+// Layout for Checkout — mini header, no footer, full screen gradient
+const CheckoutLayout = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="checkout-layout-container">
+      <header className="checkout-mini-header">
+        <div className="checkout-mini-logo" onClick={() => navigate('/')}>
+          <BookOpen size={28} />
+          <span>EducoreAcademy</span>
+        </div>
+        <button className="checkout-cancel-link" onClick={() => navigate(-1)}>
+          Cancel
+        </button>
+      </header>
+      <main className="checkout-main-content">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
+        <Toaster position="top-right" reverseOrder={false} />
         <Router>
           <Routes>
             {/* Auth pages — no header */}
@@ -73,7 +98,15 @@ function App() {
 
               <Route path="/course/:id" element={<CoursePage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
-              <Route path="/checkout/:courseId" element={<CheckoutPage />} />
+            </Route>
+
+            {/* Checkout page — custom layout */}
+            <Route element={<CheckoutLayout />}>
+               <Route path="/checkout/:courseId" element={
+                 <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                   <CheckoutPage />
+                 </PrivateRoute>
+               } />
             </Route>
 
             {/* ----- STUDENT ROUTES (Full Screen) ----- */}

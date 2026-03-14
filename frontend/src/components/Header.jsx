@@ -49,6 +49,8 @@ const Header = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchContainerRef = useRef(null);
+  
+  const [hasEnrolledCourses, setHasEnrolledCourses] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -96,6 +98,27 @@ const Header = () => {
     };
     fetchNotifications();
   }, []);
+
+  useEffect(() => {
+    const checkEnrollment = async () => {
+      if (isLoggedIn) {
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const res = await axios.get('http://localhost:5000/api/users/student/stats', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data && res.data.totalCourses > 0) {
+              setHasEnrolledCourses(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking enrollment stats:', error);
+        }
+      }
+    };
+    checkEnrollment();
+  }, [isLoggedIn]);
 
   // Handle outside click for notification and search dropdown
   useEffect(() => {
@@ -235,7 +258,7 @@ const Header = () => {
           </div>
         ) : (
           <div className="user-actions">
-            {!isInstructorRoute && (
+            {!isInstructorRoute && hasEnrolledCourses && (
               <Link to="/student-dashboard" className="my-courses-link">Khóa học của tôi</Link>
             )}
             

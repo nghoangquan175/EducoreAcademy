@@ -42,7 +42,7 @@
     font-weight: 800;
     letter-spacing: -1px;
     background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
-    -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -208,8 +208,15 @@
 }
 
 @keyframes instFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .inst-content-title {
@@ -258,9 +265,20 @@
     justify-content: center;
 }
 
-.inst-stat-icon-wrapper.earnings { background: #f0fdf4; color: #10b981; }
-.inst-stat-icon-wrapper.courses { background: #eff6ff; color: #3b82f6; }
-.inst-stat-icon-wrapper.students { background: #fdf2f8; color: #ec4899; }
+.inst-stat-icon-wrapper.earnings {
+    background: #f0fdf4;
+    color: #10b981;
+}
+
+.inst-stat-icon-wrapper.courses {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.inst-stat-icon-wrapper.students {
+    background: #fdf2f8;
+    color: #ec4899;
+}
 
 .inst-stat-info h3 {
     font-size: 0.875rem;
@@ -332,10 +350,25 @@
     font-weight: 700;
 }
 
-.inst-status-badge.published { background: #f0fdf4; color: #10b981; }
-.inst-status-badge.draft { background: #f8fafc; color: #94a3b8; }
-.inst-status-badge.pending { background: #fffbeb; color: #f59e0b; }
-.inst-status-badge.rejected { background: #fef2f2; color: #ef4444; }
+.inst-status-badge.published {
+    background: #f0fdf4;
+    color: #10b981;
+}
+
+.inst-status-badge.draft {
+    background: #f8fafc;
+    color: #94a3b8;
+}
+
+.inst-status-badge.pending {
+    background: #fffbeb;
+    color: #f59e0b;
+}
+
+.inst-status-badge.rejected {
+    background: #fef2f2;
+    color: #ef4444;
+}
 
 /* Buttons & Actions */
 .inst-actions {
@@ -355,9 +388,20 @@
     transition: all 0.2s;
 }
 
-.inst-btn.view { background: #f8fafc; color: #64748b; }
-.inst-btn.approve { background: #f0fdf4; color: #10b981; }
-.inst-btn.reject { background: #fef2f2; color: #ef4444; }
+.inst-btn.view {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.inst-btn.approve {
+    background: #f0fdf4;
+    color: #10b981;
+}
+
+.inst-btn.reject {
+    background: #fef2f2;
+    color: #ef4444;
+}
 
 .inst-btn:hover {
     transform: translateY(-2px);
@@ -384,8 +428,14 @@
     width: fit-content;
 }
 
-.inst-add-btn.primary { background: #10b981; color: white; }
-.inst-add-btn:hover { background: #059669; }
+.inst-add-btn.primary {
+    background: #10b981;
+    color: white;
+}
+
+.inst-add-btn:hover {
+    background: #059669;
+}
 
 .inst-placeholder-content {
     display: flex;
@@ -423,12 +473,15 @@
         top: 0;
         bottom: 0;
     }
+
     .inst-sidebar.open {
         left: 0;
     }
+
     .inst-mobile-toggle {
         display: flex;
     }
+
     .inst-content-wrapper {
         padding: 20px;
     }

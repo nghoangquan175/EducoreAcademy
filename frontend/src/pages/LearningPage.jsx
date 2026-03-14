@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ReactPlayer from 'react-player';
 import axios from 'axios';
 import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock } from 'react-icons/fa';
@@ -9,6 +9,7 @@ import './LearningPage.css';
 const LearningPage = () => {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -116,6 +117,12 @@ const LearningPage = () => {
   }, [courseId, lessonId]);
 
   useEffect(() => {
+    if (searchParams.get('quiz') === 'true' && currentLesson?.quiz) {
+       setShowQuiz(true);
+    }
+  }, [searchParams, currentLesson]);
+
+  useEffect(() => {
     const fetchLatestAttempt = async () => {
       if (!currentLesson?.quiz) return;
       try {
@@ -163,6 +170,11 @@ const LearningPage = () => {
       await axios.post(`http://localhost:5000/api/courses/lessons/${lessonId}/complete`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Explicitly update activity
+      axios.post(`http://localhost:5000/api/courses/${courseId}/activity`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(e => console.error("Activity ping failed:", e));
+
       if (!passedLessons.includes(parseInt(lessonId))) {
         setPassedLessons([...passedLessons, parseInt(lessonId)]);
       }
@@ -189,6 +201,11 @@ const LearningPage = () => {
         await axios.post(`http://localhost:5000/api/courses/lessons/${lessonId}/complete`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        // Explicitly update activity
+        axios.post(`http://localhost:5000/api/courses/${courseId}/activity`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(e => console.error("Activity ping failed:", e));
+
         if (!passedLessons.includes(parseInt(lessonId))) {
           setPassedLessons([...passedLessons, parseInt(lessonId)]);
         }
