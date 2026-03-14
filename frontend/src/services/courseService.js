@@ -3,8 +3,8 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Fetch published courses — optional category & type ('pro' or 'free')
-export const fetchCoursesAPI = (category = '', type = '') => {
-  const params = {};
+export const fetchCoursesAPI = (category = '', type = '', page = 1, limit = 8) => {
+  const params = { page, limit };
   if (category && category !== 'Tất cả') params.category = category;
   if (type) params.type = type;
   return axios.get(`${API_URL}/courses`, { params });

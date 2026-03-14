@@ -8,6 +8,10 @@ const { notifyAdmins } = require('../utils/notificationUtils');
 // ── GET /api/courses — Public: list published courses (optional ?category=, ?type=pro/free) ──
 router.get('/', async (req, res) => {
   try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 8;
+    const offset = (page - 1) * limit;
+
     const where = { published: 2 };
     // Category filter
     if (req.query.category && req.query.category !== 'Tất cả') {
@@ -21,7 +25,7 @@ router.get('/', async (req, res) => {
     }
 
     const { sequelize } = require('../config/db');
-    const courses = await Course.findAll({
+    const { count, rows: courses } = await Course.findAndCountAll({
       where,
       attributes: {
         include: [
@@ -37,8 +41,17 @@ router.get('/', async (req, res) => {
       },
       order: [[sequelize.literal('(SELECT COUNT(*) FROM [Enrollments] WHERE [Enrollments].[courseId] = [Course].[id])'), 'DESC']],
       include: [{ model: User, as: 'instructor', attributes: ['name'] }],
+      limit,
+      offset,
+      distinct: true
     });
-    res.json(courses);
+
+    res.json({
+      courses,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      totalItems: count
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

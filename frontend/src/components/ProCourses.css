@@ -56,6 +56,91 @@
   max-width: 520px;
 }
 
+/* ─── Pagination ─────────────────────────────────────────────────────── */
+.pc-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 54px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pc-page-btn {
+  min-width: 42px;
+  height: 42px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.pc-page-btn:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #4f46e5;
+  background: #f5f7ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+}
+
+.pc-page-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pc-page-btn--active {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  border-color: transparent;
+  /* color: #ffffff !important; */
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+.pc-page-btn--active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+}
+
+.pc-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #f1f5f9;
+  color: #94a3b8;
+}
+
+.pc-page-nav {
+  padding: 0 14px;
+}
+
+/* Specific for Free Courses if needed */
+.fc-tab--active {
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  /* Emerald to Blue */
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.fc-section .pc-page-btn--active {
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.fc-section .pc-page-btn:hover:not(:disabled):not(.pc-page-btn--active) {
+  border-color: #10b981;
+  color: #059669;
+  background: #ecfdf5;
+}
+
 /* ─── Category Tabs ───────────────────────────────────────────────────── */
 .pc-tabs {
   display: flex;
@@ -194,7 +279,8 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-height: 2.9em; /* 2 lines exactly */
+  min-height: 2.9em;
+  /* 2 lines exactly */
 }
 
 .pc-card-desc {

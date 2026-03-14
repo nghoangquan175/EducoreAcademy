@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Users, Clock, ChevronRight, Gift } from 'lucide-react';
+import { Star, Users, Clock, ChevronRight, Gift, ChevronLeft } from 'lucide-react';
 import { fetchCoursesAPI, fetchCategoriesAPI } from '../services/courseService';
 // Tái sử dụng chung style với ProCourses (hoặc sao chép chỉnh màu nếu muốn)
 import './ProCourses.css';
@@ -66,6 +66,9 @@ const FreeCourses = () => {
   const [activeCategory, setActiveCategory] = useState('Tất cả');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 8;
 
   // Load categories once (only for free courses)
   useEffect(() => {
@@ -74,14 +77,22 @@ const FreeCourses = () => {
       .catch(console.error);
   }, []);
 
-  // Load courses whenever category changes, fetch ONLY free courses
+  // Load courses whenever category or page changes
   useEffect(() => {
     setLoading(true);
-    fetchCoursesAPI(activeCategory, 'free')
-      .then(({ data }) => setCourses(data))
+    fetchCoursesAPI(activeCategory, 'free', currentPage, limit)
+      .then(({ data }) => {
+        setCourses(data.courses);
+        setTotalPages(data.totalPages);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [activeCategory]);
+  }, [activeCategory, currentPage]);
+
+  const handleCategoryChange = (cat) => {
+    setActiveCategory(cat);
+    setCurrentPage(1); // Reset to first page
+  };
 
   return (
     <section className="pc-section fc-section">
@@ -106,7 +117,7 @@ const FreeCourses = () => {
             <button
               key={cat}
               className={`pc-tab ${activeCategory === cat ? 'pc-tab--active fc-tab--active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => handleCategoryChange(cat)}
             >
               {cat}
             </button>
@@ -116,22 +127,57 @@ const FreeCourses = () => {
         {/* Grid */}
         {loading ? (
           <div className="pc-grid">
-            {Array.from({ length: 3 }).map((_, i) => (
+            {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="pc-card-skeleton" />
             ))}
           </div>
         ) : courses.length === 0 ? (
           <div className="pc-empty">Chưa có khoá học miễn phí trong danh mục này.</div>
         ) : (
-          <div className="pc-grid">
-            {courses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onClick={(id) => navigate(`/course/${id}`)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="pc-grid">
+              {courses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onClick={(id) => navigate(`/course/${id}`)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="pc-pagination">
+                <button 
+                  className="pc-page-btn pc-page-nav"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i + 1}
+                    className={`pc-page-btn ${currentPage === i + 1 ? 'pc-page-btn--active' : ''}`}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button 
+                  className="pc-page-btn pc-page-nav"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

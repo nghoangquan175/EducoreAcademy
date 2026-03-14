@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Users, Clock, ChevronRight, Zap } from 'lucide-react';
+import { Star, Users, Clock, ChevronRight, Zap, ChevronLeft } from 'lucide-react';
 import { fetchCoursesAPI, fetchCategoriesAPI } from '../services/courseService';
 import './ProCourses.css';
 
@@ -62,6 +62,9 @@ const ProCourses = () => {
   const [activeCategory, setActiveCategory] = useState('Tất cả');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 8;
 
   // Load categories once
   useEffect(() => {
@@ -70,14 +73,22 @@ const ProCourses = () => {
       .catch(console.error);
   }, []);
 
-  // Load courses whenever category changes
+  // Load courses whenever category or page changes
   useEffect(() => {
     setLoading(true);
-    fetchCoursesAPI(activeCategory, 'pro')
-      .then(({ data }) => setCourses(data))
+    fetchCoursesAPI(activeCategory, 'pro', currentPage, limit)
+      .then(({ data }) => {
+        setCourses(data.courses);
+        setTotalPages(data.totalPages);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [activeCategory]);
+  }, [activeCategory, currentPage]);
+
+  const handleCategoryChange = (cat) => {
+    setActiveCategory(cat);
+    setCurrentPage(1); // Reset to first page when changing category
+  };
 
   return (
     <section className="pc-section">
@@ -102,7 +113,7 @@ const ProCourses = () => {
             <button
               key={cat}
               className={`pc-tab ${activeCategory === cat ? 'pc-tab--active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => handleCategoryChange(cat)}
             >
               {cat}
             </button>
@@ -112,22 +123,57 @@ const ProCourses = () => {
         {/* Grid */}
         {loading ? (
           <div className="pc-grid">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="pc-card-skeleton" />
             ))}
           </div>
         ) : courses.length === 0 ? (
           <div className="pc-empty">Chưa có khoá học trong danh mục này.</div>
         ) : (
-          <div className="pc-grid">
-            {courses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onClick={(id) => navigate(`/course/${id}`)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="pc-grid">
+              {courses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onClick={(id) => navigate(`/course/${id}`)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="pc-pagination">
+                <button 
+                  className="pc-page-btn pc-page-nav"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i + 1}
+                    className={`pc-page-btn ${currentPage === i + 1 ? 'pc-page-btn--active' : ''}`}
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button 
+                  className="pc-page-btn pc-page-nav"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
