@@ -85,12 +85,25 @@ const LearningPage = () => {
         // For now, I'll ensure passedRes.data includes all completed lessons.
         setPassedLessons(passedRes.data || []);
         
-        // If no lessonId provided, find the first lesson of the course and redirect
+        // If no lessonId provided, redirect to the latest unpassed lesson
         if (!lessonId && courseRes.data.chapters && courseRes.data.chapters.length > 0) {
-          const firstChapter = courseRes.data.chapters[0];
-          if (firstChapter.lessons && firstChapter.lessons.length > 0) {
-            const firstLesson = firstChapter.lessons[0];
-            navigate(`/learn/${courseId}/lesson/${firstLesson.id}`, { replace: true });
+          // Flatten all lessons to find the first unpassed one
+          const flattenedLessons = [];
+          courseRes.data.chapters.forEach(chap => {
+            if (chap.lessons) {
+              chap.lessons.forEach(l => flattenedLessons.push(l));
+            }
+          });
+
+          if (flattenedLessons.length > 0) {
+            // Find the first lesson that is NOT in passedLessons
+            // Also check lesson.completed from the progress map if available
+            const latestUnpassed = flattenedLessons.find(l => !passedRes.data.includes(l.id));
+            
+            // Redirect to latestUnpassed or the last lesson if all are passed
+            const targetLesson = latestUnpassed || flattenedLessons[flattenedLessons.length - 1];
+            
+            navigate(`/learn/${courseId}/lesson/${targetLesson.id}`, { replace: true });
             return;
           }
         }
@@ -123,6 +136,11 @@ const LearningPage = () => {
   useEffect(() => {
     if (searchParams.get('quiz') === 'true' && currentLesson?.quiz) {
        setShowQuiz(true);
+       if (searchParams.get('mode') === 'review') {
+         setQuizInitialMode(true);
+       } else {
+         setQuizInitialMode(false);
+       }
     }
   }, [searchParams, currentLesson]);
 

@@ -1,4 +1,4 @@
-const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal } = require('../models');
+const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal, Question, Chapter } = require('../models');
 
 // ── GET /api/users/student/stats ───────────────────────────────────────────
 exports.getStudentStats = async (req, res) => {
@@ -21,14 +21,101 @@ exports.getStudentStats = async (req, res) => {
     const totalPoints = quizAttempts.reduce((acc, curr) => acc + (curr.score || 0), 0);
 
     // Badges (Simple logic: 1 badge per completed course)
-    // In a real app, this might be a separate table or complex logic
-    const badges = Math.floor(totalPoints / 100); // Mock badge logic: 1 badge per 100 points
+    const badges = Math.floor(totalPoints / 100);
+
+    // Calculate Streak
+    // Get all unique dates from Progress and QuizAttempt
+    const progressDates = await Progress.findAll({
+      attributes: ['updatedAt', 'completedAt'],
+      include: [{ model: Enrollment, where: { userId }, attributes: [] }],
+      raw: true
+    });
+
+    const quizDates = await QuizAttempt.findAll({
+      where: { userId },
+      attributes: ['createdAt'],
+      raw: true
+    });
+
+    const allDates = new Set();
+    progressDates.forEach(p => {
+      if (p.completedAt) allDates.add(new Date(p.completedAt).toISOString().split('T')[0]);
+      allDates.add(new Date(p.updatedAt).toISOString().split('T')[0]);
+    });
+    quizDates.forEach(q => {
+      allDates.add(new Date(q.createdAt).toISOString().split('T')[0]);
+    });
+
+    const sortedDates = Array.from(allDates).sort((a, b) => b.localeCompare(a)); // Newest first
+
+    let streak = 0;
+    let bestStreak = 0;
+    
+    // Calculate current streak and best streak
+    if (sortedDates.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      
+      // Current streak check
+      let hasToday = sortedDates[0] === today;
+      let hasYesterday = sortedDates.includes(yesterday);
+      
+      if (hasToday || hasYesterday) {
+        streak = 1;
+        let lastDate = new Date(hasToday ? today : yesterday);
+        let startIdx = sortedDates.indexOf(hasToday ? today : yesterday) + 1;
+        
+        for (let i = startIdx; i < sortedDates.length; i++) {
+          const prevDate = new Date(sortedDates[i]);
+          const diff = Math.round((lastDate - prevDate) / (1000 * 60 * 60 * 24));
+          if (diff === 1) {
+            streak++;
+            lastDate = prevDate;
+          } else if (diff > 1) {
+            break;
+          }
+        }
+      }
+
+      // Best streak calculation (all-time)
+      let tempStreak = 1;
+      let maxStreak = 1;
+      for (let i = 1; i < sortedDates.length; i++) {
+        const d1 = new Date(sortedDates[i-1]);
+        const d2 = new Date(sortedDates[i]);
+        const diff = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+        if (diff === 1) {
+          tempStreak++;
+        } else {
+          maxStreak = Math.max(maxStreak, tempStreak);
+          tempStreak = 1;
+        }
+      }
+      bestStreak = Math.max(maxStreak, tempStreak);
+    }
+
+    // Generate Last 7 Days Activity
+    const last7Days = [];
+    const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      last7Days.push({
+        day: dayNames[d.getDay()],
+        active: allDates.has(dateStr),
+        date: dateStr
+      });
+    }
 
     res.json({
       totalCourses,
       completedLessons,
       points: totalPoints,
-      badges
+      badges,
+      streak,
+      bestStreak,
+      last7Days
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -51,7 +138,7 @@ exports.getEnrolledCourses = async (req, res) => {
 
     const courses = await Promise.all(enrollments.map(async (en) => {
       const course = en.Course;
-      
+
       // Calculate progress
       const totalLessons = await Lesson.count({
         include: [{
@@ -64,8 +151,8 @@ exports.getEnrolledCourses = async (req, res) => {
         where: { enrollmentId: en.id }
       });
 
-      const progressPercent = totalLessons > 0 
-        ? Math.round((completedLessons / totalLessons) * 100) 
+      const progressPercent = totalLessons > 0
+        ? Math.round((completedLessons / totalLessons) * 100)
         : 0;
 
       return {
@@ -89,24 +176,30 @@ exports.getEnrolledCourses = async (req, res) => {
 exports.getQuizAttempts = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { Chapter, Course } = require('../models');
     const attempts = await QuizAttempt.findAll({
       where: { userId },
       include: [
         {
           model: Quiz,
-          include: [{ 
-            model: Lesson, 
-            attributes: ['id', 'title'],
-            include: [{
-              model: Chapter,
-              attributes: ['title'],
+          include: [
+            {
+              model: Lesson,
+              attributes: ['id', 'title'],
               include: [{
-                model: Course,
-                attributes: ['id', 'title']
+                model: Chapter,
+                attributes: ['title'],
+                include: [{
+                  model: Course,
+                  attributes: ['id', 'title']
+                }]
               }]
-            }]
-          }]
+            },
+            {
+              model: Question,
+              as: 'questions',
+              attributes: ['id']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -121,7 +214,8 @@ exports.getQuizAttempts = async (req, res) => {
       courseId: att.Quiz?.Lesson?.Chapter?.Course?.id,
       courseTitle: att.Quiz?.Lesson?.Chapter?.Course?.title || 'Unknown Course',
       score: att.score,
-      totalQuestions: att.totalQuestions,
+      totalQuestions: att.Quiz?.questions?.length || 0,
+      status: att.status,
       createdAt: att.createdAt
     }));
 
@@ -144,19 +238,21 @@ exports.getPendingQuizzes = async (req, res) => {
     });
     const enrollmentIds = enrollments.map(e => e.id);
 
-    // 2. Tìm các bài học đã hoàn thành (Progress) mà có Quiz (Lesson.Quiz)
+    // 2. Tìm các bài học đã học xong video (videoWatched: true) nhưng CHƯA hoàn thành (completed: false)
+    // vì bài học có quiz chỉ hoàn thành khi pass quiz
     const progressRecords = await Progress.findAll({
-      where: { 
+      where: {
         enrollmentId: enrollmentIds,
-        completed: true 
+        videoWatched: true,
+        completed: false
       },
       include: [{
         model: Lesson,
         required: true,
         include: [
-          { 
-            model: Quiz, 
-            as: 'quiz', 
+          {
+            model: Quiz,
+            as: 'quiz',
             required: true // Chỉ lấy những bài học có quiz
           },
           {
@@ -167,24 +263,29 @@ exports.getPendingQuizzes = async (req, res) => {
       }]
     });
 
-    // 3. Tìm các Quiz mà user đã từng làm
-    const attempts = await QuizAttempt.findAll({
-      where: { userId },
+    // 3. Tìm các Quiz mà user đã VƯỢT QUA (passed)
+    const passedAttempts = await QuizAttempt.findAll({
+      where: {
+        userId,
+        status: 'passed'
+      },
       attributes: ['quizId'],
       group: ['quizId']
     });
-    const attemptedQuizIds = attempts.map(a => a.quizId);
+    const passedQuizIds = passedAttempts.map(a => a.quizId);
 
-    // 4. Lọc ra những bài học có quiz nhưng CHƯA làm
+    // 4. Lọc ra những bài học có quiz nhưng CHƯA vượt qua
     const pendingQuizzes = progressRecords
-      .filter(p => p.Lesson && p.Lesson.quiz && !attemptedQuizIds.includes(p.Lesson.quiz.id))
+      .filter(p => p.Lesson && p.Lesson.quiz && !passedQuizIds.includes(p.Lesson.quiz.id))
       .map(p => ({
         id: p.Lesson.quiz.id,
         lessonId: p.Lesson.id,
         lessonTitle: p.Lesson.title,
+        chapterOrder: p.Lesson.Chapter?.chapterOrder,
+        lessonOrder: p.Lesson.lessonOrder,
         courseId: p.Lesson.Chapter?.Course?.id,
         courseTitle: p.Lesson.Chapter?.Course?.title || 'Unknown Course',
-        completedAt: p.updatedAt // Thời điểm hoàn thành bài học
+        lastAccessedAt: p.updatedAt // Thời điểm cập nhật tiến độ gần nhất
       }));
 
     res.json(pendingQuizzes);
@@ -256,7 +357,7 @@ exports.getLeaderboard = async (req, res) => {
     if (myRankIndex !== -1) {
       const actualRank = myRankIndex + 1;
       myPoints = parseInt(leaderboard[myRankIndex].totalPoints);
-      
+
       if (actualRank <= 5) {
         myRankLabel = actualRank.toString();
       } else if (actualRank <= 10) {
@@ -342,7 +443,7 @@ exports.updateStudyGoal = async (req, res) => {
   try {
     const { id } = req.params;
     const goal = await StudyGoal.findOne({ where: { id, userId: req.user.id } });
-    
+
     if (!goal) return res.status(404).json({ message: 'Goal not found' });
 
     await goal.update(req.body);
@@ -358,7 +459,7 @@ exports.deleteStudyGoal = async (req, res) => {
   try {
     const { id } = req.params;
     const result = await StudyGoal.destroy({ where: { id, userId: req.user.id } });
-    
+
     if (!result) return res.status(404).json({ message: 'Goal not found' });
 
     res.json({ message: 'Goal deleted successfully' });

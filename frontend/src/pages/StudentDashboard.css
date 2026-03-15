@@ -1263,6 +1263,11 @@
     color: #a16207;
 }
 
+.std-badge.danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
 :root.dark-theme .std-badge.success {
     background: rgba(22, 163, 74, 0.2);
     color: #4ade80;
@@ -1272,6 +1277,220 @@
     background: rgba(202, 138, 4, 0.2);
     color: #facc15;
 }
+
+:root.dark-theme .std-badge.danger {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+}
+
+/* Report Action Buttons */
+.report-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-action-small {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-action-small.review {
+    background: #eff6ff;
+    color: #3b82f6;
+    border-color: #dbeafe;
+}
+
+.btn-action-small.review:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+}
+
+.btn-action-small.retake {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.btn-action-small.retake:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+:root.dark-theme .btn-action-small.review {
+    background: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+:root.dark-theme .btn-action-small.review:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+:root.dark-theme .btn-action-small.retake {
+    background: rgba(148, 163, 184, 0.1);
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+:root.dark-theme .btn-action-small.retake:hover {
+    background: rgba(148, 163, 184, 0.2);
+    color: white;
+}
+
+/* Streak Card Styles */
+.std-streak-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, var(--main-bg) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.streak-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 10px 0;
+}
+
+.streak-main-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.streak-fire-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+}
+
+.streak-fire-icon {
+    color: #f97316;
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
+    animation: firePulse 2s infinite ease-in-out;
+}
+
+.streak-number {
+    position: absolute;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    z-index: 2;
+    pointer-events: none;
+    margin-top: 6px;
+}
+
+.streak-info {
+    flex: 1;
+}
+
+.streak-text {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.streak-record {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.streak-record strong {
+    color: #f97316;
+}
+
+/* Weekly Tracker */
+.streak-weekly-tracker {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 12px;
+}
+
+:root.dark-theme .streak-weekly-tracker {
+    background: rgba(255,255,255,0.03);
+}
+
+.tracker-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.tracker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    transition: all 0.3s;
+}
+
+:root.dark-theme .tracker-dot {
+    background: #475569;
+}
+
+.tracker-dot.active {
+    background: #f97316;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+    transform: scale(1.2);
+}
+
+.tracker-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.streak-message-box {
+    text-align: center;
+}
+
+.streak-message {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+    font-weight: 500;
+    font-style: italic;
+}
+
+@keyframes firePulse {
+    0%, 100% { 
+        transform: scale(1); 
+        opacity: 0.9;
+        filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
+    }
+    50% { 
+        transform: scale(1.15); 
+        opacity: 1; 
+        filter: drop-shadow(0 0 15px rgba(249, 115, 22, 0.7));
+    }
+}
+
+:root.dark-theme .std-streak-card {
+    border: 1px solid rgba(249, 115, 22, 0.15);
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(249, 115, 22, 0.05) 100%);
+}
+
+
 
 .std-empty-state {
     padding: 60px;

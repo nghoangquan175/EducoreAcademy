@@ -26,7 +26,8 @@ import {
   Plus,
   ChevronLeft,
   Sun,
-  Moon
+  Moon,
+  Flame
 } from 'lucide-react';
 
 import { useNavigate, Link } from 'react-router-dom';
@@ -334,14 +335,39 @@ const StudentDashboard = () => {
       </div>
 
       <div className="std-suggested-row">
-        <div className="std-card">
-          <div className="std-card-header">Tiến độ bài học</div>
-          <div className="mock-circle-chart">
-            {stats.totalCourses > 0 ? Math.round((stats.completedLessons / (stats.totalCourses * 10)) * 100) : 0}%
-          </div>
-          <div className="mock-circle-legend">
-            <div className="legend-item"><div className="dot blue-light"></div> Hoàn thành</div>
-            <div className="legend-item"><div className="dot blue"></div> Đang học</div>
+        <div className="std-card std-streak-card">
+          <div className="std-card-header">Chuỗi học tập</div>
+          <div className="streak-content">
+             <div className="streak-main-info">
+                <div className="streak-fire-box">
+                    <Flame className="streak-fire-icon" size={48} />
+                    <span className="streak-number">{stats.streak || 0}</span>
+                </div>
+                <div className="streak-info">
+                    <p className="streak-text">Ngày liên tục</p>
+                    <div className="streak-record">
+                      <span>Kỷ lục: <strong>{stats.bestStreak || 0}</strong> ngày</span>
+                    </div>
+                </div>
+             </div>
+             
+             <div className="streak-weekly-tracker">
+                {stats.last7Days?.map((day, index) => (
+                  <div key={index} className="tracker-day">
+                    <div className={`tracker-dot ${day.active ? 'active' : ''}`} title={day.date}></div>
+                    <span className="tracker-label">{day.day}</span>
+                  </div>
+                ))}
+             </div>
+
+             <div className="streak-message-box">
+                <p className="streak-message">
+                   {stats.streak >= 7 ? 'Cực cháy! Đừng dừng lại nhé! 🔥' : 
+                    stats.streak >= 3 ? 'Bạn đang làm rất tốt! 🚀' : 
+                    stats.streak >= 1 ? 'Khởi đầu tuyệt vời! 👍' : 
+                    'Học ngay để tạo chuỗi nào! ✨'}
+                </p>
+             </div>
           </div>
         </div>
 
@@ -526,9 +552,9 @@ const StudentDashboard = () => {
                    <th>Bài học</th>
                    <th>Chương</th>
                    <th>Khóa học</th>
-                   <th style={{ textAlign: 'center' }}>Điểm số</th>
                    <th style={{ textAlign: 'center' }}>Kết quả</th>
-                   <th style={{ textAlign: 'right' }}>Ngày làm</th>
+                   <th style={{ textAlign: 'center' }}>Ngày làm</th>
+                   <th style={{ textAlign: 'center' }}>Thao tác</th>
                 </tr>
              </thead>
              <tbody>
@@ -536,26 +562,37 @@ const StudentDashboard = () => {
                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>Chưa có lịch sử làm bài.</td></tr>
                 ) : (
                   quizAttempts.map(att => (
-                    <tr 
-                      key={att.id} 
-                      onClick={() => navigate(`/learn/${att.courseId}/lesson/${att.lessonId}?quiz=true`)}
-                      className="std-clickable-row"
-                    >
+                    <tr key={att.id}>
                        <td>{att.lessonTitle}</td>
                        <td style={{ color: 'var(--text-muted)', fontSize: '0.85em' }}>{att.chapterTitle}</td>
                        <td>{att.courseTitle}</td>
-                       <td style={{ textAlign: 'center' }}>{att.score}/{att.totalQuestions}</td>
                        <td style={{ textAlign: 'center' }}>
-                          <span className={`std-badge ${att.score / att.totalQuestions >= 0.8 ? 'success' : 'warning'}`}>
-                             {att.score / att.totalQuestions >= 0.8 ? 'Đạt' : 'Chưa đạt'} ({Math.round((att.score / att.totalQuestions) * 100)}%)
+                          <span className={`std-badge ${att.status === 'passed' ? 'success' : 'danger'}`}>
+                             {att.status === 'passed' ? 'Đạt' : 'Chưa đạt'} ({att.score}%)
                           </span>
                        </td>
-                       <td style={{ textAlign: 'right' }}>
+                       <td style={{ textAlign: 'center' }}>
                           {new Date(att.createdAt).toLocaleDateString('vi-VN', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric'
                           })}
+                       </td>
+                       <td style={{ textAlign: 'center' }}>
+                          <div className="report-actions">
+                             <button 
+                                className="btn-action-small review"
+                                onClick={() => navigate(`/learn/${att.courseId}/lesson/${att.lessonId}?quiz=true&mode=review`)}
+                             >
+                                Xem lại
+                             </button>
+                             <button 
+                                className="btn-action-small retake"
+                                onClick={() => navigate(`/learn/${att.courseId}/lesson/${att.lessonId}?quiz=true&mode=retake`)}
+                             >
+                                Làm lại
+                             </button>
+                          </div>
                        </td>
                     </tr>
                   ))
@@ -868,8 +905,8 @@ const StudentDashboard = () => {
                          style={{ cursor: 'pointer' }}
                        >
                           <div className="std-assignment-info">
-                             <h4>{quiz.lessonTitle}</h4>
-                             <span className="status-urgent">{quiz.courseTitle} • Đang chờ kiểm tra</span>
+                             <h4>Chương {quiz.chapterOrder} - Bài {quiz.lessonOrder}</h4>
+                             <span className="status-urgent">{quiz.lessonTitle} • {quiz.courseTitle}</span>
                           </div>
                        </div>
                     ))
