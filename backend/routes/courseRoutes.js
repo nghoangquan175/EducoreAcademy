@@ -293,6 +293,20 @@ router.get('/:id/learn', protect, async (req, res) => {
     if (enrollment) {
       enrollment.lastAccessedAt = new Date();
       await enrollment.save();
+
+      // Fetch user progress
+      const userProgress = await Progress.findAll({
+        where: { enrollmentId: enrollment.id }
+      });
+
+      // Map progress to lessons
+      course.chapters.forEach(chapter => {
+        chapter.lessons.forEach(lesson => {
+          const prog = userProgress.find(p => p.lessonId === lesson.id);
+          lesson.setDataValue('videoWatched', prog ? prog.videoWatched : false);
+          lesson.setDataValue('completed', prog ? prog.completed : false);
+        });
+      });
     }
     res.json(course);
   } catch (error) {
@@ -631,14 +645,23 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
     }
 
     // Create or find progress
+    const quiz = await Quiz.findOne({ where: { lessonId: lesson.id } });
+    
     const [progress, created] = await Progress.findOrCreate({
       where: { enrollmentId: enrollment.id, lessonId },
-      defaults: { completed: true, completedAt: new Date() }
+      defaults: { 
+        videoWatched: true,
+        completed: !quiz, // Mark completed ONLY if no quiz exists
+        completedAt: !quiz ? new Date() : null 
+      }
     });
 
-    if (!created && !progress.completed) {
-      progress.completed = true;
-      progress.completedAt = new Date();
+    if (!created) {
+      progress.videoWatched = true;
+      if (!quiz && !progress.completed) {
+        progress.completed = true;
+        progress.completedAt = new Date();
+      }
       await progress.save();
     }
 
@@ -646,7 +669,11 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
     enrollment.lastAccessedAt = new Date();
     await enrollment.save();
 
-    res.json({ message: 'Đã đánh dấu hoàn thành bài học', progress });
+    res.json({ 
+      message: quiz ? 'Đã ghi nhận xem video. Vui lòng hoàn thành bài kiểm tra để tiếp tục.' : 'Đã đánh dấu hoàn thành bài học', 
+      progress,
+      quizExists: !!quiz
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

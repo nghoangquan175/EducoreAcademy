@@ -8,48 +8,67 @@ const searchContent = async (req, res) => {
   try {
     const query = req.query.q;
     const instructorId = req.query.instructorId;
+    const studentId = req.query.studentId;
+    const authorId = req.query.authorId;
 
     if (!query || query.length < 2) {
       return res.status(400).json({ message: 'Search query must be at least 2 characters long' });
     }
 
-    // Search max 5-10 records total to be efficient
     const limitPerType = 5;
 
-    // Build the course where clause
+    // --- Course Search ---
     const courseWhere = {
       title: {
         [Op.substring]: query
       }
     };
 
-    // If instructorId is provided, filter by it and don't restrict to published only (they can search drafts)
-    if (instructorId) {
+    let courseInclude = [];
+
+    if (studentId) {
+      // Search only enrolled courses for this student
+      const { Enrollment } = require('../models');
+      courseInclude.push({
+        model: Enrollment,
+        where: { userId: studentId },
+        required: true, // INNER JOIN
+        attributes: [] // We don't need enrollment data, just the filter
+      });
+    } else if (instructorId) {
+      // Search courses taught by this instructor
       courseWhere.instructorId = instructorId;
     } else {
+      // Global search: only published courses
       courseWhere.published = 2; // 2 = Published
     }
 
     const courses = await Course.findAll({
       where: courseWhere,
+      include: courseInclude,
       limit: limitPerType,
       attributes: ['id', 'title', 'thumbnail', 'category']
     });
 
-    let articles = [];
-    // Only search articles if not strictly searching instructor courses
-    if (!instructorId) {
-      articles = await Article.findAll({
-        where: {
-          title: {
-            [Op.substring]: query
-          },
-          published: true
-        },
-        limit: limitPerType,
-        attributes: ['id', 'title', 'thumbnail']
-      });
+    // --- Article Search ---
+    const articleWhere = {
+      title: {
+        [Op.substring]: query
+      },
+      published: true
+    };
+
+    // If authorId is provided (Dashboard context), filter articles by author
+    // If not provided (Global context), search all published articles
+    if (authorId) {
+      articleWhere.authorId = authorId;
     }
+
+    const articles = await Article.findAll({
+      where: articleWhere,
+      limit: limitPerType,
+      attributes: ['id', 'title', 'thumbnail']
+    });
 
     // Formatting output
     const formattedCourses = courses.map(c => ({
@@ -67,9 +86,7 @@ const searchContent = async (req, res) => {
       type: 'article'
     }));
 
-    // Combine and slice to max 10 total if needed, but here limitPerType=5 means max 10 anyway
     const results = [...formattedCourses, ...formattedArticles];
-
     res.json(results);
 
   } catch (error) {

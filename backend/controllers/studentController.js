@@ -89,12 +89,24 @@ exports.getEnrolledCourses = async (req, res) => {
 exports.getQuizAttempts = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { Chapter, Course } = require('../models');
     const attempts = await QuizAttempt.findAll({
       where: { userId },
       include: [
         {
           model: Quiz,
-          include: [{ model: Lesson, attributes: ['title'] }]
+          include: [{ 
+            model: Lesson, 
+            attributes: ['id', 'title'],
+            include: [{
+              model: Chapter,
+              attributes: ['title'],
+              include: [{
+                model: Course,
+                attributes: ['id', 'title']
+              }]
+            }]
+          }]
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -103,7 +115,11 @@ exports.getQuizAttempts = async (req, res) => {
     const formattedAttempts = attempts.map(att => ({
       id: att.id,
       quizId: att.quizId,
+      lessonId: att.Quiz?.Lesson?.id,
       lessonTitle: att.Quiz?.Lesson?.title || 'Unknown Lesson',
+      chapterTitle: att.Quiz?.Lesson?.Chapter?.title || 'Unknown Chapter',
+      courseId: att.Quiz?.Lesson?.Chapter?.Course?.id,
+      courseTitle: att.Quiz?.Lesson?.Chapter?.Course?.title || 'Unknown Course',
       score: att.score,
       totalQuestions: att.totalQuestions,
       createdAt: att.createdAt

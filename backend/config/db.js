@@ -65,6 +65,16 @@ const connectDB = async () => {
         BEGIN
           ALTER TABLE [dbo].[Enrollments] ADD [lastAccessedAt] DATETIME2 NULL
         END
+
+        -- Progress videoWatched
+        IF NOT EXISTS (
+          SELECT * FROM sys.columns 
+          WHERE object_id = OBJECT_ID(N'[dbo].[Progresses]') 
+          AND name = 'videoWatched'
+        )
+        BEGIN
+          ALTER TABLE [dbo].[Progresses] ADD [videoWatched] BIT DEFAULT 0 NOT NULL
+        END
       `);
     } catch (err) {
       console.log('Manual migration notice: schema check completed.');

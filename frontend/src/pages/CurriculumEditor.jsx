@@ -166,32 +166,32 @@ const CurriculumEditor = ({ courseId, onClose }) => {
     }
   };
 
-  if (loading) return <div className="curriculum-loading">Đang tải giáo trình...</div>;
+  if (loading) return <div className="cur-curriculum-loading">Đang tải giáo trình...</div>;
 
   return (
-    <div className="curriculum-editor-container inst-content-fade-in">
+    <div className="cur-curriculum-editor-container inst-content-fade-in">
       <div className="inst-section-header">
         <h2 className="inst-content-title">Quản lý Giáo trình</h2>
         <button className="inst-btn view" onClick={onClose}>Quay lại</button>
       </div>
       <p className="inst-section-desc">Thiết kế cấu trúc khóa học của bạn bằng cách thêm chương và bài học. Kéo thả để sắp xếp (v1.0 - inline update).</p>
 
-      <div className="chapters-list">
+      <div className="cur-chapters-list">
         {course.chapters && course.chapters.map((chapter) => (
-          <div key={chapter.id} className="chapter-edit-card shadow-sm">
-            <div className="chapter-edit-header">
-              <div className="chapter-title-group">
-                <GripVertical size={20} className="drag-handle" />
+          <div key={chapter.id} className="cur-chapter-edit-card shadow-sm">
+            <div className="cur-chapter-edit-header">
+              <div className="cur-chapter-title-group">
+                <GripVertical size={20} className="cur-drag-handle" />
                 {editingChapterId === chapter.id ? (
-                  <div className="inline-edit-group">
+                  <div className="cur-inline-edit-group">
                     <input 
                       autoFocus
                       defaultValue={chapter.title}
                       onChange={(e) => setTempData({...tempData, [chapter.id]: e.target.value})}
-                      className="inline-input"
+                      className="cur-inline-input"
                     />
-                    <button className="icon-save-btn" onClick={() => handleUpdateChapter(chapter.id)}><Check size={18} /></button>
-                    <button className="icon-cancel-btn" onClick={() => setEditingChapterId(null)}><X size={18} /></button>
+                    <button className="cur-icon-save-btn" onClick={() => handleUpdateChapter(chapter.id)}><Check size={18} /></button>
+                    <button className="cur-icon-cancel-btn" onClick={() => setEditingChapterId(null)}><X size={18} /></button>
                   </div>
                 ) : (
                   <h3 onClick={() => setEditingChapterId(chapter.id)} style={{ cursor: 'pointer' }}>
@@ -199,20 +199,20 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                   </h3>
                 )}
               </div>
-              <div className="chapter-actions">
-                <button className="chapter-action-btn delete" onClick={() => handleDeleteChapter(chapter.id)} title="Xóa chương">
+              <div className="cur-chapter-actions">
+                <button className="cur-chapter-action-btn delete" onClick={() => handleDeleteChapter(chapter.id)} title="Xóa chương">
                   <Trash2 size={18} />
                 </button>
               </div>
             </div>
 
-            <div className="lessons-edit-list">
+            <div className="cur-lessons-edit-list">
               {chapter.lessons && chapter.lessons.map((lesson) => (
-                <div key={lesson.id} className="lesson-edit-item">
-                  <div className="lesson-info">
+                <div key={lesson.id} className="cur-lesson-edit-item">
+                  <div className="cur-lesson-info">
                     {editingLessonId === lesson.id ? (
-                      <div className="lesson-full-edit-form">
-                        <div className="form-grid">
+                      <div className="cur-lesson-full-edit-form">
+                        <div className="cur-form-grid">
                           <input 
                             placeholder="Tên bài học"
                             defaultValue={lesson.title}
@@ -223,13 +223,13 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                             defaultValue={lesson.videoUrl}
                             onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), videoUrl: e.target.value}})}
                           />
-                          <div className="flex-row">
+                          <div className="cur-flex-row">
                              <input 
                                 placeholder="Thời lượng (vd: 10:20)"
                                 defaultValue={lesson.duration}
                                 onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), duration: e.target.value}})}
                              />
-                             <label className="free-preview-toggle">
+                             <label className="cur-free-preview-toggle">
                                 <input 
                                   type="checkbox" 
                                   defaultChecked={lesson.isFree} 
@@ -239,23 +239,23 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                              </label>
                           </div>
                         </div>
-                        <div className="lesson-edit-footer">
-                          <button className="btn-small save" onClick={() => handleUpdateLesson(lesson.id)}>Lưu</button>
-                          <button className="btn-small cancel" onClick={() => setEditingLessonId(null)}>Hủy</button>
+                        <div className="cur-lesson-edit-footer">
+                          <button className="cur-btn-small save" onClick={() => handleUpdateLesson(lesson.id)}>Lưu</button>
+                          <button className="cur-btn-small cancel" onClick={() => setEditingLessonId(null)}>Hủy</button>
                         </div>
                       </div>
                     ) : (
                       <>
-                        <PlayCircle size={16} className="lesson-icon" />
-                        <span className="lesson-name">{lesson.title}</span>
-                        {lesson.isFree && <span className="badge preview">Học thử</span>}
-                        <span className="lesson-time">{lesson.duration || '--:--'}</span>
+                        <PlayCircle size={16} className="cur-lesson-icon" />
+                        <span className="cur-lesson-name">{lesson.title}</span>
+                        {lesson.isFree && <span className="cur-badge preview">Học thử</span>}
+                        <span className="cur-lesson-time">{lesson.duration || '--:--'}</span>
                       </>
                     )}
                   </div>
                   {!editingLessonId && (
-                    <div className="lesson-actions">
-                      <button className="lesson-action-btn edit" onClick={() => {
+                    <div className="cur-lesson-actions">
+                      <button className="cur-lesson-action-btn edit" onClick={() => {
                         setEditingLessonId(lesson.id);
                         setTempData({...tempData, [lesson.id]: {
                           title: lesson.title,
@@ -266,11 +266,11 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                       }}>
                         <Edit size={16} />
                       </button>
-                      <button className="lesson-action-btn delete" onClick={() => handleDeleteLesson(lesson.id)}>
+                      <button className="cur-lesson-action-btn delete" onClick={() => handleDeleteLesson(lesson.id)}>
                         <Trash2 size={16} />
                       </button>
                       <button 
-                        className="lesson-action-btn quiz" 
+                        className="cur-lesson-action-btn quiz" 
                         title="Quản lý bài kiểm tra"
                         onClick={() => {
                           setSelectedLessonId(lesson.id);
@@ -285,9 +285,9 @@ const CurriculumEditor = ({ courseId, onClose }) => {
               ))}
               
               {addingLessonToChapterId === chapter.id ? (
-                <div className="add-lesson-inline-form-full">
-                  <div className="form-grid">
-                    <div className="form-group-row">
+                <div className="cur-add-lesson-inline-form-full">
+                  <div className="cur-form-grid">
+                    <div className="cur-form-group-row">
                       <input 
                         autoFocus
                         placeholder="Tên bài học mới..."
@@ -303,16 +303,16 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                       />
                     </div>
                     
-                    <div className="video-source-box">
-                      <div className="source-tabs">
+                    <div className="cur-video-source-box">
+                      <div className="cur-source-tabs">
                         <button 
-                          className={`source-tab ${newLesson.videoSource === 'link' ? 'active' : ''}`}
+                          className={`cur-source-tab ${newLesson.videoSource === 'link' ? 'active' : ''}`}
                           onClick={() => setNewLesson({ ...newLesson, videoSource: 'link', videoUrl: '' })}
                         >
                           Dán link video
                         </button>
                         <button 
-                          className={`source-tab ${newLesson.videoSource === 'upload' ? 'active' : ''}`}
+                          className={`cur-source-tab ${newLesson.videoSource === 'upload' ? 'active' : ''}`}
                           onClick={() => setNewLesson({ ...newLesson, videoSource: 'upload', videoUrl: '' })}
                         >
                           Tải lên video
@@ -326,7 +326,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                           onChange={(e) => setNewLesson({ ...newLesson, videoUrl: e.target.value })}
                         />
                       ) : (
-                        <div className="lesson-upload-area">
+                        <div className="cur-lesson-upload-area">
                           <input 
                             type="file" 
                             id="lesson-video-upload" 
@@ -334,16 +334,16 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                             onChange={handleLessonVideoUpload} 
                             style={{ display: 'none' }}
                           />
-                          <label htmlFor="lesson-video-upload" className="lesson-upload-label">
+                          <label htmlFor="lesson-video-upload" className="cur-lesson-upload-label">
                             {uploadingLessonVideo ? 'Đang tải lên...' : newLesson.videoUrl ? 'Đã tải xong' : 'Chọn video'}
                           </label>
-                          {newLesson.videoUrl && <span className="upload-success-check"><Check size={16} /></span>}
+                          {newLesson.videoUrl && <span className="cur-upload-success-check"><Check size={16} /></span>}
                         </div>
                       )}
                     </div>
 
-                    <div className="form-footer-row">
-                      <label className="free-preview-toggle">
+                    <div className="cur-form-footer-row">
+                      <label className="cur-free-preview-toggle">
                         <input 
                           type="checkbox" 
                           checked={newLesson.isFree} 
@@ -352,14 +352,14 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                         Học thử
                       </label>
                       <div className="add-lesson-actions">
-                        <button className="btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo}>Thêm Bài Học</button>
-                        <button className="btn-small cancel" onClick={() => setAddingLessonToChapterId(null)}>Hủy</button>
+                        <button className="cur-btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo}>Thêm Bài Học</button>
+                        <button className="cur-btn-small cancel" onClick={() => setAddingLessonToChapterId(null)}>Hủy</button>
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <button className="add-lesson-btn" onClick={() => {
+                <button className="cur-add-lesson-btn" onClick={() => {
                   setAddingLessonToChapterId(chapter.id);
                   setNewLesson({ title: '', duration: '', isFree: false, videoUrl: '', videoSource: 'link' });
                 }}>
@@ -371,7 +371,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
         ))}
       </div>
 
-      <div className="add-chapter-foot shadow-sm">
+      <div className="cur-add-chapter-foot shadow-sm">
         <input 
           type="text" 
           placeholder="Tên chương mới... (vd: Giới thiệu căn bản)" 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
+  FileText,
+  PlayCircle,
   LayoutDashboard, 
   BookOpen, 
   History,
@@ -11,7 +13,6 @@ import {
   Search,
   Calendar,
   Bell,
-  MoreVertical,
   BookMarked,
   Video,
   HelpCircle,
@@ -23,13 +24,20 @@ import {
   Clock,
   Trash2,
   Plus,
-  ChevronLeft
+  ChevronLeft,
+  Sun,
+  Moon
 } from 'lucide-react';
+
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { useTheme } from '../contexts/ThemeContext';
+import NotificationBell from '../components/NotificationBell';
+
 import './StudentDashboard.css';
+
 
 const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -44,7 +52,17 @@ const StudentDashboard = () => {
   const [courses, setCourses] = useState([]);
   const [filterType, setFilterType] = useState('all'); // 'all', 'in-progress', 'completed'
   const [courseSearch, setCourseSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Global Search states
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [globalSearchResults, setGlobalSearchResults] = useState([]);
+  const [isGlobalSearching, setIsGlobalSearching] = useState(false);
+  const [showGlobalSearchDropdown, setShowGlobalSearchDropdown] = useState(false);
+  const globalSearchRef = useRef(null);
+
   const [showCalendar, setShowCalendar] = useState(false);
+
   const [quizAttempts, setQuizAttempts] = useState([]);
   const [pendingQuizzes, setPendingQuizzes] = useState([]);
   const [upcomingGoals, setUpcomingGoals] = useState([]);
@@ -65,29 +83,78 @@ const StudentDashboard = () => {
   
   const hasGreeted = useRef(false);
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
+
   const menuItems = [
-    { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={20} /> },
-    { id: 'courses', label: 'Courses', icon: <BookOpen size={20} /> },
-    { id: 'material', label: 'Material', icon: <BookMarked size={20} /> },
-    { id: 'lectures', label: 'Lectures', icon: <Video size={20} /> },
-    { id: 'tests', label: 'Test & Report', icon: <BarChart3 size={20} /> },
-    { id: 'doubt', label: 'Doubt', icon: <HelpCircle size={20} /> },
-    { id: 'payment', label: 'Payment', icon: <CreditCard size={20} /> },
-    { id: 'settings', label: 'Settings', icon: <Settings size={20} /> },
+    { id: 'overview', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
+    { id: 'courses', label: 'Khóa học', icon: <BookOpen size={20} /> },
+    { id: 'material', label: 'Tài liệu', icon: <BookMarked size={20} /> },
+    { id: 'lectures', label: 'Bài giảng', icon: <Video size={20} /> },
+    { id: 'tests', label: 'Bài tập & Báo cáo', icon: <BarChart3 size={20} /> },
+    { id: 'doubt', label: 'Giải đáp', icon: <HelpCircle size={20} /> },
+    { id: 'payment', label: 'Thanh toán', icon: <CreditCard size={20} /> },
+    { id: 'settings', label: 'Cài đặt', icon: <Settings size={20} /> },
   ];
 
   useEffect(() => {
     fetchDashboardData();
     if (user?.name && !hasGreeted.current) {
-      toast.success(`Welcome back, ${user.name}!`, {
+      toast.success(`Chào mừng trở lại, ${user.name}!`, {
         icon: '👋',
         duration: 4000
       });
       hasGreeted.current = true;
     }
   }, []);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(courseSearch);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [courseSearch]);
+
+  // Global Search Debounce Effect
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (globalSearch.trim().length >= 2) {
+        setIsGlobalSearching(true);
+        try {
+          // Scoped search for student dashboard: only enrolled courses and authored articles
+          const res = await axios.get(`http://localhost:5000/api/search?q=${encodeURIComponent(globalSearch)}&studentId=${user?.id}&authorId=${user?.id}`);
+          setGlobalSearchResults(res.data);
+          setShowGlobalSearchDropdown(true);
+        } catch (error) {
+          console.error('Global search error:', error);
+        } finally {
+          setIsGlobalSearching(false);
+        }
+      }
+ else {
+        setGlobalSearchResults([]);
+        setShowGlobalSearchDropdown(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [globalSearch]);
+
+  // Handle outside click for global search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (globalSearchRef.current && !globalSearchRef.current.contains(event.target)) {
+        setShowGlobalSearchDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
 
   useEffect(() => {
     if (showCalendar) {
@@ -225,20 +292,20 @@ const StudentDashboard = () => {
       <div className="std-analytics-row">
         <div className="std-card">
           <div className="std-card-header">
-            <span>Platform Statistics</span>
+            <span>Thống kê học tập</span>
           </div>
           <div className="std-stats-grid">
              <div className="std-stat-item">
                 <span className="stat-value">{stats.totalCourses}</span>
-                <span className="stat-label">Courses</span>
+                <span className="stat-label">Khóa học</span>
              </div>
              <div className="std-stat-item">
                 <span className="stat-value">{stats.points}</span>
-                <span className="stat-label">Points</span>
+                <span className="stat-label">Điểm số</span>
              </div>
              <div className="std-stat-item">
                 <span className="stat-value">{stats.badges}</span>
-                <span className="stat-label">Badges</span>
+                <span className="stat-label">Huy hiệu</span>
              </div>
           </div>
         </div>
@@ -246,7 +313,7 @@ const StudentDashboard = () => {
         {/* Recently Active Card integrated into Overview */}
         {recentlyActive && (
           <div className="std-card std-hero-card-compact" onClick={() => navigate(`/learn/${recentlyActive.id}`)}>
-             <div className="std-card-header">Recently Active</div>
+             <div className="std-card-header">Hoạt động gần đây</div>
              <div className="hero-compact-body">
                 <div className="hero-compact-thumb-wrap">
                    <img src={recentlyActive.thumbnail || 'https://via.placeholder.com/100x60'} alt="Course" />
@@ -261,25 +328,25 @@ const StudentDashboard = () => {
                    </div>
                 </div>
              </div>
-             <button className="std-resume-btn-mini">Resume Project <ChevronRight size={14} /></button>
+             <button className="std-resume-btn-mini">Tiếp tục học <ChevronRight size={14} /></button>
           </div>
         )}
       </div>
 
       <div className="std-suggested-row">
         <div className="std-card">
-          <div className="std-card-header">Learning Activity</div>
+          <div className="std-card-header">Tiến độ bài học</div>
           <div className="mock-circle-chart">
             {stats.totalCourses > 0 ? Math.round((stats.completedLessons / (stats.totalCourses * 10)) * 100) : 0}%
           </div>
           <div className="mock-circle-legend">
-            <div className="legend-item"><div className="dot blue-light"></div> Complete</div>
-            <div className="legend-item"><div className="dot blue"></div> In Progress</div>
+            <div className="legend-item"><div className="dot blue-light"></div> Hoàn thành</div>
+            <div className="legend-item"><div className="dot blue"></div> Đang học</div>
           </div>
         </div>
 
         <div className="std-card">
-          <div className="std-card-header">Top Performance</div>
+          <div className="std-card-header">Bảng xếp hạng</div>
           <div className="std-perf-list">
             {leaderboard?.top5?.map((item) => (
                <div key={item.userId} className={`perf-item ${item.userId === user?.id ? 'personal' : ''}`}>
@@ -289,7 +356,7 @@ const StudentDashboard = () => {
                      </div>
                      <span className="perf-name">{item.name}</span>
                   </div>
-                  <span className="perf-score">{item.points} pts</span>
+                  <span className="perf-score">{item.points} điểm</span>
                </div>
             ))}
             
@@ -300,9 +367,9 @@ const StudentDashboard = () => {
                   <div className="perf-item personal">
                      <div className="perf-user">
                         <div className="perf-rank rank-me">{leaderboard.myRank.rank}</div>
-                        <span className="perf-name">{user?.name} (You)</span>
+                        <span className="perf-name">{user?.name} (Bạn)</span>
                      </div>
-                     <span className="perf-score">{leaderboard.myRank.points} pts</span>
+                     <span className="perf-score">{leaderboard.myRank.points} điểm</span>
                   </div>
                </>
             )}
@@ -314,8 +381,8 @@ const StudentDashboard = () => {
       <div className="std-suggested-row">
         <div className="std-card">
            <div className="std-card-header">
-              <span>My Recent Courses</span>
-              <button className="std-view-all-btn" onClick={() => setActiveTab('courses')}>View all</button>
+              <span>Khóa học của tôi</span>
+              <button className="std-view-all-btn" onClick={() => setActiveTab('courses')}>Xem tất cả</button>
            </div>
            <div className="std-suggested-grid">
               {courses.slice(0, 3).map(course => (
@@ -323,7 +390,7 @@ const StudentDashboard = () => {
                     <img src={course.thumbnail || 'https://via.placeholder.com/48'} className="std-item-thumb" />
                     <div className="std-item-info">
                        <h4 className="std-item-title">{course.title}</h4>
-                       <span className="std-item-author">Instructor: {course.instructorName}</span>
+                       <span className="std-item-author">Giảng viên: {course.instructorName}</span>
                     </div>
                     <ChevronRight size={16} className="std-item-arrow" />
                  </div>
@@ -331,20 +398,20 @@ const StudentDashboard = () => {
            </div>
         </div>
         <div className="std-card">
-           <div className="std-card-header">Today's Class</div>
+           <div className="std-card-header">Lịch học hôm nay</div>
            <div className="std-class-card">
               <div className="class-header">
                  <div className="class-icon-box">
                     <BookMarked size={24} />
                  </div>
                  <div className="class-info">
-                    <h4 className="class-title">Advanced Web Dev</h4>
-                    <span className="class-time">Live • 12:00 PM</span>
+                    <h4 className="class-title">Phát triển Web nâng cao</h4>
+                    <span className="class-time">Trực tiếp • 12:00 PM</span>
                  </div>
               </div>
               <div className="class-footer">
-                 <span className="class-stat"><Clock size={12} /> 3 Hours</span>
-                 <span className="class-stat"><Check size={12} /> 21 Students</span>
+                 <span className="class-stat"><Clock size={12} /> 3 Giờ</span>
+                 <span className="class-stat"><Check size={12} /> 21 Học viên</span>
               </div>
            </div>
         </div>
@@ -355,7 +422,8 @@ const StudentDashboard = () => {
   const renderCourses = () => {
     // Logic for filtering
     const filteredCourses = courses.filter(course => {
-      const matchesSearch = course.title.toLowerCase().includes(courseSearch.toLowerCase());
+      const matchesSearch = course.title.toLowerCase().includes(debouncedSearch.toLowerCase());
+
       if (filterType === 'all') return matchesSearch;
       if (filterType === 'in-progress') return matchesSearch && course.progressPercent < 100;
       if (filterType === 'completed') return matchesSearch && course.progressPercent === 100;
@@ -371,26 +439,26 @@ const StudentDashboard = () => {
                   className={`std-filter-btn ${filterType === 'all' ? 'active' : ''}`}
                   onClick={() => setFilterType('all')}
                >
-                  All Courses
+                  Tất cả
                </button>
                <button 
                   className={`std-filter-btn ${filterType === 'in-progress' ? 'active' : ''}`}
                   onClick={() => setFilterType('in-progress')}
                >
-                  In Progress
+                  Đang học
                </button>
                <button 
                   className={`std-filter-btn ${filterType === 'completed' ? 'active' : ''}`}
                   onClick={() => setFilterType('completed')}
                >
-                  Completed
+                  Đã hoàn thành
                </button>
             </div>
             <div className="std-course-search">
                <Search size={18} />
                <input 
                   type="text" 
-                  placeholder="Search in your library..." 
+                  placeholder="Tìm kiếm trong thư viện của bạn..." 
                   value={courseSearch}
                   onChange={(e) => setCourseSearch(e.target.value)}
                />
@@ -402,7 +470,7 @@ const StudentDashboard = () => {
             {filteredCourses.length === 0 ? (
                <div className="std-empty-state">
                   <BookOpen size={48} />
-                  <p>No courses match your filter or search.</p>
+                  <p>Không tìm thấy khóa học nào phù hợp.</p>
                </div>
             ) : (
                filteredCourses.map(course => (
@@ -411,7 +479,7 @@ const StudentDashboard = () => {
                         <img src={course.thumbnail || 'https://via.placeholder.com/300x180'} alt={course.title} />
                         {course.progressPercent === 100 && (
                            <div className="completed-badge">
-                              <Check size={14} /> Completed
+                              <Check size={14} /> Hoàn thành
                            </div>
                         )}
                      </div>
@@ -422,7 +490,7 @@ const StudentDashboard = () => {
                         
                         <div className="card-progress-section">
                            <div className="progress-text">
-                              <span>Completion</span>
+                              <span>Tiến độ</span>
                               <span>{course.progressPercent}%</span>
                            </div>
                            <div className="progress-bar-mini">
@@ -434,7 +502,7 @@ const StudentDashboard = () => {
                            onClick={() => navigate(`/learn/${course.id}`)} 
                            className={`card-action-btn ${course.progressPercent === 100 ? 'secondary' : 'primary'}`}
                         >
-                           {course.progressPercent === 100 ? 'Review Course' : 'Resume'}
+                           {course.progressPercent === 100 ? 'Xem lại bài học' : 'Học tiếp'}
                         </button>
                      </div>
                   </div>
@@ -448,33 +516,47 @@ const StudentDashboard = () => {
   const renderTests = () => (
     <div className="std-content-fade-in">
        <div className="std-section-header">
-          <h3>Quiz & Test History</h3>
-          <p>Review your past performance and improvements.</p>
+          <h3>Lịch sử làm bài</h3>
+          <p>Xem lại kết quả và tiến độ học tập của bạn.</p>
        </div>
        <div className="std-quiz-history-table">
           <table>
              <thead>
                 <tr>
-                   <th>Lesson Title</th>
-                   <th>Score</th>
-                   <th>Result</th>
-                   <th>Date</th>
+                   <th>Bài học</th>
+                   <th>Chương</th>
+                   <th>Khóa học</th>
+                   <th style={{ textAlign: 'center' }}>Điểm số</th>
+                   <th style={{ textAlign: 'center' }}>Kết quả</th>
+                   <th style={{ textAlign: 'right' }}>Ngày làm</th>
                 </tr>
              </thead>
              <tbody>
                 {quizAttempts.length === 0 ? (
-                  <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>No quiz attempts found.</td></tr>
+                   <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>Chưa có lịch sử làm bài.</td></tr>
                 ) : (
                   quizAttempts.map(att => (
-                    <tr key={att.id}>
+                    <tr 
+                      key={att.id} 
+                      onClick={() => navigate(`/learn/${att.courseId}/lesson/${att.lessonId}?quiz=true`)}
+                      className="std-clickable-row"
+                    >
                        <td>{att.lessonTitle}</td>
-                       <td>{att.score}/{att.totalQuestions}</td>
-                       <td>
+                       <td style={{ color: 'var(--text-muted)', fontSize: '0.85em' }}>{att.chapterTitle}</td>
+                       <td>{att.courseTitle}</td>
+                       <td style={{ textAlign: 'center' }}>{att.score}/{att.totalQuestions}</td>
+                       <td style={{ textAlign: 'center' }}>
                           <span className={`std-badge ${att.score / att.totalQuestions >= 0.8 ? 'success' : 'warning'}`}>
-                             {Math.round((att.score / att.totalQuestions) * 100)}%
+                             {att.score / att.totalQuestions >= 0.8 ? 'Đạt' : 'Chưa đạt'} ({Math.round((att.score / att.totalQuestions) * 100)}%)
                           </span>
                        </td>
-                       <td>{new Date(att.createdAt).toLocaleDateString()}</td>
+                       <td style={{ textAlign: 'right' }}>
+                          {new Date(att.createdAt).toLocaleDateString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                       </td>
                     </tr>
                   ))
                 )}
@@ -487,7 +569,7 @@ const StudentDashboard = () => {
   const renderCalendarModal = () => {
     if (!showCalendar) return null;
 
-    const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', { 
+    const formattedDate = new Date(selectedDate).toLocaleDateString('vi-VN', { 
       weekday: 'long', 
       day: 'numeric', 
       month: 'long', 
@@ -496,7 +578,7 @@ const StudentDashboard = () => {
 
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
-    const monthName = viewDate.toLocaleString('en-US', { month: 'long' });
+    const monthName = viewDate.toLocaleString('vi-VN', { month: 'long' });
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     // First day of visibility
@@ -512,8 +594,8 @@ const StudentDashboard = () => {
         <div className="std-calendar-modal" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
              <div className="header-info">
-                <h3>Study Schedule</h3>
-                <p>{formattedDate} {getLocalDateString(new Date()) === selectedDate && <span className="today-badge">(Today)</span>}</p>
+                <h3>Lịch học tập</h3>
+                <p>{formattedDate} {getLocalDateString(new Date()) === selectedDate && <span className="today-badge">(Hôm nay)</span>}</p>
              </div>
              <button className="close-btn" onClick={() => setShowCalendar(false)}><X size={20} /></button>
           </div>
@@ -525,7 +607,7 @@ const StudentDashboard = () => {
                    <button onClick={handleNextMonth} className="nav-arrow"><ChevronRight size={16} /></button>
                 </div>
                 <div className="mini-days-grid">
-                   {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => <span key={d} className="day-label">{d}</span>)}
+                   {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => <span key={d} className="day-label">{d}</span>)}
                    {Array.from({ length: emptyDays }).map((_, i) => <span key={`empty-${i}`} className="day-empty"></span>)}
                    {Array.from({ length: daysInMonth }, (_, i) => {
                       const d = i + 1;
@@ -546,14 +628,14 @@ const StudentDashboard = () => {
              </div>
              <div className="daily-agenda-list">
                 <div className="agenda-header">
-                   Today's Agenda
+                   Lịch trình trong ngày
                 </div>
                 
                 <div className="agenda-items">
                    {studyGoals.length === 0 ? (
                       <div className="std-empty-goals">
                          <Calendar size={48} />
-                         <p>No goals set for this day.</p>
+                         <p>Chưa có mục tiêu nào trong ngày này.</p>
                       </div>
                    ) : (
                       studyGoals.map((item) => (
@@ -585,7 +667,7 @@ const StudentDashboard = () => {
                    <form className="add-goal-form" onSubmit={handleAddGoal}>
                       <input 
                         type="text" 
-                        placeholder="Goal title..." 
+                        placeholder="Tiêu đề mục tiêu..." 
                         value={newGoal.title}
                         onChange={e => setNewGoal({...newGoal, title: e.target.value})}
                         required
@@ -593,10 +675,10 @@ const StudentDashboard = () => {
                       />
                       <div className="form-row">
                          <select value={newGoal.type} onChange={e => setNewGoal({...newGoal, type: e.target.value})}>
-                            <option>Task</option>
-                            <option>Live Class</option>
-                            <option>Assignment</option>
-                            <option>Meeting</option>
+                            <option>Nhiệm vụ</option>
+                            <option>Lớp học trực tuyến</option>
+                            <option>Bài tập</option>
+                            <option>Cuộc họp</option>
                          </select>
                          <input 
                            type="time" 
@@ -611,12 +693,12 @@ const StudentDashboard = () => {
                          />
                       </div>
                       <div className="form-actions">
-                         <button type="button" className="cancel-btn" onClick={() => setIsAddingGoal(false)}>Cancel</button>
-                         <button type="submit" className="save-btn">Save Goal</button>
+                         <button type="button" className="cancel-btn" onClick={() => setIsAddingGoal(false)}>Hủy</button>
+                         <button type="submit" className="save-btn">Lưu mục tiêu</button>
                       </div>
                    </form>
                 ) : (
-                   <button className="add-event-btn" onClick={() => setIsAddingGoal(true)}>+ Add Study Goal</button>
+                   <button className="add-event-btn" onClick={() => setIsAddingGoal(true)}>+ Thêm mục tiêu mới</button>
                 )}
              </div>
           </div>
@@ -650,7 +732,7 @@ const StudentDashboard = () => {
         <div className="px-6-custom mt-auto-custom">
           <button className="std-nav-item text-red-custom" onClick={handleLogout}>
             <LogOut size={20} />
-            <span>Logout</span>
+            <span>Đăng xuất</span>
           </button>
         </div>
       </aside>
@@ -658,16 +740,73 @@ const StudentDashboard = () => {
       {/* Main Wrapper */}
       <div className="std-main-wrapper">
         <header className="std-topbar">
-          <h1 className="std-header-title">Welcome back</h1>
-          <div className="std-search-box">
-             <Search size={18} className="std-search-icon" />
-             <input type="text" placeholder="Search anything..." />
+          <h1 className="std-header-title">Chào mừng trở lại</h1>
+          <div className="std-search-box-container" ref={globalSearchRef}>
+             <div className={`std-search-box ${showGlobalSearchDropdown ? 'active' : ''}`}>
+                <Search size={18} className="std-search-icon" />
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm khóa học, bài viết..." 
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
+                  onFocus={() => {
+                    if (globalSearch.length >= 2) setShowGlobalSearchDropdown(true);
+                  }}
+                />
+                {isGlobalSearching && <div className="std-search-loader"></div>}
+             </div>
+
+             {/* Global Search Results Dropdown */}
+             {showGlobalSearchDropdown && globalSearch.length >= 2 && (
+                <div className="std-search-dropdown">
+                   {globalSearchResults.length > 0 ? (
+                      <div className="std-search-results-list">
+                         {globalSearchResults.map((item) => (
+                             <Link 
+                                key={`${item.type}-${item.id}`} 
+                                to={item.type === 'course' ? `/learn/${item.id}` : `/article/${item.id}`}
+                                className="std-search-item"
+                                onClick={() => {
+                                   setShowGlobalSearchDropdown(false);
+                                   setGlobalSearch('');
+                                }}
+                             >
+                                <div className="std-search-item-icon">
+                                   {item.thumbnail ? (
+                                     <img src={item.thumbnail} alt={item.title} className="std-search-item-thumb" />
+                                   ) : (
+                                     item.type === 'course' ? <PlayCircle size={18} /> : <FileText size={18} />
+                                   )}
+                                </div>
+                                <div className="std-search-item-info">
+                                   <div className="std-search-item-title">{item.title}</div>
+                                   <div className="std-search-item-type">
+                                      {item.type === 'course' ? 'Khóa học' : 'Bài viết'}
+                                   </div>
+                                </div>
+
+                             </Link>
+                         ))}
+                      </div>
+                   ) : (
+                      !isGlobalSearching && (
+                         <div className="std-search-no-results">
+                            Không tìm thấy kết quả cho "{globalSearch}"
+                         </div>
+                      )
+                   )}
+                </div>
+             )}
           </div>
+
           <div className="std-actions-right">
              <button className="std-action-btn glass" onClick={() => setShowCalendar(true)}><Calendar size={18} /></button>
-             <button className="std-action-btn"><Bell size={18} /></button>
-             <button className="std-action-btn dark"><MoreVertical size={18} /></button>
+             <NotificationBell iconSize={18} buttonClassName="std-action-btn" />
+             <button className="std-action-btn dark" onClick={toggleTheme}>
+               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+             </button>
              <div className="std-user-profile-header">
+
                 <img src={user?.avatar || "https://i.pravatar.cc/150"} className="std-header-avatar" />
              </div>
           </div>
@@ -679,7 +818,7 @@ const StudentDashboard = () => {
               {activeTab === 'courses' && renderCourses()}
               {activeTab === 'tests' && renderTests()}
               {['material', 'lectures', 'doubt', 'payment', 'settings'].includes(activeTab) && (
-                <div className="std-empty-state">Feature coming soon!</div>
+                <div className="std-empty-state">Tính năng đang phát triển!</div>
               )}
            </main>
 
@@ -690,12 +829,12 @@ const StudentDashboard = () => {
            <aside className="std-right-column">
               <section>
                  <div className="std-right-section-title">
-                    <ShieldCheck size={20} className="text-accent" /> Upcomings
+                  Sắp tới
                  </div>
                  {upcomingGoals.length === 0 ? (
                     <div className="std-empty-state-mini" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
                        <Calendar size={32} style={{ marginBottom: '10px', opacity: 0.5 }} />
-                       <p style={{ fontSize: '13px' }}>No upcoming study goals. Set some goals to stay on track!</p>
+                       <p style={{ fontSize: '13px' }}>Chưa có mục tiêu học tập nào. Hãy lập kế hoạch để bắt đầu nhé!</p>
                     </div>
                  ) : (
                     upcomingGoals.map(goal => (
@@ -703,22 +842,22 @@ const StudentDashboard = () => {
                           <div className="upcoming-header">
                              <h4 className="upcoming-title">{goal.title}</h4>
                              <span className="upcoming-date">
-                                {new Date(goal.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                {new Date(goal.date).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' })}
                              </span>
                           </div>
                           <p className="upcoming-desc">{goal.type} • {goal.time}</p>
                        </div>
                     ))
                  )}
-                 <button className="std-all-events-btn" onClick={() => setShowCalendar(true)}>Manage Schedule</button>
+                 <button className="std-all-events-btn" onClick={() => setShowCalendar(true)}>Quản lý lịch trình</button>
               </section>
 
               <section>
-                 <div className="std-right-section-title">Assignments</div>
+                 <div className="std-right-section-title">Bài tập chuyên đề</div>
                  {pendingQuizzes.length === 0 ? (
                     <div className="std-empty-state-mini" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
                        <BookMarked size={32} style={{ marginBottom: '10px', opacity: 0.5 }} />
-                       <p style={{ fontSize: '13px' }}>You've finished all quizzes! Great job!</p>
+                       <p style={{ fontSize: '13px' }}>Bạn đã hoàn thành tất cả bài tập! Thật tuyệt vời!</p>
                     </div>
                  ) : (
                     pendingQuizzes.map(quiz => (
@@ -728,10 +867,9 @@ const StudentDashboard = () => {
                          onClick={() => navigate(`/learn/${quiz.courseId}/lesson/${quiz.lessonId}?quiz=true`)}
                          style={{ cursor: 'pointer' }}
                        >
-                          <div className="check-box-empty"></div>
                           <div className="std-assignment-info">
                              <h4>{quiz.lessonTitle}</h4>
-                             <span className="status-urgent">{quiz.courseTitle} • Pending Quiz</span>
+                             <span className="status-urgent">{quiz.courseTitle} • Đang chờ kiểm tra</span>
                           </div>
                        </div>
                     ))

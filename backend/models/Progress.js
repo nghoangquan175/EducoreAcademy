@@ -11,6 +11,10 @@ const Progress = sequelize.define('Progress', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  videoWatched: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   completedAt: {
     type: DataTypes.DATE
   }

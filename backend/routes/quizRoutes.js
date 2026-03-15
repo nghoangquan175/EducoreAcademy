@@ -112,8 +112,19 @@ router.post('/:quizId/submit', protect, async (req, res) => {
                 if (enrollment) {
                     await Progress.findOrCreate({
                         where: { enrollmentId: enrollment.id, lessonId: lesson.id },
-                        defaults: { completed: true, completedAt: new Date() }
+                        defaults: { completed: true, videoWatched: true, completedAt: new Date() }
                     });
+                    
+                    // If progress already exists, ensure it is marked as completed
+                    const progress = await Progress.findOne({
+                        where: { enrollmentId: enrollment.id, lessonId: lesson.id }
+                    });
+                    if (progress && !progress.completed) {
+                        progress.completed = true;
+                        progress.videoWatched = true;
+                        progress.completedAt = new Date();
+                        await progress.save();
+                    }
                 }
             }
         }

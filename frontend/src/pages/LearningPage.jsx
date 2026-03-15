@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ReactPlayer from 'react-player';
 import axios from 'axios';
 import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock } from 'react-icons/fa';
+import { Sun, Moon } from 'lucide-react';
+import { ThemeContext } from '../contexts/ThemeContext';
 import QuizPlayer from './QuizPlayer';
 import './LearningPage.css';
 
@@ -60,6 +62,8 @@ const LearningPage = () => {
     if (allLessons.length === 0) return false;
     return allLessons[allLessons.length - 1].id.toString() === lessonId;
   }, [allLessons, lessonId]);
+
+  const { theme, toggleTheme } = useContext(ThemeContext);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -167,7 +171,7 @@ const LearningPage = () => {
   const handleMarkFinished = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:5000/api/courses/lessons/${lessonId}/complete`, {}, {
+      const response = await axios.post(`http://localhost:5000/api/courses/lessons/${lessonId}/complete`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       // Explicitly update activity
@@ -175,8 +179,24 @@ const LearningPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       }).catch(e => console.error("Activity ping failed:", e));
 
-      if (!passedLessons.includes(parseInt(lessonId))) {
+      if (response.data.progress.completed && !passedLessons.includes(parseInt(lessonId))) {
         setPassedLessons([...passedLessons, parseInt(lessonId)]);
+      }
+      
+      // Update the current lesson's videoWatched status in the course state
+      if (course) {
+        setCourse(prev => {
+          const newCourse = { ...prev };
+          newCourse.chapters.forEach(chap => {
+            chap.lessons.forEach(l => {
+              if (l.id.toString() === lessonId) {
+                l.videoWatched = true;
+                l.completed = response.data.progress.completed;
+              }
+            });
+          });
+          return newCourse;
+        });
       }
     } catch (err) {
       console.error("Lỗi khi đánh dấu hoàn thành bài học:", err);
@@ -242,7 +262,9 @@ const LearningPage = () => {
           </div>
         </div>
         <div className="topbar-right">
-          {/* Progress bar info có thể để đây */}
+          <button className="theme-toggle-btn" onClick={toggleTheme}>
+            {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
             <FaList />
           </button>
@@ -331,7 +353,7 @@ const LearningPage = () => {
                 <p className="learning-chapter-title">Thuộc: {currentChapterTitle}</p>
                 
                 {/* Manual Quiz Start Logic */}
-                {currentLesson.quiz && (videoFinished || latestAttempt || passedLessons.includes(parseInt(lessonId)) || passedLessons.includes(currentLesson.id)) && (
+                {currentLesson.quiz && (videoFinished || currentLesson.videoWatched || latestAttempt || passedLessons.includes(parseInt(lessonId)) || passedLessons.includes(currentLesson.id)) && (
                   <div className="quiz-entry-card">
                     <h3>Bài kiểm tra: {currentLesson.title}</h3>
                     <p>Hoàn thành để củng cố kiến thức đã học trong video này.</p>

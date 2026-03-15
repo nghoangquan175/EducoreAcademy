@@ -2,7 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
+
 import BannerCarousel from './components/BannerCarousel';
 import ProCourses from './components/ProCourses';
 import FreeCourses from './components/FreeCourses';
@@ -75,72 +77,75 @@ const CheckoutLayout = () => {
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <AuthProvider>
-        <Toaster position="top-right" reverseOrder={false} />
-        <Router>
-          <Routes>
-            {/* Auth pages — no header */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/staff/login" element={<StaffLogin />} />
-            </Route>
+      <ThemeProvider>
+        <AuthProvider>
+          <Toaster position="top-right" reverseOrder={false} />
+          <Router>
+            <Routes>
+              {/* Auth pages — no header */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/staff/login" element={<StaffLogin />} />
+              </Route>
 
-            {/* Main pages — with header */}
-            <Route element={<MainLayout />}>
-              <Route path="/" element={
-                <>
-                  <BannerCarousel />
-                  <ProCourses />
-                  <FreeCourses />
-                </>
+              {/* Main pages — with header */}
+              <Route element={<MainLayout />}>
+                <Route path="/" element={
+                  <>
+                    <BannerCarousel />
+                    <ProCourses />
+                    <FreeCourses />
+                  </>
+                } />
+
+                <Route path="/course/:id" element={<CoursePage />} />
+                <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              </Route>
+
+              {/* Checkout page — custom layout */}
+              <Route element={<CheckoutLayout />}>
+                 <Route path="/checkout/:courseId" element={
+                   <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                     <CheckoutPage />
+                   </PrivateRoute>
+                 } />
+              </Route>
+
+              {/* ----- STUDENT ROUTES (Full Screen) ----- */}
+              <Route path="/student-dashboard" element={
+                <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                  <StudentDashboard />
+                </PrivateRoute>
               } />
 
-              <Route path="/course/:id" element={<CoursePage />} />
-              <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            </Route>
+              {/* ----- INSTRUCTOR ROUTES (Full Screen) ----- */}
+              <Route path="/instructor-dashboard" element={
+                <PrivateRoute allowedRoles={['instructor', 'admin']}>
+                  <InstructorDashboard />
+                </PrivateRoute>
+              } />
 
-            {/* Checkout page — custom layout */}
-            <Route element={<CheckoutLayout />}>
-               <Route path="/checkout/:courseId" element={
-                 <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
-                   <CheckoutPage />
-                 </PrivateRoute>
-               } />
-            </Route>
+              {/* Admin Dashboard — no header/footer */}
+              <Route path="/admin-dashboard" element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </PrivateRoute>
+              } />
 
-            {/* ----- STUDENT ROUTES (Full Screen) ----- */}
-            <Route path="/student-dashboard" element={
-              <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
-                <StudentDashboard />
-              </PrivateRoute>
-            } />
-
-            {/* ----- INSTRUCTOR ROUTES (Full Screen) ----- */}
-            <Route path="/instructor-dashboard" element={
-              <PrivateRoute allowedRoles={['instructor', 'admin']}>
-                <InstructorDashboard />
-              </PrivateRoute>
-            } />
-
-            {/* Admin Dashboard — no header/footer */}
-            <Route path="/admin-dashboard" element={
-              <PrivateRoute allowedRoles={['admin']}>
-                <AdminDashboard />
-              </PrivateRoute>
-            } />
-
-            {/* Learning pages — custom layout */}
-            <Route element={<LearningLayout />}>
-              <Route path="/learn/:courseId" element={<LearningPage />} />
-              <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPage />} />
-              <Route path="/course-completed/:courseId" element={<CourseCongrats />} />
-            </Route>
-          </Routes>
-        </Router>
-      </AuthProvider>
+              {/* Learning pages — custom layout */}
+              <Route element={<LearningLayout />}>
+                <Route path="/learn/:courseId" element={<LearningPage />} />
+                <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPage />} />
+                <Route path="/course-completed/:courseId" element={<CourseCongrats />} />
+              </Route>
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
     </GoogleOAuthProvider>
   );
+
 }
 
 export default App;
