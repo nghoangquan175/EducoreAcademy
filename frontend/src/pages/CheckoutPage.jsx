@@ -24,7 +24,7 @@ const CheckoutPage = () => {
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('vnpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -44,19 +44,51 @@ const CheckoutPage = () => {
 
   const handlePayment = async () => {
     setIsProcessing(true);
-    // Simulate payment delay
-    setTimeout(async () => {
-      try {
-        await axios.post(`http://localhost:5000/api/courses/${courseId}/enroll`, {}, {
+    try {
+      if (paymentMethod === 'vnpay') {
+        const orderRes = await axios.post(`http://localhost:5000/api/payment/order/create`, {
+          courseId: courseId,
+          amount: course.price
+        }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setShowSuccess(true);
-      } catch (err) {
-        alert(err.response?.data?.message || 'Lỗi khi xử lý thanh toán');
-      } finally {
+
+        const { orderId: newOrderId } = orderRes.data;
+
+        const { data } = await axios.post(`http://localhost:5000/api/payment/vnpay/create`, {
+          orderId: newOrderId,
+          amount: course.price
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (data.paymentUrl) {
+          window.location.href = data.paymentUrl;
+        }
+      } else {
+        // Mock flow for other methods
+        setTimeout(async () => {
+          try {
+            await axios.post(`http://localhost:5000/api/courses/${courseId}/enroll`, {}, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            setShowSuccess(true);
+          } catch (err) {
+            alert(err.response?.data?.message || 'Lỗi khi xử lý thanh toán');
+          } finally {
+            setIsProcessing(false);
+          }
+        }, 2000);
+        return; // Exit here as we use setTimeout for mock
+      }
+    } catch (err) {
+      console.error('Lỗi thanh toán:', err);
+      alert(err.response?.data?.message || 'Lỗi khi xử lý thanh toán');
+    } finally {
+      if (paymentMethod === 'vnpay') {
         setIsProcessing(false);
       }
-    }, 2000);
+    }
   };
 
   const goToLearning = () => {
@@ -86,6 +118,20 @@ const CheckoutPage = () => {
             
             <div className="payment-methods">
               <div 
+                className={`payment-method-item ${paymentMethod === 'vnpay' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('vnpay')}
+              >
+                <div className="method-icon">
+                  <Landmark size={24} />
+                </div>
+                <div className="method-info">
+                  <h4>VNPay</h4>
+                  <p>Thanh toán qua cổng VNPay (ATM, Visa, QR)</p>
+                </div>
+                {paymentMethod === 'vnpay' && <CheckCircle size={20} className="check-indicator" />}
+              </div>
+
+              <div 
                 className={`payment-method-item ${paymentMethod === 'card' ? 'active' : ''}`}
                 onClick={() => setPaymentMethod('card')}
               >
@@ -97,20 +143,6 @@ const CheckoutPage = () => {
                   <p>Visa, Mastercard, JCB, Amex</p>
                 </div>
                 {paymentMethod === 'card' && <CheckCircle size={20} className="check-indicator" />}
-              </div>
-
-              <div 
-                className={`payment-method-item ${paymentMethod === 'transfer' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('transfer')}
-              >
-                <div className="method-icon">
-                  <Landmark size={24} />
-                </div>
-                <div className="method-info">
-                  <h4>Chuyển khoản ngân hàng</h4>
-                  <p>Vietcombank, Techcombank, MB Bank...</p>
-                </div>
-                {paymentMethod === 'transfer' && <CheckCircle size={20} className="check-indicator" />}
               </div>
             </div>
 

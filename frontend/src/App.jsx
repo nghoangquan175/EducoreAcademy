@@ -22,6 +22,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import StudentDashboard from './pages/StudentDashboard';
 import CourseCongrats from './pages/CourseCongrats';
 import PrivateRoute from './components/PrivateRoute';
+import PaymentResult from './pages/PaymentResult';
 import { BookOpen, X } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
@@ -105,11 +106,12 @@ function App() {
 
               {/* Checkout page — custom layout */}
               <Route element={<CheckoutLayout />}>
-                 <Route path="/checkout/:courseId" element={
-                   <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
-                     <CheckoutPage />
-                   </PrivateRoute>
-                 } />
+                  <Route path="/checkout/:courseId" element={
+                    <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                      <CheckoutPage />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/payment-result" element={<PaymentResult />} />
               </Route>
 
               {/* ----- STUDENT ROUTES (Full Screen) ----- */}

@@ -12,6 +12,8 @@ const Quiz = require('./Quiz');
 const Question = require('./Question');
 const QuizAttempt = require('./QuizAttempt');
 const StudyGoal = require('./StudyGoal');
+const PaymentOrder = require('./PaymentOrder');
+const Payment = require('./Payment');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -69,6 +71,17 @@ QuizAttempt.belongsTo(Quiz, { foreignKey: 'quizId' });
 User.hasMany(StudyGoal, { foreignKey: 'userId' });
 StudyGoal.belongsTo(User, { foreignKey: 'userId' });
 
+// Order
+User.hasMany(PaymentOrder, { foreignKey: 'userId' });
+PaymentOrder.belongsTo(User, { foreignKey: 'userId' });
+
+Course.hasMany(PaymentOrder, { foreignKey: 'courseId' });
+PaymentOrder.belongsTo(Course, { foreignKey: 'courseId' });
+
+// Payment
+PaymentOrder.hasMany(Payment, { foreignKey: 'orderId' });
+Payment.belongsTo(PaymentOrder, { foreignKey: 'orderId' });
+
 module.exports = {
   User,
   Course,
@@ -83,5 +96,7 @@ module.exports = {
   Quiz,
   Question,
   QuizAttempt,
-  StudyGoal
+  StudyGoal,
+  PaymentOrder,
+  Payment
 };

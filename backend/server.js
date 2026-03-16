@@ -22,6 +22,13 @@ app.use('/api/banners', require('./routes/bannerRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/quizzes', require('./routes/quizRoutes'));
+const paymentController = require('./controllers/paymentController');
+
+// Callback route matching VNPay Return URL
+app.get('/payment-return', paymentController.vnpayReturn);
+app.get('/payment-ipn', paymentController.vnpayIpn);
+
+app.use('/api/payment', require('./routes/paymentRoutes'));
 
 app.get('/', (req, res) => {
   res.send('API is running...');
