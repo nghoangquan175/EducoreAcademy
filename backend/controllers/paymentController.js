@@ -1,4 +1,4 @@
-const { PaymentOrder, Payment } = require('../models');
+const { PaymentOrder, Payment, Enrollment, Course } = require('../models');
 const vnpayConfig = require('../config/vnpay');
 const crypto = require('crypto');
 const querystring = require('qs');
@@ -96,11 +96,19 @@ exports.vnpayReturn = async (req, res) => {
       const orderId = vnp_Params['vnp_TxnRef'];
       const responseCode = vnp_Params['vnp_ResponseCode'];
 
+      const order = await PaymentOrder.findByPk(orderId);
+      const courseId = order ? order.courseId : 'unknown';
+
+      if (responseCode === '00') {
+        const transactionNo = vnp_Params['vnp_TransactionNo'];
+        await fulfillOrder(orderId, transactionNo, vnp_Params);
+      }
+
       const clientUrl = process.env.CLIENT_URL || 'https://localhost:5173';
-      return res.redirect(`${clientUrl}/payment-result?status=${responseCode === '00' ? 'success' : 'failed'}&orderId=${orderId}`);
+      return res.redirect(`${clientUrl}/payment-result?status=${responseCode === '00' ? 'success' : 'failed'}&orderId=${orderId}&courseId=${courseId}`);
     } else {
       const clientUrl = process.env.CLIENT_URL || 'https://localhost:5173';
-      return res.redirect(`${clientUrl}/payment-result?status=failed&orderId=invalid`);
+      return res.redirect(`${clientUrl}/payment-result?status=failed&orderId=invalid&courseId=unknown`);
     }
   } catch (error) {
     console.error('VNPay return error exception:');
@@ -132,16 +140,7 @@ exports.vnpayIpn = async (req, res) => {
         if (order.amount * 100 == vnp_Params['vnp_Amount']) {
           if (order.status === 'pending') {
             if (rspCode === "00") {
-              order.status = 'paid';
-              await order.save();
-
-              await Payment.create({
-                orderId: orderId,
-                transactionCode: vnp_Params['vnp_TransactionNo'],
-                status: 'success',
-                rawResponse: JSON.stringify(vnp_Params)
-              });
-
+              await fulfillOrder(orderId, vnp_Params['vnp_TransactionNo'], vnp_Params);
               res.status(200).json({ RspCode: '00', Message: 'Success' });
             } else {
               order.status = 'failed';
@@ -173,6 +172,45 @@ exports.vnpayIpn = async (req, res) => {
     res.status(500).json({ RspCode: '99', Message: 'Unknow error' });
   }
 };
+
+async function fulfillOrder(orderId, transactionNo, rawParams) {
+  try {
+    const order = await PaymentOrder.findByPk(orderId);
+    if (!order || order.status !== 'pending') return;
+
+    // Update order status
+    order.status = 'paid';
+    await order.save();
+
+    // Create payment record
+    await Payment.create({
+      orderId: orderId,
+      transactionCode: transactionNo,
+      status: 'success',
+      rawResponse: JSON.stringify(rawParams)
+    });
+
+    // Handle Enrollment
+    const enrollment = await Enrollment.findOne({
+      where: { userId: order.userId, courseId: order.courseId }
+    });
+
+    if (!enrollment) {
+      await Enrollment.create({
+        userId: order.userId,
+        courseId: order.courseId,
+        status: 'active'
+      });
+
+      const course = await Course.findByPk(order.courseId);
+      if (course) {
+        await course.increment('studentsCount');
+      }
+    }
+  } catch (error) {
+    console.error('Fulfill order error:', error);
+  }
+}
 
 function sortObject(obj) {
   let sorted = {};

@@ -8,8 +8,17 @@ const PaymentResult = () => {
   const navigate = useNavigate();
   const status = searchParams.get('status');
   const orderId = searchParams.get('orderId');
+  const courseId = searchParams.get('courseId');
 
   const isSuccess = status === 'success';
+
+  const handleRetry = () => {
+    if (courseId && courseId !== 'unknown') {
+      navigate(`/checkout/${courseId}`);
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <div className="payment-result-container">
@@ -44,7 +53,7 @@ const PaymentResult = () => {
               <button className="btn-secondary" onClick={() => navigate('/')}>
                 QUAY LẠI TRANG CHỦ <Home size={18} />
               </button>
-              <button className="btn-primary" onClick={() => navigate(-1)}>
+              <button className="btn-primary" onClick={handleRetry}>
                 THỬ THANH TOÁN LẠI
               </button>
             </div>
