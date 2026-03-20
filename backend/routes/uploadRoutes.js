@@ -5,8 +5,8 @@ const { protect, instructor } = require('../middleware/authMiddleware');
 
 // @desc    Upload an image (e.g. course thumbnail)
 // @route   POST /api/upload/image
-// @access  Private (Instructor/Admin)
-router.post('/image', protect, instructor, uploadImage.single('image'), (req, res) => {
+// @access  Private (Student/Instructor/Admin)
+router.post('/image', protect, uploadImage.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No image file provided' });

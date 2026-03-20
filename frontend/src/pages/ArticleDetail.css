@@ -1,0 +1,96 @@
+.article-detail-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 60px 20px;
+  background-color: var(--page-bg, #ffffff);
+  color: var(--text-main, #111827);
+  min-height: 100vh;
+}
+
+.article-simple-title {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 30px;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.article-simple-thumbnail {
+  width: 100%;
+  max-height: 500px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 40px;
+}
+
+.article-simple-content {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--text-main);
+  margin-bottom: 60px;
+}
+
+.article-simple-content p {
+  margin-bottom: 24px;
+}
+
+.article-simple-footer {
+  padding-top: 30px;
+  border-top: 2px solid var(--border-color, #e5e7eb);
+  color: var(--text-muted, #6b7280);
+  font-size: 1rem;
+}
+
+.article-footer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.article-footer-item strong {
+  color: var(--text-main);
+}
+
+.preview-alert-simple {
+  padding: 12px 20px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Dark Theme Support */
+.dark-theme .article-detail-container {
+  background-color: #0f172a;
+}
+
+.dark-theme .article-simple-title {
+  color: #f8fafc;
+}
+
+.dark-theme .article-simple-content {
+  color: #cbd5e1;
+}
+
+.dark-theme .preview-alert-simple {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.dark-theme .article-simple-footer {
+  border-color: #334155;
+}
+
+@media (max-width: 640px) {
+  .article-simple-title {
+    font-size: 2rem;
+  }
+}

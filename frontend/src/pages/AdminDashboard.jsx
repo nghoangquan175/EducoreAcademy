@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -11,24 +11,36 @@ import {
   ChevronRight,
   Menu,
   X,
+  CheckCircle, 
+  XCircle, 
+  ArrowDownCircle,
+  Eye, 
   Check,
-  XCircle,
-  Eye,
   ChevronDown,
   UserCheck,
   GraduationCap,
   Plus,
-  Bell
+  Bell,
+  Search,
+  User
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ArticleEditor from './ArticleEditor';
+import { 
+  fetchMyArticlesAPI, 
+  deleteArticleAPI, 
+  adminFetchPendingArticlesAPI, 
+  adminUpdateArticleStatusAPI 
+} from '../services/articleService';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isUsersMenuOpen, setIsUsersMenuOpen] = useState(false);
+  const [isArticlesMenuOpen, setIsArticlesMenuOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [pendingCourses, setPendingCourses] = useState([]);
   const [banners, setBanners] = useState([]);
@@ -47,6 +59,23 @@ const AdminDashboard = () => {
     sortOrder: 0,
     isActive: true
   });
+  
+  // Articles State
+  const [articles, setArticles] = useState([]);
+  const [pendingArticles, setPendingArticles] = useState([]);
+  const [articleSubTab, setArticleSubTab] = useState('my-articles'); // 'my-articles' or 'review'
+  const [articleView, setArticleView] = useState('list'); // 'list' or 'editor'
+  const [editingArticleId, setEditingArticleId] = useState(null);
+  const [editingArticleData, setEditingArticleData] = useState(null);
+  const [articleSearch, setArticleSearch] = useState('');
+  const [debouncedArticleSearch, setDebouncedArticleSearch] = useState('');
+  const [articlePage, setArticlePage] = useState(1);
+  const [articleTotalPages, setArticleTotalPages] = useState(1);
+  const [courseSearch, setCourseSearch] = useState('');
+  const [debouncedCourseSearch, setDebouncedCourseSearch] = useState('');
+  const prevTab = useRef(activeTab);
+  const prevSubTab = useRef(articleSubTab);
+
   const [loading, setLoading] = useState(true);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -67,16 +96,45 @@ const AdminDashboard = () => {
     },
     { id: 'categories', label: 'Danh mục', icon: <Layers size={20} /> },
     { id: 'banners', label: 'Banners', icon: <ImageIcon size={20} /> },
-    { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
+    { 
+      id: 'articles', 
+      label: 'Bài viết', 
+      icon: <FileText size={20} />,
+      hasSubmenu: true,
+      subItems: [
+        { id: 'all-articles', label: 'Tất cả bài viết', icon: <Layers size={18} /> },
+        { id: 'my-articles', label: 'Bài viết của tôi', icon: <User size={18} /> },
+        { id: 'review-articles', label: 'Duyệt bài viết', icon: <CheckCircle size={18} /> },
+      ]
+    },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} /> },
   ];
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    const timer = setTimeout(() => {
+      setDebouncedCourseSearch(courseSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [courseSearch]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedArticleSearch(articleSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [articleSearch]);
+
+  useEffect(() => {
+    const isSilent = (activeTab === prevTab.current && articleSubTab === prevSubTab.current);
+    fetchData(isSilent);
+    prevTab.current = activeTab;
+    prevSubTab.current = articleSubTab;
+  }, [activeTab, articleSubTab, articlePage, debouncedArticleSearch, debouncedCourseSearch]);
+
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent) {
+      setLoading(true);
+    }
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
@@ -85,10 +143,10 @@ const AdminDashboard = () => {
         const { data } = await axios.get('http://localhost:5000/api/admin/stats', { headers });
         setStats(data);
       } else if (activeTab === 'approvals') {
-        const { data } = await axios.get('http://localhost:5000/api/admin/courses/pending', { headers });
+        const { data } = await axios.get(`http://localhost:5000/api/admin/courses/pending?search=${debouncedCourseSearch}`, { headers });
         setPendingCourses(data);
       } else if (activeTab === 'courses') {
-        const { data } = await axios.get('http://localhost:5000/api/admin/courses', { headers });
+        const { data } = await axios.get(`http://localhost:5000/api/admin/courses?search=${debouncedCourseSearch}`, { headers });
         // Lọc khóa học đã xuất bản (published: 2)
         setPendingCourses(data.filter(c => c.published === 2));
       } else if (activeTab === 'students' || activeTab === 'instructors') {
@@ -97,6 +155,16 @@ const AdminDashboard = () => {
       } else if (activeTab === 'banners') {
         const { data } = await axios.get('http://localhost:5000/api/banners/all', { headers });
         setBanners(data);
+      } else if (activeTab === 'all-articles') {
+        const { data } = await axios.get(`http://localhost:5000/api/admin/articles/all?search=${debouncedArticleSearch}`, { headers });
+        setArticles(data.data || []); 
+      } else if (activeTab === 'my-articles') {
+        const response = await fetchMyArticlesAPI(articlePage, 10, debouncedArticleSearch);
+        setArticles(response.data?.articles || []); 
+        setArticleTotalPages(response.data?.totalPages || 1);
+      } else if (activeTab === 'review-articles') {
+        const response = await adminFetchPendingArticlesAPI(debouncedArticleSearch);
+        setPendingArticles(response.data || []);
       }
       
       // Always fetch notifications to update unread count
@@ -207,8 +275,6 @@ const AdminDashboard = () => {
     }
   };
 
-
-  
   const handleMarkAsRead = async (notifId) => {
     try {
       const token = localStorage.getItem('token');
@@ -230,6 +296,29 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error('Lỗi khi đánh dấu tất cả đã đọc:', error);
+    }
+  };
+
+  const handleArticleStatusUpdate = async (id, status) => {
+    const confirmMsg = status === 2 ? 'Phê duyệt bài viết này?' : 'Từ chối bài viết này?';
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await adminUpdateArticleStatusAPI(id, status);
+      alert(status === 2 ? 'Đã phê duyệt bài viết!' : 'Đã từ chối bài viết.');
+      fetchData();
+    } catch (error) {
+      alert('Lỗi: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleArticleDelete = async (id) => {
+    if (!window.confirm('Xóa bài viết này?')) return;
+    try {
+      await deleteArticleAPI(id);
+      fetchData();
+    } catch (error) {
+      alert('Lỗi: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -267,12 +356,11 @@ const AdminDashboard = () => {
                 <p className="stat-value">{stats?.enrollments || 0}</p>
                 <span className="stat-label">Tổng lượt tham gia</span>
               </div>
-            </div>
-            <div className="recent-activity">
-                <h3>Hoạt động gần đây</h3>
-                <div className="activity-placeholder">
-                    Hệ thống đang hoạt động ổn định.
-                </div>
+              <div className="stat-card">
+                <h3>Bài viết</h3>
+                <p className="stat-value">{stats?.publishedArticles || 0}</p>
+                <span className="stat-label">{stats?.pendingArticles || 0} đang chờ duyệt</span>
+              </div>
             </div>
           </div>
         );
@@ -281,6 +369,18 @@ const AdminDashboard = () => {
           <div className="admin-content-fade-in">
             <h2 className="content-title">Phê duyệt khóa học</h2>
             <p className="section-desc">Danh sách các khóa học đang chờ bạn kiểm duyệt nội dung.</p>
+            
+            <div className="admin-search-wrapper" style={{ marginBottom: '20px', maxWidth: '400px', position: 'relative' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+                <input 
+                    type="text" 
+                    placeholder="Tìm theo tên khóa học..." 
+                    value={courseSearch}
+                    onChange={(e) => setCourseSearch(e.target.value)}
+                    style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#ffffff', color: '#1f2937' }}
+                />
+            </div>
+
             <div className="table-container">
                 <table className="admin-table">
                     <thead>
@@ -330,7 +430,19 @@ const AdminDashboard = () => {
         return (
           <div className="admin-content-fade-in">
             <h2 className="content-title">Quản lý khóa học</h2>
-            <p className="section-desc">Danh sách tất cả các khóa học đã được xuất bản trên hệ thống.</p>
+            <p className="section-desc">Danh sách các khóa học đã được phê duyệt và đang hiển thị trên hệ thống.</p>
+            
+            <div className="admin-search-wrapper" style={{ marginBottom: '20px', maxWidth: '400px', position: 'relative' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+                <input 
+                    type="text" 
+                    placeholder="Tìm theo tên khóa học..." 
+                    value={courseSearch}
+                    onChange={(e) => setCourseSearch(e.target.value)}
+                    style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#ffffff', color: '#1f2937' }}
+                />
+            </div>
+
             <div className="table-container">
                 <table className="admin-table">
                     <thead>
@@ -375,6 +487,42 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
+      case 'students':
+      case 'instructors':
+        const filteredUsers = usersList.filter(u => u.role === (activeTab === 'students' ? 'student' : 'instructor'));
+        return (
+          <div className="admin-content-fade-in">
+            <h2 className="content-title">Quản lý {activeTab === 'students' ? 'Học viên' : 'Giảng viên'}</h2>
+            <div className="table-container">
+                <table className="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Ngày tham gia</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredUsers.length > 0 ? filteredUsers.map(u => (
+                            <tr key={u.id}>
+                                <td>#{u.id.substring(0, 8)}</td>
+                                <td className="user-name-cell">{u.name}</td>
+                                <td>{u.email}</td>
+                                <td>{new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
+                                <td><span className="status-badge active">Hoạt động</span></td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan="5" className="empty-table-cell">Không có dữ liệu người dùng</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+          </div>
+        );
+      case 'categories':
+        return <div className="admin-content-fade-in"><h2 className="content-title">Quản lý danh mục</h2><p className="empty-state">Tính năng đang phát triển...</p></div>;
       case 'banners':
         return (
           <div className="admin-content-fade-in">
@@ -384,13 +532,11 @@ const AdminDashboard = () => {
                     <Plus size={18} /> Thêm Banner mới
                 </button>
             </div>
-            <p className="section-desc">Quản lý các banner quảng cáo hiển thị trên trang chủ Carousel.</p>
-            
             <div className="table-container">
                 <table className="admin-table">
                     <thead>
                         <tr>
-                            <th>Hình ảnh & Tiêu đề</th>
+                            <th>Banner</th>
                             <th>Tag</th>
                             <th>Thứ tự</th>
                             <th>Trạng thái</th>
@@ -402,77 +548,175 @@ const AdminDashboard = () => {
                             <tr key={banner.id}>
                                 <td>
                                     <div className="banner-cell">
-                                        <div className="banner-thumb-wrapper" style={{ background: banner.gradient || '#6366f1' }}>
-                                            {banner.imageUrl && <img src={banner.imageUrl} alt="" className="admin-table-thumb" />}
+                                        <div className="banner-preview-box" style={{ background: banner.gradient }}>
+                                            {banner.imageUrl && <img src={banner.imageUrl} alt="" />}
                                         </div>
-                                        <div className="banner-info-cell">
-                                            <span className="banner-title-text">{banner.title}</span>
-                                            <span className="banner-desc-text">{banner.description}</span>
+                                        <div className="banner-info">
+                                            <span className="banner-title">{banner.title}</span>
                                         </div>
                                     </div>
                                 </td>
-                                <td><span className="banner-tag-badge">{banner.tag}</span></td>
+                                <td><span className="tag-badge">{banner.tag}</span></td>
                                 <td>{banner.sortOrder}</td>
                                 <td>
-                                    <button 
-                                        className={`status-toggle-btn ${banner.isActive ? 'active' : 'inactive'}`}
-                                        onClick={() => handleBannerToggle(banner.id, banner.isActive)}
-                                    >
-                                        {banner.isActive ? 'Đang hiện' : 'Đang ẩn'}
-                                    </button>
+                                    <span className={`status-badge ${banner.isActive ? 'active' : 'draft'}`}>
+                                        {banner.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                                    </span>
                                 </td>
                                 <td>
                                     <div className="admin-actions">
-                                        <button className="admin-btn reject" onClick={() => handleBannerDelete(banner.id)} title="Xóa">
+                                        <button 
+                                            className={`admin-btn ${banner.isActive ? 'reject' : 'approve'}`} 
+                                            title={banner.isActive ? "Tạm dừng" : "Kích hoạt"}
+                                            onClick={() => handleBannerToggle(banner.id, banner.isActive)}
+                                        >
                                             <XCircle size={18} />
+                                        </button>
+                                        <button className="admin-btn reject" onClick={() => handleBannerDelete(banner.id)} title="Xóa">
+                                            <FileText size={18} />
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                         )) : (
-                            <tr>
-                                <td colSpan="5" className="empty-table-cell">Chưa có banner nào</td>
-                            </tr>
+                            <tr><td colSpan="5" className="empty-table-cell">Chưa có banner nào</td></tr>
                         )}
                     </tbody>
                 </table>
             </div>
           </div>
         );
-      case 'students':
-      case 'instructors':
-        const filteredUsers = usersList.filter(u => u.role === (activeTab === 'students' ? 'student' : 'instructor'));
+      case 'all-articles':
+      case 'my-articles':
+      case 'review-articles':
+        if (articleView === 'editor') {
+          return (
+            <ArticleEditor 
+              articleId={editingArticleId}
+              articleData={editingArticleData}
+              userRole="admin"
+              onClose={() => setArticleView('list')}
+              onSuccess={() => {
+                setArticleView('list');
+                fetchData();
+              }}
+            />
+          );
+        }
         return (
           <div className="admin-content-fade-in">
-            <h2 className="content-title">Quản lý {activeTab === 'students' ? 'Học viên' : 'Giảng viên'}</h2>
+            <div className="section-header">
+                <h2 className="content-title">
+                  {activeTab === 'all-articles' ? 'Tất cả bài viết' : 
+                   activeTab === 'my-articles' ? 'Bài viết của tôi' : 'Duyệt bài viết'}
+                </h2>
+                <button 
+                  className="add-btn primary"
+                  onClick={() => {
+                    setArticleView('editor');
+                    setEditingArticleId(null);
+                    setEditingArticleData(null);
+                  }}
+                >
+                  <Plus size={18} /> Viết bài
+                </button>
+            </div>
+
+            <div className="admin-search-wrapper" style={{ marginBottom: '20px', maxWidth: '400px', position: 'relative' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
+                <input 
+                    type="text" 
+                    placeholder={activeTab === 'all-articles' ? "Tìm trong tất cả bài viết..." : 
+                                 activeTab === 'my-articles' ? "Tìm theo tên bài viết của tôi..." : "Tìm theo tên bài viết chờ duyệt..."} 
+                    value={articleSearch}
+                    onChange={(e) => setArticleSearch(e.target.value)}
+                    style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#ffffff', color: '#1f2937' }}
+                />
+            </div>
+
             <div className="table-container">
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Tên</th>
-                            <th>Email</th>
-                            <th>Ngày tham gia</th>
-                            <th>Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredUsers.map(u => (
-                            <tr key={u.id}>
-                                <td>{u.name}</td>
-                                <td>{u.email}</td>
-                                <td>{new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
-                                <td>
-                                    <span className="status-badge active">Hoạt động</span>
-                                </td>
-                            </tr>
-                        ))}
-                        {filteredUsers.length === 0 && (
-                            <tr>
-                                <td colSpan="4" className="empty-table-cell">Không có người dùng nào</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Bài viết</th>
+                    {activeTab !== 'my-articles' && <th>Tác giả</th>}
+                    <th>Danh mục</th>
+                    <th>Ngày</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(activeTab === 'review-articles' ? pendingArticles : articles).length > 0 ? 
+                   (activeTab === 'review-articles' ? pendingArticles : articles).map(art => (
+                    <tr key={art.id}>
+                      <td style={{ fontWeight: '500' }}>{art.title}</td>
+                      {activeTab !== 'my-articles' && <td>{art.author?.name || 'Admin'}</td>}
+                      <td>{art.category}</td>
+                      <td>{new Date(art.updatedAt).toLocaleDateString('vi-VN')}</td>
+                      <td>
+                        <span className={`status-badge ${
+                          art.articleStatus === 2 ? 'active' : 
+                          art.articleStatus === 1 ? 'pending' : 
+                          art.articleStatus === 3 ? 'rejected' : 'draft'
+                        }`}>
+                          {art.articleStatus === 2 ? 'Đã xuất bản' : 
+                           art.articleStatus === 1 ? 'Chờ duyệt' : 
+                           art.articleStatus === 3 ? 'Từ chối' : 'Bản nháp'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-actions">
+                          {activeTab === 'review-articles' ? (
+                            <>
+                              <button className="admin-btn approve" onClick={() => handleArticleStatusUpdate(art.id, 2)} title="Duyệt">
+                                <Check size={18} />
+                              </button>
+                              <button className="admin-btn reject" onClick={() => handleArticleStatusUpdate(art.id, 3)} title="Từ chối">
+                                <XCircle size={18} />
+                              </button>
+                              <button className="admin-btn view" onClick={() => window.open(`/articles/${art.id}`, '_blank')} title="Xem trước">
+                                <Eye size={18} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button 
+                                className="admin-btn view" 
+                                title="Sửa"
+                                onClick={() => {
+                                  setArticleView('editor');
+                                  setEditingArticleId(art.id);
+                                  setEditingArticleData(art);
+                                }}
+                              >
+                                <CheckSquare size={18} />
+                              </button>
+                              <button className="admin-btn view" onClick={() => window.open(`/articles/${art.id}`, '_blank')} title="Xem">
+                                <Eye size={18} />
+                              </button>
+                              {art.articleStatus === 2 ? (
+                                <button className="admin-btn reject" title="Gỡ xuống" onClick={() => handleArticleStatusUpdate(art.id, 0)}>
+                                  <ArrowDownCircle size={18} />
+                                </button>
+                              ) : (
+                                <button className="admin-btn approve" title="Xuất bản" onClick={() => handleArticleStatusUpdate(art.id, 2)}>
+                                  <CheckCircle size={18} />
+                                </button>
+                              )}
+                              <button className="admin-btn reject" title="Xóa" onClick={() => handleArticleDelete(art.id)}>
+                                <XCircle size={18} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="6" className="empty-table-cell">Không có bài viết nào</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         );
@@ -481,11 +725,9 @@ const AdminDashboard = () => {
           <div className="admin-content-fade-in">
             <div className="section-header">
                 <h2 className="content-title">Thông báo hệ thống</h2>
-                {notifications.some(n => !n.isRead) && (
-                    <button className="add-btn secondary" onClick={handleMarkAllRead}>
-                        Đánh dấu tất cả đã đọc
-                    </button>
-                )}
+                <button className="add-btn secondary" onClick={handleMarkAllRead}>
+                    Đánh dấu tất cả đã đọc
+                </button>
             </div>
             <p className="section-desc">Theo dõi các hoạt động quan trọng từ giảng viên và hệ thống.</p>
             
@@ -517,14 +759,7 @@ const AdminDashboard = () => {
           </div>
         );
       default:
-        return (
-          <div className="admin-content-fade-in">
-            <h2 className="content-title">{menuItems.find(m => m.id === activeTab)?.label}</h2>
-            <div className="placeholder-content">
-              Module này đang được phát triển. Dữ liệu sẽ sớm hiển thị tại đây.
-            </div>
-          </div>
-        );
+        return <div className="admin-content-fade-in"><h2>Chào mừng quay trở lại</h2><p>Vui lòng chọn một mục từ menu bên trái.</p></div>;
     }
   };
 
@@ -543,50 +778,61 @@ const AdminDashboard = () => {
         </div>
 
         <nav className="sidebar-nav">
-          {menuItems.map((item) => (
-            <div key={item.id} className="nav-group">
-              <button
-                className={`nav-item ${activeTab === item.id || (item.id === 'users' && (activeTab === 'students' || activeTab === 'instructors')) ? 'active' : ''}`}
-                onClick={() => {
-                  if (item.hasSubmenu) {
-                    setIsUsersMenuOpen(!isUsersMenuOpen);
-                  } else {
-                    setActiveTab(item.id);
-                    if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                  }
-                }}
-              >
-                <span className="item-icon">{item.icon}</span>
-                <span className="item-label">{item.label}</span>
-                {item.id === 'notifications' && unreadCount > 0 && (
-                  <span className="notif-badge">{unreadCount}</span>
+          {menuItems.map((item) => {
+            const isUsersItem = item.id === 'users';
+            const isArticlesItem = item.id === 'articles';
+            const isItemMenuOpen = isUsersItem ? isUsersMenuOpen : (isArticlesItem ? isArticlesMenuOpen : false);
+            
+            const isTabActive = activeTab === item.id || 
+              (isUsersItem && (activeTab === 'students' || activeTab === 'instructors')) ||
+              (isArticlesItem && (activeTab === 'all-articles' || activeTab === 'my-articles' || activeTab === 'review-articles'));
+
+            return (
+              <div key={item.id} className="nav-group">
+                <button
+                  className={`nav-item ${isTabActive ? 'active' : ''}`}
+                  onClick={() => {
+                    if (item.hasSubmenu) {
+                      if (isUsersItem) setIsUsersMenuOpen(!isUsersMenuOpen);
+                      if (isArticlesItem) setIsArticlesMenuOpen(!isArticlesMenuOpen);
+                    } else {
+                      setActiveTab(item.id);
+                      if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                    }
+                  }}
+                >
+                  <span className="item-icon">{item.icon}</span>
+                  <span className="item-label">{item.label}</span>
+                  {item.id === 'notifications' && unreadCount > 0 && (
+                    <span className="notif-badge">{unreadCount}</span>
+                  )}
+                  {item.hasSubmenu ? (
+                    <ChevronDown size={16} className={`arrow-icon ${isItemMenuOpen ? 'rotated' : ''}`} />
+                  ) : (
+                    activeTab === item.id && <ChevronRight size={16} className="active-arrow" />
+                  )}
+                </button>
+                
+                {item.hasSubmenu && isItemMenuOpen && (
+                  <div className="submenu">
+                    {item.subItems.map(subItem => (
+                      <button
+                        key={subItem.id}
+                        className={`submenu-item ${activeTab === subItem.id ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveTab(subItem.id);
+                          if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                        }}
+                      >
+                        <span className="sub-icon">{subItem.icon}</span>
+                        <span className="sub-label">{subItem.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
-                {item.hasSubmenu ? (
-                  <ChevronDown size={16} className={`arrow-icon ${isUsersMenuOpen ? 'rotated' : ''}`} />
-                ) : (
-                  activeTab === item.id && <ChevronRight size={16} className="active-arrow" />
-                )}
-              </button>
-              
-              {item.hasSubmenu && isUsersMenuOpen && (
-                <div className="submenu">
-                  {item.subItems.map(subItem => (
-                    <button
-                      key={subItem.id}
-                      className={`submenu-item ${activeTab === subItem.id ? 'active' : ''}`}
-                      onClick={() => {
-                        setActiveTab(subItem.id);
-                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                      }}
-                    >
-                      <span className="sub-icon">{subItem.icon}</span>
-                      <span className="sub-label">{subItem.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">

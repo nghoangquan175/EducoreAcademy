@@ -18,9 +18,18 @@ const Article = sequelize.define('Article', {
   thumbnail: {
     type: DataTypes.STRING
   },
-  published: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false
+  excerpt: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  category: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  articleStatus: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: '0: Draft, 1: Pending, 2: Approved, 3: Rejected'
   }
 }, {
   indexes: [

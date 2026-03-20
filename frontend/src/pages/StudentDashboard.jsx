@@ -14,11 +14,7 @@ import {
   Calendar,
   Bell,
   BookMarked,
-  Video,
-  HelpCircle,
   BarChart3,
-  CreditCard,
-  Settings,
   ShieldCheck,
   Check,
   Clock,
@@ -36,6 +32,14 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { useTheme } from '../contexts/ThemeContext';
 import NotificationBell from '../components/NotificationBell';
+import ArticleEditor from './ArticleEditor';
+import { 
+  fetchStudentProStatusAPI, 
+  fetchMyArticlesStudentAPI, 
+  deleteArticleStudentAPI, 
+  submitArticleForReviewStudentAPI,
+  undoSubmitArticleStudentAPI
+} from '../services/articleService';
 
 import './StudentDashboard.css';
 
@@ -82,6 +86,24 @@ const StudentDashboard = () => {
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoal, setNewGoal] = useState({ title: '', type: 'Task', time: '09:00', color: '#3b82f6' });
   
+  // Articles State
+  const [articles, setArticles] = useState([]);
+  const [isProForArticles, setIsProForArticles] = useState(false);
+  const [articleView, setArticleView] = useState('list'); // 'list' or 'editor'
+  const [editingArticleId, setEditingArticleId] = useState(null);
+  const [editingArticleData, setEditingArticleData] = useState(null);
+  const [articleSearch, setArticleSearch] = useState('');
+  const [articlePage, setArticlePage] = useState(1);
+  const [articleTotalPages, setArticleTotalPages] = useState(1);
+  const [debouncedArticleSearch, setDebouncedArticleSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedArticleSearch(articleSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [articleSearch]);
+  
   const hasGreeted = useRef(false);
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -91,12 +113,8 @@ const StudentDashboard = () => {
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
     { id: 'courses', label: 'Khóa học', icon: <BookOpen size={20} /> },
-    { id: 'material', label: 'Tài liệu', icon: <BookMarked size={20} /> },
-    { id: 'lectures', label: 'Bài giảng', icon: <Video size={20} /> },
     { id: 'tests', label: 'Bài tập & Báo cáo', icon: <BarChart3 size={20} /> },
-    { id: 'doubt', label: 'Giải đáp', icon: <HelpCircle size={20} /> },
-    { id: 'payment', label: 'Thanh toán', icon: <CreditCard size={20} /> },
-    { id: 'settings', label: 'Cài đặt', icon: <Settings size={20} /> },
+    { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
   ];
 
   useEffect(() => {
@@ -126,8 +144,8 @@ const StudentDashboard = () => {
       if (globalSearch.trim().length >= 2) {
         setIsGlobalSearching(true);
         try {
-          // Scoped search for student dashboard: only enrolled courses and authored articles
-          const res = await axios.get(`http://localhost:5000/api/search?q=${encodeURIComponent(globalSearch)}&studentId=${user?.id}&authorId=${user?.id}`);
+          // Global search: find any published courses and articles
+          const res = await axios.get(`http://localhost:5000/api/search?q=${encodeURIComponent(globalSearch)}`);
           setGlobalSearchResults(res.data);
           setShowGlobalSearchDropdown(true);
         } catch (error) {
@@ -194,12 +212,61 @@ const StudentDashboard = () => {
         safeFetch('http://localhost:5000/api/users/student/quiz-attempts', setQuizAttempts),
         safeFetch('http://localhost:5000/api/users/student/pending-quizzes', setPendingQuizzes),
         safeFetch('http://localhost:5000/api/users/student/upcoming-study-goals', setUpcomingGoals),
-        safeFetch('http://localhost:5000/api/users/student/leaderboard', setLeaderboard)
+        safeFetch('http://localhost:5000/api/users/student/leaderboard', setLeaderboard),
+        fetchStudentProStatusAPI().then(res => setIsProForArticles(res.isPro))
       ]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'articles' && isProForArticles) {
+      fetchStudentArticles();
+    }
+  }, [activeTab, articlePage, debouncedArticleSearch, isProForArticles]);
+
+  const fetchStudentArticles = async () => {
+    try {
+      const { data } = await fetchMyArticlesStudentAPI(articlePage, 10, debouncedArticleSearch);
+      setArticles(data.articles);
+      setArticleTotalPages(data.totalPages);
+    } catch (error) {
+      console.error('Error fetching student articles:', error);
+    }
+  };
+
+  const handleArticleDelete = async (id) => {
+    if (!window.confirm('Xóa bài viết này?')) return;
+    try {
+      await deleteArticleStudentAPI(id);
+      fetchStudentArticles();
+    } catch (error) {
+      toast.error('Lỗi khi xóa bài viết');
+    }
+  };
+
+  const handleArticleSubmit = async (id) => {
+    if (!window.confirm('Bạn có chắc muốn gửi bài viết này để phê duyệt?')) return;
+    try {
+      await submitArticleForReviewStudentAPI(id);
+      toast.success('Đã gửi bài viết để duyệt!');
+      fetchStudentArticles();
+    } catch (error) {
+      toast.error('Lỗi khi gửi bài viết: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleUndoSubmit = async (id) => {
+    if (!window.confirm('Bạn có chắc muốn thu hồi yêu cầu phê duyệt cho bài viết này?')) return;
+    try {
+      await undoSubmitArticleStudentAPI(id);
+      toast.success('Đã thu hồi yêu cầu phê duyệt!');
+      fetchStudentArticles();
+    } catch (error) {
+      toast.error('Lỗi khi thu hồi: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -743,6 +810,168 @@ const StudentDashboard = () => {
       </div>
     );
   };
+  const renderArticles = () => {
+    if (!isProForArticles) {
+      return (
+        <div className="std-content-fade-in">
+          <div className="std-empty-state" style={{ marginTop: '50px', textAlign: 'center' }}>
+            <ShieldCheck size={64} style={{ color: 'var(--accent)', marginBottom: '20px' }} />
+            <h3>Tính năng dành cho thành viên PRO</h3>
+            <p style={{ maxWidth: '500px', margin: '15px auto', lineHeight: '1.6', color: 'var(--text-muted)' }}>
+              Bạn cần sở hữu ít nhất một khóa học <strong>PRO</strong> để có thể viết và đăng bài trên nền tảng. 
+              Hãy nâng cấp thành viên để chia sẻ kiến thức ngay hôm nay!
+            </p>
+            <button className="std-continue-btn" onClick={() => navigate('/courses')}>
+              Khám phá khóa học PRO
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (articleView === 'editor') {
+      return (
+        <ArticleEditor 
+          articleId={editingArticleId}
+          articleData={editingArticleData}
+          userRole="student"
+          onClose={() => setArticleView('list')}
+          onSuccess={() => {
+            setArticleView('list');
+            fetchStudentArticles();
+          }}
+        />
+      );
+    }
+
+    return (
+      <div className="std-content-fade-in">
+        <div className="std-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Quản lý bài viết</h3>
+            <p style={{ color: 'var(--text-muted)' }}>Chia sẻ kiến thức và kinh nghiệm của bạn với cộng đồng.</p>
+          </div>
+          <button 
+            className="std-continue-btn" 
+            style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}
+            onClick={() => {
+              setArticleView('editor');
+              setEditingArticleId(null);
+              setEditingArticleData(null);
+            }}
+          >
+            <Plus size={18} /> Viết bài mới
+          </button>
+        </div>
+
+        <div className="std-courses-controls" style={{ marginBottom: '24px', display: 'flex', gap: '15px' }}>
+          <div className="std-course-search" style={{ flex: 1, position: 'relative' }}>
+             <Search size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+             <input 
+                type="text" 
+                placeholder="Tìm kiếm bài viết của bạn..." 
+                value={articleSearch}
+                onChange={(e) => setArticleSearch(e.target.value)}
+                style={{ width: '100%', padding: '12px 12px 12px 45px', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-main)' }}
+             />
+          </div>
+        </div>
+
+        <div className="std-quiz-history-table">
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <th style={{ padding: '0 15px' }}>Bài viết</th>
+                <th>Danh mục</th>
+                <th>Ngày tạo</th>
+                <th style={{ textAlign: 'center' }}>Trạng thái</th>
+                <th style={{ textAlign: 'center' }}>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {articles.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '15px' }}>
+                    <FileText size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
+                    <p>Bạn chưa có bài viết nào. Hãy bắt đầu chia sẻ kiến thức ngay!</p>
+                  </td>
+                </tr>
+              ) : (
+                articles.map(art => (
+                  <tr key={art.id} style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                    <td style={{ padding: '15px', fontWeight: 600, borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>{art.title}</td>
+                    <td>{art.category}</td>
+                    <td>{new Date(art.createdAt).toLocaleDateString('vi-VN')}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className={`std-badge ${
+                        art.articleStatus === 0 ? 'warning' : 
+                        art.articleStatus === 1 ? 'info' : 
+                        art.articleStatus === 2 ? 'success' : 'danger'
+                      }`} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>
+                        {art.articleStatus === 0 ? 'Bản nháp' : 
+                         art.articleStatus === 1 ? 'Chờ duyệt' : 
+                         art.articleStatus === 2 ? 'Đã đăng' : 'Bị từ chối'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '15px', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <button 
+                          className="btn-action-small view"
+                          style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-main)' }}
+                          onClick={() => window.open(`/articles/${art.id}`, '_blank')}
+                        >
+                          Xem
+                        </button>
+                        {(art.articleStatus === 0 || art.articleStatus === 3) && (
+                          <>
+                            <button 
+                              className="btn-action-small review"
+                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: 'var(--accent-light)', color: 'var(--accent)' }}
+                              onClick={() => {
+                                setEditingArticleId(art.id);
+                                setEditingArticleData(art);
+                                setArticleView('editor');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                            >
+                              Sửa
+                            </button>
+                            <button 
+                              className="btn-action-small retake"
+                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#10b981', color: 'white' }}
+                              onClick={() => handleArticleSubmit(art.id)}
+                            >
+                              Gửi duyệt
+                            </button>
+                            <button 
+                              className="btn-action-small delete" 
+                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#ef4444' }}
+                              onClick={() => handleArticleDelete(art.id)}
+                            >
+                              Xóa
+                            </button>
+                          </>
+                        )}
+                        {art.articleStatus === 1 && (
+                          <button 
+                            className="btn-action-small review"
+                            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fffbeb', color: '#f59e0b' }}
+                            onClick={() => handleUndoSubmit(art.id)}
+                          >
+                            Thu hồi
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="student-dashboard-layout">
@@ -850,14 +1079,12 @@ const StudentDashboard = () => {
         </header>
 
         <div className="std-dashboard-container">
-           <main className="std-content-scroll">
-              {activeTab === 'overview' && renderOverview()}
-              {activeTab === 'courses' && renderCourses()}
-              {activeTab === 'tests' && renderTests()}
-              {['material', 'lectures', 'doubt', 'payment', 'settings'].includes(activeTab) && (
-                <div className="std-empty-state">Tính năng đang phát triển!</div>
-              )}
-           </main>
+            <main className="std-content-scroll">
+               {activeTab === 'overview' && renderOverview()}
+               {activeTab === 'courses' && renderCourses()}
+               {activeTab === 'tests' && renderTests()}
+               {activeTab === 'articles' && renderArticles()}
+            </main>
 
            {/* Modals */}
            {renderCalendarModal()}

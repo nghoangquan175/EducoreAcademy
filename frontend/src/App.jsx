@@ -8,10 +8,12 @@ import Header from './components/Header';
 import BannerCarousel from './components/BannerCarousel';
 import ProCourses from './components/ProCourses';
 import FreeCourses from './components/FreeCourses';
+import ArticlesHome from './components/ArticlesHome';
 import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CoursePage from './pages/CoursePage';
+import ArticleDetail from './pages/ArticleDetail';
 import LearningPage from './pages/LearningPage';
 import InstructorDashboard from './pages/InstructorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -97,12 +99,15 @@ function App() {
                     <BannerCarousel />
                     <ProCourses />
                     <FreeCourses />
+                    <ArticlesHome />
                   </>
                 } />
 
                 <Route path="/course/:id" element={<CoursePage />} />
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
               </Route>
+              
+              <Route path="/articles/:id" element={<ArticleDetail />} />
 
               {/* Checkout page — custom layout */}
               <Route element={<CheckoutLayout />}>

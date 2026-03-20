@@ -3,6 +3,12 @@ const router = express.Router();
 const { User, Course, Enrollment, Article } = require('../models');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { sequelize } = require('../config/db');
+const { Op } = require('sequelize');
+const { 
+  adminGetPendingArticles, 
+  adminUpdateArticleStatus,
+  adminGetAllArticles
+} = require('../controllers/articleController');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -14,6 +20,8 @@ router.get('/stats', protect, admin, async (req, res) => {
     const courseCount = await Course.count();
     const pendingCourses = await Course.count({ where: { published: 1 } });
     const enrollmentCount = await Enrollment.count();
+    const publishedArticles = await Article.count({ where: { articleStatus: 2 } });
+    const pendingArticles = await Article.count({ where: { articleStatus: 1 } });
     
     // Revenue (simplistic: sum of prices of enrolled courses, this might need a Payment model later)
     // For now, let's just return some mock or basic data
@@ -27,7 +35,9 @@ router.get('/stats', protect, admin, async (req, res) => {
       courses: courseCount,
       pendingCourses,
       enrollments: enrollmentCount,
-      revenue: totalRevenue
+      revenue: totalRevenue,
+      publishedArticles,
+      pendingArticles
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -39,8 +49,12 @@ router.get('/stats', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.get('/courses/pending', protect, admin, async (req, res) => {
   try {
+    const search = req.query.search || '';
     const pendingCourses = await Course.findAll({
-      where: { published: 1 },
+      where: { 
+        published: 1,
+        title: { [Op.like]: `%${search}%` }
+      },
       include: [{ model: User, as: 'instructor', attributes: ['id', 'name', 'email'] }],
       order: [['updatedAt', 'ASC']]
     });
@@ -55,7 +69,11 @@ router.get('/courses/pending', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.get('/courses', protect, admin, async (req, res) => {
   try {
+    const search = req.query.search || '';
     const courses = await Course.findAll({
+      where: {
+        title: { [Op.like]: `%${search}%` }
+      },
       attributes: {
         include: [
           [
@@ -119,5 +137,20 @@ router.get('/users', protect, admin, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// @desc    Get all articles for management
+// @route   GET /api/admin/articles/all
+// @access  Private/Admin
+router.get('/articles/all', protect, admin, adminGetAllArticles);
+
+// @desc    Get pending articles for review
+// @route   GET /api/admin/articles/pending
+// @access  Private/Admin
+router.get('/articles/pending', protect, admin, adminGetPendingArticles);
+
+// @desc    Approve or Reject an article
+// @route   PATCH /api/admin/articles/:id/status
+// @access  Private/Admin
+router.patch('/articles/:id/status', protect, admin, adminUpdateArticleStatus);
 
 module.exports = router;

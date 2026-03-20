@@ -14,13 +14,16 @@ import {
   Menu,
   X,
   CreditCard,
-  Users
+  Users,
+  Eye
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import CourseEditor from './CourseEditor';
 import CurriculumEditor from './CurriculumEditor';
+import ArticleEditor from './ArticleEditor';
+import { fetchMyArticlesAPI, deleteArticleAPI, submitArticleForReviewAPI } from '../services/articleService';
 import './InstructorDashboard.css';
 
 const InstructorDashboard = () => {
@@ -29,6 +32,16 @@ const InstructorDashboard = () => {
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Articles State
+  const [articles, setArticles] = useState([]);
+  const [articleView, setArticleView] = useState('list'); // 'list' or 'editor'
+  const [editingArticleId, setEditingArticleId] = useState(null);
+  const [editingArticleData, setEditingArticleData] = useState(null);
+  const [articleSearch, setArticleSearch] = useState('');
+  const [articlePage, setArticlePage] = useState(1);
+  const [articleTotalPages, setArticleTotalPages] = useState(1);
+
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({
     totalEarnings: 0,
@@ -47,7 +60,18 @@ const InstructorDashboard = () => {
 
   useEffect(() => {
     fetchMyCourses();
-  }, []);
+    fetchMyArticles();
+  }, [articlePage, articleSearch]);
+
+  const fetchMyArticles = async () => {
+    try {
+      const { data } = await fetchMyArticlesAPI(articlePage, 10, articleSearch);
+      setArticles(data.articles);
+      setArticleTotalPages(data.totalPages);
+    } catch (error) {
+      console.error('Lỗi khi tải bài viết:', error);
+    }
+  };
 
   const fetchMyCourses = async () => {
     setLoading(true);
@@ -96,6 +120,28 @@ const InstructorDashboard = () => {
       fetchMyCourses();
     } catch (error) {
       alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu phê duyệt');
+    }
+  };
+
+  const handleArticleDelete = async (id) => {
+    if (!window.confirm('Bạn có chắc muốn xóa bài viết này?')) return;
+    try {
+      await deleteArticleAPI(id);
+      alert('Đã xóa bài viết thành công');
+      fetchMyArticles();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Lỗi khi xóa bài viết');
+    }
+  };
+
+  const handleArticleSubmit = async (id) => {
+    if (!window.confirm('Gửi bài viết này để quản trị viên phê duyệt?')) return;
+    try {
+      await submitArticleForReviewAPI(id);
+      alert('Đã gửi bài viết thành công');
+      fetchMyArticles();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Lỗi khi gửi bài viết');
     }
   };
 
@@ -265,14 +311,141 @@ const InstructorDashboard = () => {
           </div>
         );
       case 'articles':
+        if (articleView === 'editor') {
+          return (
+            <ArticleEditor 
+              articleId={editingArticleId}
+              articleData={editingArticleData}
+              onClose={() => setArticleView('list')}
+              onSuccess={() => {
+                setArticleView('list');
+                fetchMyArticles();
+              }}
+            />
+          );
+        }
         return (
           <div className="inst-content-fade-in">
-            <h2 className="inst-content-title">Quản lý Bài viết</h2>
-            <div className="inst-placeholder-content">
-                <FileText size={48} />
-                <p>Tính năng quản lý bài viết Blog dành cho Giảng viên đang được phát triển.</p>
-                <button className="inst-add-btn primary mt-4">Viết bài mới</button>
+            <div className="inst-section-header">
+                <h2 className="inst-content-title">Quản lý Bài viết</h2>
+                <button 
+                  className="inst-add-btn primary"
+                  onClick={() => {
+                    setArticleView('editor');
+                    setEditingArticleId(null);
+                    setEditingArticleData(null);
+                  }}
+                >
+                  <Plus size={18} /> Viết bài mới
+                </button>
             </div>
+
+            <div className="inst-filters-bar" style={{ marginBottom: '20px' }}>
+              <div className="inst-search-wrapper" style={{ position: 'relative', maxWidth: '400px' }}>
+                <input 
+                  type="text" 
+                  className="inst-search-input" 
+                  placeholder="Tìm kiếm bài viết..." 
+                  value={articleSearch}
+                  onChange={(e) => setArticleSearch(e.target.value)}
+                  style={{ width: '100%', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                />
+              </div>
+            </div>
+
+            <div className="inst-table-container">
+                <table className="inst-table">
+                  <thead>
+                    <tr>
+                      <th>Bài viết</th>
+                      <th>Danh mục</th>
+                      <th>Ngày tạo</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {articles.length > 0 ? articles.map(article => (
+                      <tr key={article.id}>
+                        <td>{article.title}</td>
+                        <td>{article.category}</td>
+                        <td>{new Date(article.createdAt).toLocaleDateString('vi-VN')}</td>
+                        <td>
+                          <span className={`inst-status-badge ${article.articleStatus === 2 ? 'published' : article.articleStatus === 1 ? 'pending' : article.articleStatus === 3 ? 'rejected' : 'draft'}`}>
+                            {article.articleStatus === 2 && 'Đã duyệt'}
+                            {article.articleStatus === 0 && 'Bản nháp'}
+                            {article.articleStatus === 1 && 'Chờ duyệt'}
+                            {article.articleStatus === 3 && 'Từ chối'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="inst-actions">
+                            <button 
+                              className="inst-btn view" 
+                              onClick={() => window.open(`/articles/${article.id}`, '_blank')}
+                              title="Xem chi tiết"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            {(article.articleStatus === 0 || article.articleStatus === 3) && (
+                              <button className="inst-btn approve" onClick={() => handleArticleSubmit(article.id)} title="Gửi duyệt">
+                                <Send size={16} />
+                              </button>
+                            )}
+                            <button 
+                              className="inst-btn view" 
+                              onClick={() => {
+                                setArticleView('editor');
+                                setEditingArticleId(article.id);
+                                setEditingArticleData({
+                                  title: article.title,
+                                  content: article.content,
+                                  thumbnail: article.thumbnail,
+                                  excerpt: article.excerpt,
+                                  category: article.category
+                                });
+                              }}
+                              title="Sửa"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            {article.articleStatus !== 2 && (
+                              <button className="inst-btn reject" onClick={() => handleArticleDelete(article.id)} title="Xóa">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan="5" className="empty-table-cell">Không tìm thấy bài viết nào</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+            </div>
+
+            {articleTotalPages > 1 && (
+              <div className="inst-pagination" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                {Array.from({ length: articleTotalPages }).map((_, i) => (
+                  <button 
+                    key={i + 1}
+                    className={`inst-page-btn ${articlePage === i + 1 ? 'active' : ''}`}
+                    onClick={() => setArticlePage(i + 1)}
+                    style={{ 
+                      padding: '5px 12px', 
+                      borderRadius: '8px', 
+                      border: '1px solid #e2e8f0',
+                      background: articlePage === i + 1 ? '#6366f1' : 'white',
+                      color: articlePage === i + 1 ? 'white' : 'inherit'
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         );
       default:

@@ -54,14 +54,18 @@ const searchContent = async (req, res) => {
     const articleWhere = {
       title: {
         [Op.substring]: query
-      },
-      published: true
+      }
     };
 
-    // If authorId is provided (Dashboard context), filter articles by author
-    // If not provided (Global context), search all published articles
+    // If authorId is provided (Dashboard context), we might want to see our own articles (all statuses)
+    // BUT usually global search only shows published content even in dashboard.
+    // However, the user said "tìm kiếm bài viết của student chưa work".
+    // Let's make it so: if authorId is provided, search author's articles.
+    // Otherwise, search all published articles.
     if (authorId) {
       articleWhere.authorId = authorId;
+    } else {
+      articleWhere.articleStatus = 2; // 2 = Published/Approved
     }
 
     const articles = await Article.findAll({
