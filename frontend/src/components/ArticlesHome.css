@@ -108,12 +108,12 @@
 
 .art-card {
   background: hsl(var(--art-bg-card));
-  /* border: 1px solid hsl(var(--art-border)); */
   border-radius: 20px;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 
 .art-card:hover {
@@ -225,8 +225,7 @@
   justify-content: center;
   gap: 10px;
   margin-top: 54px;
-  padding-top: 24px;
-  border-top: 1px solid hsl(var(--art-border));
+  padding-top: 0;
 }
 
 .art-page-btn {

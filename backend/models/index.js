@@ -14,6 +14,8 @@ const QuizAttempt = require('./QuizAttempt');
 const StudyGoal = require('./StudyGoal');
 const PaymentOrder = require('./PaymentOrder');
 const Payment = require('./Payment');
+const Comment = require('./Comment');
+const Category = require('./Category');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -45,7 +47,7 @@ Progress.belongsTo(Lesson, { foreignKey: 'lessonId' });
 Course.hasMany(Review, { foreignKey: 'courseId' });
 Review.belongsTo(Course, { foreignKey: 'courseId' });
 User.hasMany(Review, { foreignKey: 'userId' });
-Review.belongsTo(User, { foreignKey: 'userId' });
+Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Notification
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
@@ -54,6 +56,14 @@ Notification.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 // Article
 User.hasMany(Article, { foreignKey: 'authorId', as: 'articles' });
 Article.belongsTo(User, { foreignKey: 'authorId', as: 'author' });
+ 
+// Comment
+Article.hasMany(Comment, { foreignKey: 'articleId', as: 'comments', onDelete: 'CASCADE' });
+Comment.belongsTo(Article, { foreignKey: 'articleId' });
+User.hasMany(Comment, { foreignKey: 'userId', as: 'comments' });
+Comment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Comment.hasMany(Comment, { foreignKey: 'parentId', as: 'replies', onDelete: 'CASCADE' });
+Comment.belongsTo(Comment, { foreignKey: 'parentId', as: 'parent' });
 
 // Quiz
 Lesson.hasOne(Quiz, { foreignKey: 'lessonId', as: 'quiz', onDelete: 'CASCADE' });
@@ -98,5 +108,7 @@ module.exports = {
   QuizAttempt,
   StudyGoal,
   PaymentOrder,
-  Payment
+  Payment,
+  Comment,
+  Category
 };

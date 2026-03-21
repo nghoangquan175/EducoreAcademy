@@ -1,4 +1,4 @@
-const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal, Question, Chapter } = require('../models');
+const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal, Question, Chapter, Review } = require('../models');
 
 // ── GET /api/users/student/stats ───────────────────────────────────────────
 exports.getStudentStats = async (req, res) => {
@@ -135,16 +135,24 @@ exports.getEnrolledCourses = async (req, res) => {
         }
       ]
     });
+ 
+    // Optimization: Fetch all reviews for this user once
+    const userReviews = await Review.findAll({ 
+      where: { userId },
+      attributes: ['courseId']
+    });
+    const reviewedCourseIds = new Set(userReviews.map(r => r.courseId));
 
     const courses = await Promise.all(enrollments.map(async (en) => {
       const course = en.Course;
+      if (!course) return null;
 
       // Calculate progress
+      const courseChapters = await Chapter.findAll({ where: { courseId: course.id }, attributes: ['id'] });
+      const chapterIds = courseChapters.map(c => c.id);
+      
       const totalLessons = await Lesson.count({
-        include: [{
-          model: require('../models').Chapter,
-          where: { courseId: course.id }
-        }]
+        where: { chapterId: chapterIds }
       });
 
       const completedLessons = await Progress.count({
@@ -154,7 +162,7 @@ exports.getEnrolledCourses = async (req, res) => {
       const progressPercent = totalLessons > 0
         ? Math.round((completedLessons / totalLessons) * 100)
         : 0;
-
+ 
       return {
         id: course.id,
         title: course.title,
@@ -162,12 +170,14 @@ exports.getEnrolledCourses = async (req, res) => {
         instructorName: course.instructor?.name || 'Unknown',
         progressPercent,
         category: course.category,
-        lastAccessedAt: en.lastAccessedAt
+        lastAccessedAt: en.lastAccessedAt,
+        isReviewed: reviewedCourseIds.has(course.id)
       };
     }));
-
-    res.json(courses);
+ 
+    res.json(courses.filter(c => c !== null));
   } catch (error) {
+    console.error('Error in getEnrolledCourses:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -229,7 +239,6 @@ exports.getQuizAttempts = async (req, res) => {
 exports.getPendingQuizzes = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { Chapter, Course } = require('../models');
 
     // 1. Tìm tất cả lượt đăng ký của user
     const enrollments = await Enrollment.findAll({

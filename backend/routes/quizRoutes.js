@@ -62,6 +62,14 @@ router.post('/', protect, instructor, async (req, res) => {
             include: [{ model: Question, as: 'questions' }]
         });
 
+        // Update Course Stats
+        const updatedLesson = await Lesson.findByPk(lessonId, {
+            include: [{ model: Chapter }]
+        });
+        if (updatedLesson) {
+            await Course.updateCourseStats(updatedLesson.Chapter.courseId);
+        }
+
         res.status(201).json(finalQuiz);
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -85,7 +85,10 @@ const CourseCongrats = () => {
             <button className="btn-dashboard-back" onClick={() => navigate('/student-dashboard')}>
               <Home size={20} /> Quay lại Dashboard
             </button>
-            <button className="btn-review-shared" onClick={() => navigate(`/course/${courseId}`)}>
+            <button className="btn-review-shared" onClick={() => navigate(`/course/${courseId}/review`)}>
+              <Star size={20} /> Đánh giá khóa học
+            </button>
+            <button className="btn-review-shared" onClick={() => navigate(`/course/${courseId}`)} style={{ background: 'rgba(255,255,255,0.1)' }}>
               <BookOpen size={20} /> Xem lại khóa học
             </button>
           </div>

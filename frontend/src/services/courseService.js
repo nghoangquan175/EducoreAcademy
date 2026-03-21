@@ -52,4 +52,14 @@ export const forceDeleteCourseAPI = (id) => {
   const config = { headers: { Authorization: `Bearer ${token}` } };
   return axios.delete(`${API_URL}/courses/${id}/force`, config);
 };
+ 
+export const fetchCourseReviewsAPI = (courseId, page = 1, limit = 10) => {
+  return axios.get(`${API_URL}/courses/${courseId}/reviews`, { params: { page, limit } });
+};
+ 
+export const addCourseReviewAPI = (courseId, reviewData) => {
+  const token = localStorage.getItem('token');
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  return axios.post(`${API_URL}/courses/${courseId}/reviews`, reviewData, config);
+};
 

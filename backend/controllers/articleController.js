@@ -217,8 +217,8 @@ exports.updateArticle = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Article not found' });
     }
 
-    if (article.authorId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
+    if (article.authorId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized: You can only edit your own articles.' });
     }
 
     // Only allow updating if status is Draft (0) or Rejected (3), or if admin
@@ -326,7 +326,14 @@ exports.deleteArticle = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Only allow deleting if status is Draft (0) or Rejected (3), or if admin
+    if (article.articleStatus === 2) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Bài viết đã xuất bản không thể xóa. Vui lòng gỡ xuống bản nháp (Draft) trước.' 
+      });
+    }
+
+    // Only allow deleting if status is Draft (0) or Rejected (3), or if admin (can delete pending but not published)
     if (![0, 3].includes(article.articleStatus) && req.user.role !== 'admin') {
       return res.status(400).json({ success: false, message: 'Cannot delete article in current status' });
     }
@@ -394,9 +401,9 @@ exports.adminGetPendingArticles = async (req, res) => {
 // @access  Private (Admin)
 exports.adminUpdateArticleStatus = async (req, res) => {
   try {
-    const { status } = req.body; // 2: Approved, 3: Rejected
+    const { status } = req.body; // 0: Draft, 2: Approved, 3: Rejected
     
-    if (![2, 3].includes(Number(status))) {
+    if (![0, 2, 3].includes(Number(status))) {
       return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
     }
 
@@ -408,10 +415,19 @@ exports.adminUpdateArticleStatus = async (req, res) => {
     await article.update({ articleStatus: Number(status) });
 
     // Create Notification for the author
-    const notifyTitle = status === 2 ? 'Bài viết đã được duyệt' : 'Bài viết bị từ chối';
-    const notifyMessage = status === 2 
-      ? `Chúc mừng! Bài viết "${article.title}" của bạn đã được phê duyệt và xuất bản.`
-      : `Rất tiếc, bài viết "${article.title}" của bạn đã bị từ chối phê duyệt. Vui lòng kiểm tra lại nội dung.`;
+    let notifyTitle = '';
+    let notifyMessage = '';
+    
+    if (Number(status) === 2) {
+      notifyTitle = 'Bài viết đã được duyệt';
+      notifyMessage = `Chúc mừng! Bài viết "${article.title}" của bạn đã được phê duyệt và xuất bản.`;
+    } else if (Number(status) === 3) {
+      notifyTitle = 'Bài viết bị từ chối';
+      notifyMessage = `Rất tiếc, bài viết "${article.title}" của bạn đã bị từ chối phê duyệt. Vui lòng kiểm tra lại nội dung.`;
+    } else if (Number(status) === 0) {
+      notifyTitle = 'Bài viết đã bị gỡ';
+      notifyMessage = `Bài viết "${article.title}" của bạn đã bị gỡ xuống bản nháp bởi Quản trị viên.`;
+    }
 
     await Notification.create({
       userId: article.authorId,
@@ -422,7 +438,7 @@ exports.adminUpdateArticleStatus = async (req, res) => {
 
     res.json({ 
       success: true,
-      message: status === 2 ? 'Bài viết đã được phê duyệt' : 'Bài viết đã bị từ chối'
+      message: Number(status) === 2 ? 'Bài viết đã được phê duyệt' : (Number(status) === 3 ? 'Bài viết đã bị từ chối' : 'Đã gỡ bài viết xuống bản nháp')
     });
   } catch (error) {
     console.error('adminUpdateArticleStatus Error:', error);

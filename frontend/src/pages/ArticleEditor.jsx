@@ -8,6 +8,9 @@ import {
   createArticleStudentAPI,
   updateArticleStudentAPI 
 } from '../services/articleService';
+import { fetchAllCategoriesAPI } from '../services/categoryService';
+import ConfirmDialog from '../components/ConfirmDialog';
+import toast from 'react-hot-toast';
 import './CourseEditor.css';
 
 const ArticleEditor = ({ articleId, articleData, onClose, onSuccess, userRole }) => {
@@ -23,13 +26,35 @@ const ArticleEditor = ({ articleId, articleData, onClose, onSuccess, userRole })
   });
 
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
   const [uploadingThumb, setUploadingThumb] = useState(false);
+  
+  const [confirmDialog, setConfirmDialog] = useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    onConfirm: () => {}, 
+    type: 'info' 
+  });
 
   useEffect(() => {
+    fetchCategories();
     if (isEditMode && articleData) {
       setArticle(articleData);
     }
   }, [articleId, articleData]);
+
+  const fetchCategories = async () => {
+    try {
+      const data = await fetchAllCategoriesAPI();
+      setCategories(data);
+      if (!isEditMode && !articleData?.category && data.length > 0 && article.category === 'Lập trình') {
+        setArticle(prev => ({ ...prev, category: data[0].name }));
+      }
+    } catch (error) {
+       console.error("Error fetching categories:", error);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,15 +74,15 @@ const ArticleEditor = ({ articleId, articleData, onClose, onSuccess, userRole })
       setArticle({ ...article, thumbnail: res.url });
     } catch (error) {
       console.error("Upload error:", error);
-      alert('Tải ảnh bìa thất bại: ' + (error.response?.data?.message || error.message));
+      toast.error('Tải ảnh bìa thất bại: ' + (error.response?.data?.message || error.message));
     } finally {
       setUploadingThumb(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleConfirmSubmit = async () => {
     setLoading(true);
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
     try {
       if (isEditMode) {
         if (userRole === 'student') {
@@ -65,21 +90,34 @@ const ArticleEditor = ({ articleId, articleData, onClose, onSuccess, userRole })
         } else {
           await updateArticleAPI(articleId, article);
         }
-        alert('Đã cập nhật bài viết thành công!');
+        toast.success('Đã cập nhật bài viết thành công!');
       } else {
         if (userRole === 'student') {
           await createArticleStudentAPI(article);
         } else {
           await createArticleAPI(article);
         }
-        alert('Đã tạo bài viết mới thành công!');
+        toast.success('Đã tạo bài viết mới thành công!');
       }
       if (onSuccess) onSuccess();
     } catch (error) {
-      alert('Có lỗi xảy ra khi lưu bài viết: ' + (error.response?.data?.message || error.message));
+      toast.error('Có lỗi xảy ra khi lưu bài viết: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setConfirmDialog({
+      isOpen: true,
+      title: isEditMode ? 'Xác nhận cập nhật bài viết' : 'Xác nhận lưu bài viết mới',
+      message: isEditMode 
+        ? 'Bạn có chắc chắn muốn lưu các thay đổi cho bài viết này?' 
+        : 'Bạn có chắc chắn muốn lưu bài viết này?',
+      type: 'info',
+      onConfirm: handleConfirmSubmit
+    });
   };
 
   return (
@@ -116,11 +154,7 @@ const ArticleEditor = ({ articleId, articleData, onClose, onSuccess, userRole })
             <div className="form-group half">
               <label><Layout size={16} /> Danh mục</label>
               <select name="category" value={article.category} onChange={handleChange}>
-                <option value="Lập trình">Lập trình</option>
-                <option value="Thiết kế">Thiết kế</option>
-                <option value="Kinh nghiệm">Kinh nghiệm</option>
-                <option value="Công nghệ">Công nghệ</option>
-                <option value="Đời sống">Đời sống</option>
+                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div className="form-group half">
@@ -206,6 +240,15 @@ const ArticleEditor = ({ articleId, articleData, onClose, onSuccess, userRole })
           )}
         </form>
       </div>
+
+      <ConfirmDialog 
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({...confirmDialog, isOpen: false})}
+        type={confirmDialog.type}
+      />
     </div>
   );
 };

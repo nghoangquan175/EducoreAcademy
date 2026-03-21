@@ -29,7 +29,9 @@ import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import ArticleEditor from './ArticleEditor';
+import CategoryManager from '../components/CategoryManager';
 import {
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -326,16 +328,36 @@ const AdminDashboard = () => {
   };
 
   const handleArticleStatusUpdate = (id, status) => {
-    const isApprove = status === 2;
+    let title = '';
+    let message = '';
+    let successMsg = '';
+    let dialogType = 'info';
+
+    if (status === 2) {
+      title = 'Phê duyệt / Xuất bản bài viết';
+      message = 'Bạn có chắc chắn muốn xuất bản bài viết này?';
+      successMsg = 'Đã phê duyệt và xuất bản bài viết!';
+    } else if (status === 3) {
+      title = 'Từ chối bài viết';
+      message = 'Bạn có chắc chắn muốn từ chối duyệt bài viết này?';
+      successMsg = 'Đã từ chối bài viết.';
+      dialogType = 'danger';
+    } else if (status === 0) {
+      title = 'Gỡ xuống bài viết';
+      message = 'Gỡ xuống bài viết này?';
+      successMsg = 'Đã gỡ bài viết về trạng thái bản nháp.';
+      dialogType = 'warning';
+    }
+
     setConfirmDialog({
       isOpen: true,
-      title: isApprove ? 'Phê duyệt bài viết' : 'Từ chối bài viết',
-      message: isApprove ? 'Phê duyệt bài viết này?' : 'Từ chối bài viết này?',
-      type: isApprove ? 'info' : 'danger',
+      title,
+      message,
+      type: dialogType,
       onConfirm: async () => {
         try {
           await adminUpdateArticleStatusAPI(id, status);
-          toast.success(isApprove ? 'Đã phê duyệt bài viết!' : 'Đã từ chối bài viết.');
+          toast.success(successMsg);
           fetchData();
         } catch (error) {
           toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
@@ -707,7 +729,7 @@ const AdminDashboard = () => {
           </div>
         );
       case 'categories':
-        return <div className="admin-content-fade-in"><h2 className="content-title">Quản lý danh mục</h2><p className="empty-state">Tính năng đang phát triển...</p></div>;
+        return <CategoryManager setConfirmDialog={setConfirmDialog} />;
       case 'banners':
         return (
           <div className="admin-content-fade-in">
@@ -904,17 +926,19 @@ const AdminDashboard = () => {
                               </>
                             ) : (
                               <>
-                                <button 
-                                  className="admin-btn view" 
-                                  title="Sửa"
-                                  onClick={() => {
-                                    setArticleView('editor');
-                                    setEditingArticleId(art.id);
-                                    setEditingArticleData(art);
-                                  }}
-                                >
-                                  <CheckSquare size={18} />
-                                </button>
+                                {(!art.authorId || art.authorId === user.id) && (
+                                  <button 
+                                    className="admin-btn view" 
+                                    title="Sửa"
+                                    onClick={() => {
+                                      setArticleView('editor');
+                                      setEditingArticleId(art.id);
+                                      setEditingArticleData(art);
+                                    }}
+                                  >
+                                    <CheckSquare size={18} />
+                                  </button>
+                                )}
                                 <button className="admin-btn view" onClick={() => window.open(`/articles/${art.id}`, '_blank')} title="Xem">
                                   <Eye size={18} />
                                 </button>
@@ -923,13 +947,15 @@ const AdminDashboard = () => {
                                     <ArrowDownCircle size={18} />
                                   </button>
                                 ) : (
-                                  <button className="admin-btn approve" title="Xuất bản" onClick={() => handleArticleStatusUpdate(art.id, 2)}>
-                                    <CheckCircle size={18} />
-                                  </button>
+                                  <>
+                                    <button className="admin-btn approve" title="Xuất bản" onClick={() => handleArticleStatusUpdate(art.id, 2)}>
+                                      <CheckCircle size={18} />
+                                    </button>
+                                    <button className="admin-btn reject" title="Xóa" onClick={() => handleArticleDelete(art.id)}>
+                                      <XCircle size={18} />
+                                    </button>
+                                  </>
                                 )}
-                                <button className="admin-btn reject" title="Xóa" onClick={() => handleArticleDelete(art.id)}>
-                                  <XCircle size={18} />
-                                </button>
                               </>
                             )}
                           </div>

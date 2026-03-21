@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress } = require('../models');
+const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review } = require('../models');
 const { Op } = require('sequelize');
 const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
 const { notifyAdmins } = require('../utils/notificationUtils');
@@ -465,6 +465,9 @@ router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res
       );
     }
 
+    // Update stats
+    await Course.updateCourseStats(course.id);
+
     res.status(201).json(lesson);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -489,6 +492,9 @@ router.delete('/chapters/:id', protect, instructor, async (req, res) => {
         `Giảng viên ${req.user.name} vừa xóa một chương trong khóa học: "${course.title}"`
       );
     }
+
+    // Update stats
+    await Course.updateCourseStats(course.id);
 
     res.json({ message: 'Đã xóa chương' });
   } catch (error) {
@@ -524,6 +530,9 @@ router.patch('/lessons/:id', protect, instructor, async (req, res) => {
       );
     }
 
+    // Update stats
+    await Course.updateCourseStats(course.id);
+
     res.json(lesson);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -549,6 +558,9 @@ router.delete('/lessons/:id', protect, instructor, async (req, res) => {
         `Giảng viên ${req.user.name} vừa xóa một bài học trong khóa học: "${course.title}"`
       );
     }
+
+    // Update stats
+    await Course.updateCourseStats(course.id);
 
     res.json({ message: 'Đã xóa bài học' });
   } catch (error) {
@@ -737,5 +749,90 @@ router.delete('/:id/force', protect, async (req, res) => {
   }
 });
 
-module.exports = router;
+// ── GET /api/courses/:id/reviews — Public: get course reviews ────────
+router.get('/:id/reviews', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
 
+    const { count, rows: reviews } = await Review.findAndCountAll({
+      where: { courseId: req.params.id },
+      include: [{ model: User, as: 'user', attributes: ['name', 'avatar'] }],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset
+    });
+    res.json({
+      reviews,
+      totalPages: Math.ceil(count / limit),
+      totalReviews: count
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/:id/reviews — Student: Submit a review ──────────
+router.post('/:id/reviews', protect, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const courseId = req.params.id;
+    const userId = req.user.id;
+
+    // 1. Check enrollment
+    const enrollment = await Enrollment.findOne({ where: { userId, courseId } });
+    if (!enrollment) {
+      return res.status(403).json({ message: 'Bạn phải đăng ký khóa học này để đánh giá' });
+    }
+
+    // 2. Check completion
+    const totalLessons = await Lesson.count({
+      include: [{ model: Chapter, where: { courseId } }]
+    });
+
+    const completedLessons = await Progress.count({
+      where: { enrollmentId: enrollment.id, completed: true }
+    });
+
+    if (completedLessons < totalLessons || totalLessons === 0) {
+      return res.status(403).json({ 
+        message: 'Bạn phải hoàn thành toàn bộ khóa học trước khi để lại đánh giá',
+        progress: `${completedLessons}/${totalLessons}`
+      });
+    }
+
+    // 3. Create or update review
+    const existingReview = await Review.findOne({ where: { courseId, userId } });
+    if (existingReview) {
+      existingReview.rating = rating;
+      existingReview.comment = comment;
+      await existingReview.save();
+
+      // Update Course Average Rating
+      const allReviews = await Review.findAll({ where: { courseId } });
+      const avgRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
+      await Course.update({ rating: avgRating }, { where: { id: courseId } });
+
+      return res.json({ message: 'Đã cập nhật đánh giá của bạn', review: existingReview });
+    }
+
+    const review = await Review.create({
+      courseId,
+      userId,
+      rating,
+      comment
+    });
+
+    // 4. Update Course Average Rating
+    const allReviews = await Review.findAll({ where: { courseId } });
+    const avgRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
+    await Course.update({ rating: avgRating }, { where: { id: courseId } });
+
+    res.status(201).json({ message: 'Cảm ơn bạn đã đánh giá khóa học!', review });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+ 
+module.exports = router;

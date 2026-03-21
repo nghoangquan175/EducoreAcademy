@@ -434,6 +434,15 @@ const LearningPage = () => {
                       </button>
                    </div>
                 )}
+
+                {isLastLesson && (passedLessons.includes(parseInt(lessonId)) || passedLessons.includes(currentLesson.id)) && (
+                   <div className="course-completion-final">
+                      <p>🎉 Chúc mừng! Bạn đã hoàn thành tất cả bài học.</p>
+                      <button className="btn-complete-course-final" onClick={handleCompleteCourse}>
+                         NHẬN CHỨNG CHỈ & ĐÁNH GIÁ
+                      </button>
+                   </div>
+                )}
               </div>
             </>
           )}

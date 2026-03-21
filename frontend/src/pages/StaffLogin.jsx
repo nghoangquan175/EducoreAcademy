@@ -65,10 +65,6 @@ const StaffLogin = () => {
   return (
     <div className="staff-login-container">
       <div className="staff-login-box">
-        <button className="btn-back-home" onClick={() => navigate('/')}>
-          <ArrowLeft size={16} /> Quay lại trang chủ
-        </button>
-
         <div className="staff-login-header">
            <h2>Đăng nhập Cổng Nội Bộ</h2>
            <p>Dành riêng cho Giảng Viên và Quản Trị Viên</p>

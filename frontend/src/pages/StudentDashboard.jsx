@@ -28,7 +28,8 @@ import {
   Edit,
   Send,
   RotateCcw,
-  Undo
+  Undo,
+  Star
 } from 'lucide-react';
 
 import { useNavigate, Link } from 'react-router-dom';
@@ -116,7 +117,6 @@ const StudentDashboard = () => {
     return () => clearTimeout(timer);
   }, [articleSearch]);
   
-  const hasGreeted = useRef(false);
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -139,13 +139,6 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    if (user?.name && !hasGreeted.current) {
-      toast.success(`Chào mừng trở lại, ${user.name}!`, {
-        icon: '👋',
-        duration: 4000
-      });
-      hasGreeted.current = true;
-    }
   }, []);
 
   useEffect(() => {
@@ -690,12 +683,25 @@ const StudentDashboard = () => {
                            </div>
                         </div>
 
-                        <button 
-                           onClick={() => navigate(`/learn/${course.id}`)} 
-                           className={`card-action-btn ${course.progressPercent === 100 ? 'secondary' : 'primary'}`}
-                        >
-                           {course.progressPercent === 100 ? 'Xem lại bài học' : 'Học tiếp'}
-                        </button>
+                        <div className="card-actions-row" style={{ display: 'flex', gap: '10px' }}>
+                           <button 
+                              onClick={() => navigate(`/learn/${course.id}`)} 
+                              className={`card-action-btn ${course.progressPercent === 100 ? 'secondary' : 'primary'}`}
+                              style={{ flex: 2 }}
+                           >
+                              {course.progressPercent === 100 ? 'Xem lại bài học' : 'Học tiếp'}
+                           </button>
+
+                           {course.progressPercent === 100 && !course.isReviewed && (
+                              <button 
+                                 onClick={() => navigate(`/course/${course.id}/review`)} 
+                                 className="card-action-btn review-btn"
+                                 style={{ flex: 1, background: '#facc15', color: '#000', border: 'none' }}
+                              >
+                                 <Star size={14} style={{ marginRight: '4px' }} /> Đánh giá
+                              </button>
+                           )}
+                        </div>
                      </div>
                   </div>
                ))

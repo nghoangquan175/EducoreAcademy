@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, User, ArrowRight, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchArticlesAPI } from '../services/articleService';
 import './ArticlesHome.css';
 
-const ArticleCard = ({ article }) => (
-  <div className="art-card">
+const ArticleCard = ({ article, onClick }) => (
+  <div 
+    className="art-card" 
+    onClick={() => onClick(article.id)} 
+    role="button" 
+    tabIndex={0}
+    onKeyDown={(e) => e.key === 'Enter' && onClick(article.id)}
+  >
     <div className="art-thumb">
       <img 
         src={article.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'} 
@@ -36,6 +43,7 @@ const ArticleCard = ({ article }) => (
 );
 
 const ArticlesHome = () => {
+  const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,7 +94,11 @@ const ArticlesHome = () => {
           <>
             <div className="art-grid">
               {articles.map(article => (
-                <ArticleCard key={article.id} article={article} />
+                <ArticleCard 
+                  key={article.id} 
+                  article={article} 
+                  onClick={(id) => navigate(`/articles/${id}`)}
+                />
               ))}
             </div>
 

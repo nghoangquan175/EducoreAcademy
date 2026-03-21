@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Users, Clock, ChevronRight, Gift, ChevronLeft } from 'lucide-react';
+import { Star, Users, Clock, ChevronRight, Gift, ChevronLeft, Video } from 'lucide-react';
 import { fetchCoursesAPI, fetchCategoriesAPI } from '../services/courseService';
 // Tái sử dụng chung style với ProCourses (hoặc sao chép chỉnh màu nếu muốn)
 import './ProCourses.css';
@@ -44,9 +44,11 @@ const CourseCard = ({ course, onClick }) => (
         <span className="pc-meta-dot" />
         <Users size={13} />
         <span>{(course.studentsCount || 0).toLocaleString('vi-VN')}</span>
+        <Video size={13} />
+        <span>{course.videoCount || 0} bài</span>
         <span className="pc-meta-dot" />
-        <Clock size={13} />
-        <span>{course.duration}</span>
+        <Star size={13} />
+        <span>{course.quizCount || 0} Quiz</span>
       </div>
 
       {/* Footer */}

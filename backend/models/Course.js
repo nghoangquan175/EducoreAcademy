@@ -43,9 +43,17 @@ const Course = sequelize.define('Course', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
-  duration: {
+    duration: {
     type: DataTypes.STRING(50), // e.g. "12 giờ", "8.5 giờ"
     allowNull: true,
+  },
+  videoCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  quizCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
   },
   published: {
     type: DataTypes.INTEGER,
@@ -64,5 +72,39 @@ const Course = sequelize.define('Course', {
     { fields: ['published'] },
   ],
 });
+
+Course.updateCourseStats = async function(courseId) {
+  const { Lesson, Chapter, Quiz } = require('./index');
+  try {
+    const videoCount = await Lesson.count({
+      where: {
+        videoUrl: { [require('sequelize').Op.not]: null, [require('sequelize').Op.ne]: '' }
+      },
+      include: [{
+        model: Chapter,
+        where: { courseId },
+        required: true
+      }]
+    });
+
+    const quizCount = await Quiz.count({
+      include: [{
+        model: Lesson,
+        required: true,
+        include: [{
+          model: Chapter,
+          where: { courseId },
+          required: true
+        }]
+      }]
+    });
+
+    await Course.update({ videoCount, quizCount }, { where: { id: courseId } });
+    return { videoCount, quizCount };
+  } catch (error) {
+    console.error('Error updating course stats:', error);
+    throw error;
+  }
+};
 
 module.exports = Course;

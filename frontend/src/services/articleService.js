@@ -237,4 +237,36 @@ export const forceDeleteArticleAPI = async (id) => {
     throw error;
   }
 };
+ 
+export const fetchCommentsAPI = async (articleId, page = 1, limit = 10) => {
+  try {
+    const response = await axios.get(`${API_URL}/articles/${articleId}/comments`, {
+      params: { page, limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    throw error;
+  }
+};
+ 
+export const addCommentAPI = async (articleId, commentData) => {
+  try {
+    const response = await axios.post(`${API_URL}/articles/${articleId}/comments`, commentData, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    throw error;
+  }
+};
+ 
+export const deleteCommentAPI = async (commentId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/articles/comments/${commentId}`, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    throw error;
+  }
+};
 

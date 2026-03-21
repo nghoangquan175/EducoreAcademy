@@ -12,19 +12,19 @@ import ArticlesHome from './components/ArticlesHome';
 import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import CoursePage from './pages/CoursePage';
 import ArticleDetail from './pages/ArticleDetail';
-import LearningPage from './pages/LearningPage';
-import InstructorDashboard from './pages/InstructorDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import CourseEditor from './pages/CourseEditor';
-import UnauthorizedPage from './pages/UnauthorizedPage';
 import StaffLogin from './pages/StaffLogin';
 import CheckoutPage from './pages/CheckoutPage';
 import StudentDashboard from './pages/StudentDashboard';
 import CourseCongrats from './pages/CourseCongrats';
 import PrivateRoute from './components/PrivateRoute';
 import PaymentResult from './pages/PaymentResult';
+import CoursePage from './pages/CoursePage';
+import CourseReview from './pages/CourseReview';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import LearningPage from './pages/LearningPage';
+import InstructorDashboard from './pages/InstructorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import { BookOpen, X } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
@@ -60,17 +60,17 @@ const LearningLayout = () => (
 const CheckoutLayout = () => {
   const navigate = useNavigate();
   return (
-    <div className="checkout-layout-container">
+    <div className="checkout-bg">
       <header className="checkout-mini-header">
-        <div className="checkout-mini-logo" onClick={() => navigate('/')}>
+        <div className="mini-header-logo" onClick={() => window.location.href='/'}>
           <BookOpen size={28} />
-          <span>EducoreAcademy</span>
+          <span>Educore</span>
         </div>
-        <button className="checkout-cancel-link" onClick={() => navigate(-1)}>
-          Cancel
+        <button className="mini-header-close" onClick={() => window.history.back()}>
+          <X />
         </button>
       </header>
-      <main className="checkout-main-content">
+      <main className="checkout-main">
         <Outlet />
       </main>
     </div>
@@ -82,8 +82,8 @@ function App() {
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
         <AuthProvider>
-          <Toaster position="top-right" reverseOrder={false} />
           <Router>
+            <Toaster position="top-right" reverseOrder={false} />
             <Routes>
               {/* Auth pages — no header */}
               <Route element={<AuthLayout />}>
@@ -104,10 +104,10 @@ function App() {
                 } />
 
                 <Route path="/course/:id" element={<CoursePage />} />
+                <Route path="/course/:courseId/review" element={<CourseReview />} />
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                <Route path="/articles/:id" element={<ArticleDetail />} />
               </Route>
-              
-              <Route path="/articles/:id" element={<ArticleDetail />} />
 
               {/* Checkout page — custom layout */}
               <Route element={<CheckoutLayout />}>

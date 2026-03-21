@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const articleController = require('../controllers/articleController');
+const commentController = require('../controllers/commentController');
 const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
 
 // Public routes
@@ -27,5 +28,10 @@ router.patch('/student/:id/undo-submit', protect, articleController.undoSubmitAr
 // Trash bin routes
 router.put('/:id/restore', protect, articleController.restoreArticle);
 router.delete('/:id/force', protect, articleController.forceDeleteArticle);
+ 
+// Comment routes
+router.get('/:id/comments', commentController.getArticleComments);
+router.post('/:id/comments', protect, commentController.addComment);
+router.delete('/comments/:id', protect, commentController.deleteComment);
 
 module.exports = router;

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { fetchArticleByIdAPI } from '../services/articleService';
-import { Loader2, AlertCircle, Calendar, User } from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, User, ChevronLeft } from 'lucide-react';
+import CommentSection from '../components/CommentSection';
 import './ArticleDetail.css';
 
 const ArticleDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,6 +27,25 @@ const ArticleDetail = () => {
     };
     fetchArticle();
   }, [id]);
+
+  // Hide Top Header and Footer in Preview Mode
+  useEffect(() => {
+    if (article) {
+      const isPreviewMode = article.articleStatus !== 2;
+      if (isPreviewMode) {
+        const header = document.querySelector('header');
+        const footer = document.querySelector('footer');
+        if (header) header.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+
+        // Cleanup function when component unmounts or leaves preview mode
+        return () => {
+          if (header) header.style.display = '';
+          if (footer) footer.style.display = '';
+        };
+      }
+    }
+  }, [article]);
 
   if (loading) {
     return (
@@ -57,31 +78,42 @@ const ArticleDetail = () => {
         </div>
       )}
 
-      {/* 1. Title in to đậm */}
+      {!isPreview && (
+        <button className="btn-back-article" onClick={() => navigate('/')}>
+          <ChevronLeft size={20} /> Quay lại trang chủ
+        </button>
+      )}
+
+      {/* 1. Title */}
       <h1 className="article-simple-title">{article.title}</h1>
 
-      {/* 2. Ảnh thumbnail */}
+      {/* 2. Meta Info */}
+      <div className="article-meta-header">
+        <div className="article-meta-item">
+          <User size={18} />
+          <span>Tác giả: <strong>{article.author?.name || 'Ẩn danh'}</strong></span>
+        </div>
+        <div className="article-meta-item">
+          <Calendar size={18} />
+          <span>Đăng ngày: <strong>{new Date(article.createdAt).toLocaleString('vi-VN')}</strong></span>
+        </div>
+      </div>
+
+      {/* 3. Ảnh thumbnail */}
       {article.thumbnail && (
         <img src={article.thumbnail} alt={article.title} className="article-simple-thumbnail" />
       )}
 
-      {/* 3. Bài viết */}
+      {/* 4. Bài viết */}
       <div 
         className="article-simple-content"
         dangerouslySetInnerHTML={{ __html: article.content }}
       />
-
-      {/* 4. Ngày giờ đăng và thông tin tác giả */}
-      <footer className="article-simple-footer">
-        <div className="article-footer-item">
-          <Calendar size={18} />
-          <span>Đăng ngày: <strong>{new Date(article.createdAt).toLocaleString('vi-VN')}</strong></span>
-        </div>
-        <div className="article-footer-item">
-          <User size={18} />
-          <span>Tác giả: <strong>{article.author?.name || 'Ẩn danh'}</strong></span>
-        </div>
-      </footer>
+ 
+      {/* 5. Comment Section */}
+      {!isPreview && (
+        <CommentSection articleId={article.id} />
+      )}
     </div>
   );
 };

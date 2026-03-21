@@ -18,6 +18,9 @@ const Review = sequelize.define('Review', {
   comment: {
     type: DataTypes.TEXT
   }
+}, {
+  paranoid: true,
+  timestamps: true
 });
 
 module.exports = Review;

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, Plus, Trash2, Video, ArrowLeft } from 'lucide-react';
+import { fetchAllCategoriesAPI } from '../services/categoryService';
+import ConfirmDialog from '../components/ConfirmDialog';
+import toast from 'react-hot-toast';
 import './CourseEditor.css';
 
 const CourseEditor = ({ courseId, onClose, onSuccess }) => {
@@ -18,14 +21,36 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
   });
   
   const [loading, setLoading] = useState(isEditMode);
+  const [categories, setCategories] = useState([]);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   
+  const [confirmDialog, setConfirmDialog] = useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    onConfirm: () => {}, 
+    type: 'info' 
+  });
+  
   useEffect(() => {
+    fetchCategories();
     if (isEditMode) {
       fetchCourseData();
     }
   }, [courseId]);
+
+  const fetchCategories = async () => {
+    try {
+      const data = await fetchAllCategoriesAPI();
+      setCategories(data);
+      if (!isEditMode && data.length > 0 && course.category === 'Phát triển Web') {
+        setCourse(prev => ({ ...prev, category: data[0].name }));
+      }
+    } catch (error) {
+       console.error("Error fetching categories:", error);
+    }
+  };
 
   const fetchCourseData = async () => {
     setLoading(true);
@@ -37,7 +62,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
       setCourse(data);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu khóa học:", error);
-      alert('Không thể tải dữ liệu khóa học');
+      toast.error('Không thể tải dữ liệu khóa học');
       if (onClose) onClose();
     } finally {
       setLoading(false);
@@ -76,7 +101,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
        setCourse({ ...course, thumbnail: res.data.url });
     } catch (error) {
        console.error("Upload error:", error);
-       alert('Tải ảnh bìa thất bại: ' + (error.response?.data?.message || error.message));
+       toast.error('Tải ảnh bìa thất bại: ' + (error.response?.data?.message || error.message));
     } finally {
        setUploadingThumb(false);
     }
@@ -87,7 +112,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
     if (!file) return;
 
     if (file.size > 100 * 1024 * 1024) {
-      alert('File video quá lớn. Vui lòng chọn file dưới 100MB.');
+      toast.error('File video quá lớn. Vui lòng chọn file dưới 100MB.');
       return;
     }
 
@@ -106,34 +131,47 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
        setCourse({ ...course, previewVideoUrl: res.data.url });
     } catch (error) {
        console.error("Upload video error:", error);
-       alert('Tải video thất bại: ' + (error.response?.data?.message || error.message));
+       toast.error('Tải video thất bại: ' + (error.response?.data?.message || error.message));
     } finally {
        setUploadingVideo(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleConfirmSubmit = async () => {
     setLoading(true);
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
     try {
       const token = localStorage.getItem('token');
       if (isEditMode) {
         await axios.patch(`http://localhost:5000/api/courses/${courseId}`, course, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        alert('Đã cập nhật thông tin khóa học thành công!');
+        toast.success('Đã cập nhật thông tin khóa học thành công!');
       } else {
         await axios.post('http://localhost:5000/api/courses', course, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        alert('Đã tạo khóa học thành công!');
+        toast.success('Đã tạo khóa học thành công!');
       }
       if (onSuccess) onSuccess();
     } catch (error) {
-      alert('Có lỗi xảy ra khi lưu: ' + (error.response?.data?.message || error.message));
+      toast.error('Có lỗi xảy ra khi lưu: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setConfirmDialog({
+      isOpen: true,
+      title: isEditMode ? 'Xác nhận cập nhật khóa học' : 'Xác nhận tạo khóa học mới',
+      message: isEditMode 
+        ? 'Bạn có chắc chắn muốn lưu các thay đổi cho khóa học này?' 
+        : 'Bạn có chắc chắn muốn tạo xuất bản khóa học này?',
+      type: 'info',
+      onConfirm: handleConfirmSubmit
+    });
   };
 
   if (loading) return <div className="editor-loading">Đang tải...</div>;
@@ -205,38 +243,41 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
                </div>
              </div>
 
-             <div className="form-row">
-               <div className="form-group half">
-                  <label>Danh mục</label>
-                  <input 
-                    type="text" 
-                    name="category" 
-                    list="category-suggestions" 
-                    // value={course.category} 
-                    onChange={handleChange} 
-                    placeholder="Chọn hoặc nhập danh mục mới..." 
-                    required 
-                  />
-                  <datalist id="category-suggestions">
-                    <option value="Phát triển Web" />
-                    <option value="Mobile App" />
-                    <option value="Data Science" />
-                    <option value="Design" />
-                    <option value="IT & Web" />
-                    <option value="Ngoại ngữ" />
-                    <option value="Marketing" />
-                  </datalist>
-               </div>
-                <div className="form-group half">
-                  <label>Cấp độ</label>
-                  <select name="level" value={course.level} onChange={handleChange}>
-                    <option value="Beginner">Beginner (Cơ bản)</option>
-                    <option value="Intermediate">Intermediate (Trung bình)</option>
-                    <option value="Advanced">Advanced (Nâng cao)</option>
-                    <option value="All Levels">All Levels (Mọi cấp độ)</option>
-                  </select>
-               </div>
-             </div>
+              <div className="form-row">
+                 <div className="form-group half">
+                   <label>Danh mục</label>
+                   <select 
+                     name="category" 
+                     value={course.category} 
+                     onChange={handleChange} 
+                     required 
+                   >
+                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                   </select>
+                </div>
+                 <div className="form-group half">
+                   <label>Cấp độ</label>
+                   <select name="level" value={course.level} onChange={handleChange}>
+                     <option value="Beginner">Beginner (Cơ bản)</option>
+                     <option value="Intermediate">Intermediate (Trung bình)</option>
+                     <option value="Advanced">Advanced (Nâng cao)</option>
+                     <option value="All Levels">All Levels (Mọi cấp độ)</option>
+                   </select>
+                </div>
+              </div>
+
+              {isEditMode && (
+                <div className="form-row" style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                  <div className="form-group half" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '0.85rem', color: '#64748b' }}>Số bài học video</label>
+                    <div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{course.videoCount || 0} bài</div>
+                  </div>
+                  <div className="form-group half" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '0.85rem', color: '#64748b' }}>Số bài kiểm tra</label>
+                    <div style={{ fontWeight: '600', fontSize: '1.1rem' }}>{course.quizCount || 0} bài</div>
+                  </div>
+                </div>
+              )}
 
              <div className="form-row">
                <div className="form-group upload-group half">
@@ -307,6 +348,15 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
              </div>
           )}
         </div>
+
+        <ConfirmDialog 
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog({...confirmDialog, isOpen: false})}
+          type={confirmDialog.type}
+        />
     </div>
   );
 };
