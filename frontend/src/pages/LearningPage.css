@@ -36,12 +36,33 @@
   border-radius: 50%;
   color: var(--text-main);
   background-color: transparent;
+  border: none;
+  cursor: pointer;
   text-decoration: none;
   transition: background-color 0.2s;
+  padding: 0;
 }
 
 .back-btn:hover {
   background-color: var(--accent-light);
+}
+
+.back-to-dashboard-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  background-color: transparent;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.back-to-dashboard-icon:hover {
+  background-color: var(--accent-light);
+  color: var(--accent);
 }
 
 .topbar-brand-title {

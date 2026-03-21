@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, ArrowRight, HelpCircle, Trophy } from 'lucide-react';
 import axios from 'axios';
+import ConfirmDialog from '../components/ConfirmDialog';
 import './QuizPlayer.css';
 
 const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesson, onCompleteCourse, initialReviewMode }) => {
@@ -10,6 +11,13 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [reviewMode, setReviewMode] = useState(initialReviewMode || false);
+  const [confirmDialog, setConfirmDialog] = useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    onConfirm: () => {}, 
+    type: 'warning' 
+  });
 
   useEffect(() => {
     setReviewMode(initialReviewMode || false);
@@ -82,9 +90,17 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
   };
 
   const handleRetake = () => {
-    setResult(null);
-    setAnswers({});
-    setReviewMode(false);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Làm lại bài kiểm tra',
+      message: 'Bạn có chắc chắn muốn làm lại bài kiểm tra này? Tiến trình làm bài hiện tại sẽ bị xóa.',
+      type: 'warning',
+      onConfirm: () => {
+        setResult(null);
+        setAnswers({});
+        setReviewMode(false);
+      }
+    });
   };
 
   if (loading) return <div className="quiz-player-loading">Đang tải câu hỏi...</div>;
@@ -224,6 +240,10 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
           </button>
         </div>
       )}
+      <ConfirmDialog 
+        {...confirmDialog} 
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
+      />
     </div>
   );
 };

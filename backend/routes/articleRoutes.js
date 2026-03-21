@@ -5,6 +5,7 @@ const { protect, instructor, optionalProtect } = require('../middleware/authMidd
 
 // Public routes
 router.get('/', articleController.getArticles);
+router.get('/trash', protect, articleController.getTrashArticles);
 router.get('/:id', optionalProtect, articleController.getArticleById);
 
 // Instructor routes (also allows admin)
@@ -22,5 +23,9 @@ router.put('/student/:id', protect, articleController.updateArticle);
 router.delete('/student/:id', protect, articleController.deleteArticleStudent);
 router.patch('/student/:id/submit', protect, articleController.submitArticleForReview);
 router.patch('/student/:id/undo-submit', protect, articleController.undoSubmitArticleStudent);
+
+// Trash bin routes
+router.put('/:id/restore', protect, articleController.restoreArticle);
+router.delete('/:id/force', protect, articleController.forceDeleteArticle);
 
 module.exports = router;

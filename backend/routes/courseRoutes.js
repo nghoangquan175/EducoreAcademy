@@ -123,6 +123,30 @@ router.get('/instructor/my-courses', protect, instructor, async (req, res) => {
   }
 });
 
+// ── GET /api/courses/trash — Instructor/Admin: Get trash bin courses ──
+router.get('/trash/all', protect, async (req, res) => {
+  try {
+    const where = {};
+    if (req.user.role !== 'admin') {
+      where.instructorId = req.user.id;
+    }
+    
+    // Manual check for deletedAt since we need paranoid: false
+    const courses = await Course.findAll({
+      where: {
+        ...where,
+        deletedAt: { [Op.ne]: null }
+      },
+      paranoid: false,
+      include: [{ model: User, as: 'instructor', attributes: ['name'] }],
+      order: [['deletedAt', 'DESC']]
+    });
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ── GET /api/courses/:id — Public: get single course ─────────────────────────
 router.get('/:id', async (req, res) => {
   try {
@@ -679,4 +703,39 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
   }
 });
 
+// ── PUT /api/courses/:id/restore — Instructor/Admin: Restore course ──
+router.put('/:id/restore', protect, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id, { paranoid: false });
+    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    
+    if (course.instructorId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Không có quyền' });
+    }
+
+    await course.restore();
+    res.json({ message: 'Đã khôi phục khóa học' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── DELETE /api/courses/:id/force — Instructor/Admin: Permanent delete ──
+router.delete('/:id/force', protect, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id, { paranoid: false });
+    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+
+    if (course.instructorId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Không có quyền' });
+    }
+
+    await course.destroy({ force: true });
+    res.json({ message: 'Đã xóa vĩnh viễn khóa học' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
+

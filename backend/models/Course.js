@@ -56,6 +56,8 @@ const Course = sequelize.define('Course', {
     defaultValue: false,
   },
 }, {
+  paranoid: true,
+  timestamps: true,
   indexes: [
     { fields: ['title'] },
     { fields: ['category'] },

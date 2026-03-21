@@ -32,6 +32,8 @@ const Article = sequelize.define('Article', {
     comment: '0: Draft, 1: Pending, 2: Approved, 3: Rejected'
   }
 }, {
+  paranoid: true,
+  timestamps: true,
   indexes: [
     {
       fields: ['title']

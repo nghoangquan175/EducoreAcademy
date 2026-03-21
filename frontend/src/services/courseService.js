@@ -34,3 +34,22 @@ export const fetchCurriculumAPI = (id) => {
   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   return axios.get(`${API_URL}/courses/${id}/curriculum`, config);
 };
+
+export const fetchTrashCoursesAPI = () => {
+  const token = localStorage.getItem('token');
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  return axios.get(`${API_URL}/courses/trash/all`, config);
+};
+
+export const restoreCourseAPI = (id) => {
+  const token = localStorage.getItem('token');
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  return axios.put(`${API_URL}/courses/${id}/restore`, {}, config);
+};
+
+export const forceDeleteCourseAPI = (id) => {
+  const token = localStorage.getItem('token');
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  return axios.delete(`${API_URL}/courses/${id}/force`, config);
+};
+

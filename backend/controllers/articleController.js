@@ -449,3 +449,80 @@ exports.adminGetAllArticles = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
+// @desc    Get trash bin articles
+// @route   GET /api/articles/trash
+// @access  Private
+exports.getTrashArticles = async (req, res) => {
+  try {
+    const where = {
+      deletedAt: { [sequelize.Sequelize.Op.ne]: null }
+    };
+
+    // If student or instructor, only show their own deleted articles
+    if (req.user.role !== 'admin') {
+      where.authorId = req.user.id;
+    }
+
+    const articles = await Article.findAll({
+      where,
+      paranoid: false,
+      include: [{ model: User, as: 'author', attributes: ['id', 'name', 'avatar'] }],
+      order: [['deletedAt', 'DESC']]
+    });
+
+    res.json({ success: true, data: articles });
+  } catch (error) {
+    console.error('getTrashArticles Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// @desc    Restore an article
+// @route   PUT /api/articles/:id/restore
+// @access  Private
+exports.restoreArticle = async (req, res) => {
+  try {
+    const article = await Article.findByPk(req.params.id, { paranoid: false });
+
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết' });
+    }
+
+    // Auth check
+    if (article.authorId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện thao tác này' });
+    }
+
+    await article.restore();
+    res.json({ success: true, message: 'Đã khôi phục bài viết' });
+  } catch (error) {
+    console.error('restoreArticle Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// @desc    Force delete an article
+// @route   DELETE /api/articles/:id/force
+// @access  Private
+exports.forceDeleteArticle = async (req, res) => {
+  try {
+    const article = await Article.findByPk(req.params.id, { paranoid: false });
+
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết' });
+    }
+
+    // Auth check
+    if (article.authorId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện thao tác này' });
+    }
+
+    await article.destroy({ force: true });
+    res.json({ success: true, message: 'Đã xóa vĩnh viễn bài viết' });
+  } catch (error) {
+    console.error('forceDeleteArticle Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+

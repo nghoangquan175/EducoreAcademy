@@ -1,0 +1,136 @@
+.confirm-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.confirm-dialog-content {
+    background: white;
+    width: 440px;
+    max-width: 90%;
+    border-radius: 20px;
+    padding: 30px;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+.confirm-dialog-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #f1f5f9;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.confirm-dialog-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.confirm-dialog-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.confirm-dialog-icon-wrapper {
+    margin-bottom: 20px;
+}
+
+.dialog-icon {
+    padding: 15px;
+    border-radius: 50%;
+}
+
+.dialog-icon.warning {
+    background: #fffbeb;
+    color: #f59e0b;
+}
+
+.dialog-icon.danger {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.dialog-icon.info {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.confirm-dialog-text h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 10px 0;
+}
+
+.confirm-dialog-text p {
+    font-size: 0.95rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.confirm-dialog-footer {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-dialog-footer button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-dialog-cancel {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.btn-dialog-cancel:hover {
+    background: #e2e8f0;
+}
+
+.btn-dialog-confirm.warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-dialog-confirm.danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-dialog-confirm.info {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-dialog-confirm:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+}

@@ -207,3 +207,34 @@ export const uploadArticleImageAPI = async (formData) => {
     throw error;
   }
 };
+
+export const fetchTrashArticlesAPI = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/articles/trash`, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching trash articles:', error);
+    throw error;
+  }
+};
+
+export const restoreArticleAPI = async (id) => {
+  try {
+    const response = await axios.put(`${API_URL}/articles/${id}/restore`, {}, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    console.error('Error restoring article:', error);
+    throw error;
+  }
+};
+
+export const forceDeleteArticleAPI = async (id) => {
+  try {
+    const response = await axios.delete(`${API_URL}/articles/${id}/force`, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    console.error('Error force deleting article:', error);
+    throw error;
+  }
+};
+

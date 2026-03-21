@@ -3,9 +3,10 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import ReactPlayer from 'react-player';
 import axios from 'axios';
 import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock } from 'react-icons/fa';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 import QuizPlayer from './QuizPlayer';
+import ConfirmDialog from '../components/ConfirmDialog';
 import './LearningPage.css';
 
 const LearningPage = () => {
@@ -24,6 +25,13 @@ const LearningPage = () => {
   const [latestAttempt, setLatestAttempt] = useState(null);
   const [videoFinished, setVideoFinished] = useState(false);
   const [quizInitialMode, setQuizInitialMode] = useState(false); // false = take, true = review
+  const [confirmDialog, setConfirmDialog] = useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    onConfirm: () => {}, 
+    type: 'warning' 
+  });
 
   // Flatten lessons for sequence tracking
   const allLessons = useMemo(() => {
@@ -271,8 +279,11 @@ const LearningPage = () => {
       {/* TOPBAR */}
       <div className="learning-topbar">
         <div className="topbar-left">
-          <Link to={`/course/${courseId}`} className="back-btn">
+          <button onClick={() => navigate(-1)} className="back-btn" title="Quay lại">
             <FaChevronLeft />
+          </button>
+          <Link to="/student-dashboard" className="back-to-dashboard-icon" title="Về bảng điều khiển">
+            <LayoutDashboard size={20} />
           </Link>
           <div className="topbar-brand-title">
             {/* <span className="brand-logo">EA.</span> */}
@@ -379,8 +390,21 @@ const LearningPage = () => {
                       <button 
                         className="btn-take-quiz-now" 
                         onClick={() => {
-                          setQuizInitialMode(false);
-                          setShowQuiz(true);
+                          if (latestAttempt) {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: 'Làm lại bài kiểm tra',
+                              message: 'Bạn có chắc chắn muốn làm lại bài kiểm tra này? Kết quả mới sẽ được ghi nhận sau khi bạn hoàn thành.',
+                              type: 'warning',
+                              onConfirm: () => {
+                                setQuizInitialMode(false);
+                                setShowQuiz(true);
+                              }
+                            });
+                          } else {
+                            setQuizInitialMode(false);
+                            setShowQuiz(true);
+                          }
                         }}
                       >
                         {latestAttempt ? 'Làm lại bài kiểm tra' : 'Bắt đầu làm bài kiểm tra'}
@@ -484,6 +508,10 @@ const LearningPage = () => {
         )}
 
       </div>
+      <ConfirmDialog 
+        {...confirmDialog} 
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
+      />
     </div>
   );
 };

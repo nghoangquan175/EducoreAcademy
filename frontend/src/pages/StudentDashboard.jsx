@@ -23,11 +23,17 @@ import {
   ChevronLeft,
   Sun,
   Moon,
-  Flame
+  Flame,
+  Eye,
+  Edit,
+  Send,
+  RotateCcw,
+  Undo
 } from 'lucide-react';
 
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { useTheme } from '../contexts/ThemeContext';
@@ -35,11 +41,15 @@ import NotificationBell from '../components/NotificationBell';
 import ArticleEditor from './ArticleEditor';
 import { 
   fetchStudentProStatusAPI, 
-  fetchMyArticlesStudentAPI, 
-  deleteArticleStudentAPI, 
   submitArticleForReviewStudentAPI,
-  undoSubmitArticleStudentAPI
+  undoSubmitArticleStudentAPI,
+  fetchTrashArticlesAPI,
+  restoreArticleAPI,
+  forceDeleteArticleAPI,
+  fetchMyArticlesStudentAPI,
+  deleteArticleStudentAPI
 } from '../services/articleService';
+
 
 import './StudentDashboard.css';
 
@@ -96,6 +106,8 @@ const StudentDashboard = () => {
   const [articlePage, setArticlePage] = useState(1);
   const [articleTotalPages, setArticleTotalPages] = useState(1);
   const [debouncedArticleSearch, setDebouncedArticleSearch] = useState('');
+  const [trashArticles, setTrashArticles] = useState([]);
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -108,6 +120,14 @@ const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
+  const [confirmDialog, setConfirmDialog] = useState({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    onConfirm: () => {}, 
+    type: 'warning' 
+  });
 
 
   const menuItems = [
@@ -238,36 +258,106 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleArticleDelete = async (id) => {
-    if (!window.confirm('Xóa bài viết này?')) return;
+  const fetchTrashArticles = async () => {
     try {
-      await deleteArticleStudentAPI(id);
-      fetchStudentArticles();
+      const { data } = await fetchTrashArticlesAPI();
+      setTrashArticles(data);
     } catch (error) {
-      toast.error('Lỗi khi xóa bài viết');
+      console.error('Error fetching trash articles:', error);
     }
   };
 
-  const handleArticleSubmit = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn gửi bài viết này để phê duyệt?')) return;
-    try {
-      await submitArticleForReviewStudentAPI(id);
-      toast.success('Đã gửi bài viết để duyệt!');
-      fetchStudentArticles();
-    } catch (error) {
-      toast.error('Lỗi khi gửi bài viết: ' + (error.response?.data?.message || error.message));
-    }
+  const handleArticleRestore = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Khôi phục bài viết',
+      message: 'Bạn có chắc chắn muốn khôi phục bài viết này? Bài viết sẽ quay trở lại danh sách bài viết hiện tại.',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          await restoreArticleAPI(id);
+          toast.success('Đã khôi phục bài viết');
+          fetchTrashArticles();
+          fetchStudentArticles();
+        } catch (error) {
+          toast.error('Lỗi khi khôi phục bài viết');
+        }
+      }
+    });
   };
 
-  const handleUndoSubmit = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn thu hồi yêu cầu phê duyệt cho bài viết này?')) return;
-    try {
-      await undoSubmitArticleStudentAPI(id);
-      toast.success('Đã thu hồi yêu cầu phê duyệt!');
-      fetchStudentArticles();
-    } catch (error) {
-      toast.error('Lỗi khi thu hồi: ' + (error.response?.data?.message || error.message));
-    }
+  const handleArticleForceDelete = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận xóa vĩnh viễn',
+      message: 'Hành động này không thể hoàn tác. Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await forceDeleteArticleAPI(id);
+          toast.success('Đã xóa vĩnh viễn bài viết');
+          fetchTrashArticles();
+        } catch (error) {
+          toast.error('Lỗi khi xóa vĩnh viễn');
+        }
+      }
+    });
+  };
+
+
+  const handleArticleDelete = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn đưa bài viết này vào thùng rác?',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteArticleStudentAPI(id);
+          toast.success('Đã chuyển vào thùng rác');
+          fetchStudentArticles();
+        } catch (error) {
+          toast.error('Lỗi khi xóa bài viết');
+        }
+      }
+    });
+  };
+
+  const handleArticleSubmit = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận gửi duyệt',
+      message: 'Bạn có chắc muốn gửi bài viết này để phê duyệt? Sau khi gửi, bạn sẽ không thể sửa nội dung cho đến khi có phản hồi.',
+      type: 'info',
+      confirmText: 'Gửi ngay',
+      onConfirm: async () => {
+        try {
+          await submitArticleForReviewStudentAPI(id);
+          toast.success('Đã gửi bài viết để duyệt!');
+          fetchStudentArticles();
+        } catch (error) {
+          toast.error('Lỗi khi gửi bài viết: ' + (error.response?.data?.message || error.message));
+        }
+      }
+    });
+  };
+
+  const handleUndoSubmit = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận thu hồi',
+      message: 'Bạn có chắc muốn thu hồi yêu cầu phê duyệt cho bài viết này?',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await undoSubmitArticleStudentAPI(id);
+          toast.success('Đã thu hồi yêu cầu phê duyệt!');
+          fetchStudentArticles();
+        } catch (error) {
+          toast.error('Lỗi khi thu hồi: ' + (error.response?.data?.message || error.message));
+        }
+      }
+    });
   };
 
   const fetchStudyGoals = async () => {
@@ -331,19 +421,28 @@ const StudentDashboard = () => {
     }
   };
 
-  const handleDeleteGoal = async (id) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/users/student/study-goals/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setStudyGoals(studyGoals.filter(g => g.id !== id));
-      fetchGoalsSummary();
-      // Refetch upcomings for the side रेल
-      setUpcomingGoals(upcomingGoals.filter(g => g.id !== id));
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-    }
+  const handleDeleteGoal = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xóa mục tiêu',
+      message: 'Bạn có chắc chắn muốn xóa mục tiêu này?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`http://localhost:5000/api/users/student/study-goals/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setStudyGoals(studyGoals.filter(g => g.id !== id));
+          fetchGoalsSummary();
+          setUpcomingGoals(upcomingGoals.filter(g => g.id !== id));
+          toast.success('Đã xóa mục tiêu');
+        } catch (error) {
+          console.error('Error deleting goal:', error);
+          toast.error('Lỗi khi xóa mục tiêu');
+        }
+      }
+    });
   };
 
   const handleLogout = () => {
@@ -653,12 +752,20 @@ const StudentDashboard = () => {
                              >
                                 Xem lại
                              </button>
-                             <button 
-                                className="btn-action-small retake"
-                                onClick={() => navigate(`/learn/${att.courseId}/lesson/${att.lessonId}?quiz=true&mode=retake`)}
-                             >
-                                Làm lại
-                             </button>
+                              <button 
+                                 className="btn-action-small retake"
+                                 onClick={() => {
+                                    setConfirmDialog({
+                                       isOpen: true,
+                                       title: 'Làm lại bài tập',
+                                       message: 'Bạn có chắc chắn muốn làm lại bài tập này? Kết quả cũ sẽ vẫn được lưu cho đến khi bạn hoàn thành lượt làm mới.',
+                                       type: 'warning',
+                                       onConfirm: () => navigate(`/learn/${att.courseId}/lesson/${att.lessonId}?quiz=true&mode=retake`)
+                                    });
+                                 }}
+                              >
+                                 Làm lại
+                              </button>
                           </div>
                        </td>
                     </tr>
@@ -848,21 +955,46 @@ const StudentDashboard = () => {
       <div className="std-content-fade-in">
         <div className="std-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Quản lý bài viết</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Chia sẻ kiến thức và kinh nghiệm của bạn với cộng đồng.</p>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{articleView === 'trash' ? 'Thùng rác bài viết' : 'Quản lý bài viết'}</h3>
+            <p style={{ color: 'var(--text-muted)' }}>
+              {articleView === 'trash' ? 'Danh sách các bài viết đã xóa tạm thời.' : 'Chia sẻ kiến thức và kinh nghiệm của bạn với cộng đồng.'}
+            </p>
           </div>
-          <button 
-            className="std-continue-btn" 
-            style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}
-            onClick={() => {
-              setArticleView('editor');
-              setEditingArticleId(null);
-              setEditingArticleData(null);
-            }}
-          >
-            <Plus size={18} /> Viết bài mới
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {articleView === 'trash' ? (
+              <button 
+                className="std-continue-btn" 
+                style={{ marginTop: 0, background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
+                onClick={() => setArticleView('list')}
+              >
+                Quay lại
+              </button>
+            ) : (
+                <button 
+                className="std-continue-btn" 
+                style={{ marginTop: 0, background: 'var(--card-bg)', color: 'var(--text-main)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                onClick={() => {
+                  setArticleView('trash');
+                  fetchTrashArticles();
+                }}
+              >
+                <Trash2 size={18} /> Thùng rác
+              </button>
+            )}
+            <button 
+              className="std-continue-btn" 
+              style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}
+              onClick={() => {
+                setArticleView('editor');
+                setEditingArticleId(null);
+                setEditingArticleData(null);
+              }}
+            >
+              <Plus size={18} /> Viết bài mới
+            </button>
+          </div>
         </div>
+
 
         <div className="std-courses-controls" style={{ marginBottom: '24px', display: 'flex', gap: '15px' }}>
           <div className="std-course-search" style={{ flex: 1, position: 'relative' }}>
@@ -883,92 +1015,140 @@ const StudentDashboard = () => {
               <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 <th style={{ padding: '0 15px' }}>Bài viết</th>
                 <th>Danh mục</th>
-                <th>Ngày tạo</th>
+                <th>{articleView === 'trash' ? 'Ngày xóa' : 'Ngày tạo'}</th>
                 <th style={{ textAlign: 'center' }}>Trạng thái</th>
                 <th style={{ textAlign: 'center' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {articles.length === 0 ? (
-                <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '15px' }}>
-                    <FileText size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
-                    <p>Bạn chưa có bài viết nào. Hãy bắt đầu chia sẻ kiến thức ngay!</p>
-                  </td>
-                </tr>
-              ) : (
-                articles.map(art => (
-                  <tr key={art.id} style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                    <td style={{ padding: '15px', fontWeight: 600, borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>{art.title}</td>
-                    <td>{art.category}</td>
-                    <td>{new Date(art.createdAt).toLocaleDateString('vi-VN')}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`std-badge ${
-                        art.articleStatus === 0 ? 'warning' : 
-                        art.articleStatus === 1 ? 'info' : 
-                        art.articleStatus === 2 ? 'success' : 'danger'
-                      }`} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {art.articleStatus === 0 ? 'Bản nháp' : 
-                         art.articleStatus === 1 ? 'Chờ duyệt' : 
-                         art.articleStatus === 2 ? 'Đã đăng' : 'Bị từ chối'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '15px', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button 
-                          className="btn-action-small view"
-                          style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-main)' }}
-                          onClick={() => window.open(`/articles/${art.id}`, '_blank')}
-                        >
-                          Xem
-                        </button>
-                        {(art.articleStatus === 0 || art.articleStatus === 3) && (
-                          <>
-                            <button 
-                              className="btn-action-small review"
-                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: 'var(--accent-light)', color: 'var(--accent)' }}
-                              onClick={() => {
-                                setEditingArticleId(art.id);
-                                setEditingArticleData(art);
-                                setArticleView('editor');
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button 
-                              className="btn-action-small retake"
-                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#10b981', color: 'white' }}
-                              onClick={() => handleArticleSubmit(art.id)}
-                            >
-                              Gửi duyệt
-                            </button>
-                            <button 
-                              className="btn-action-small delete" 
-                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#ef4444' }}
-                              onClick={() => handleArticleDelete(art.id)}
-                            >
-                              Xóa
-                            </button>
-                          </>
-                        )}
-                        {art.articleStatus === 1 && (
-                          <button 
-                            className="btn-action-small review"
-                            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fffbeb', color: '#f59e0b' }}
-                            onClick={() => handleUndoSubmit(art.id)}
-                          >
-                            Thu hồi
-                          </button>
-                        )}
-                      </div>
+              {articleView === 'trash' ? (
+                trashArticles.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '15px' }}>
+                      <Trash2 size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
+                      <p>Thùng rác trống!</p>
                     </td>
                   </tr>
-                ))
+                ) : (
+                  trashArticles.map(art => (
+                    <tr key={art.id} style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <td style={{ padding: '15px', fontWeight: 600, borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>{art.title}</td>
+                      <td>{art.category}</td>
+                      <td>{new Date(art.deletedAt).toLocaleDateString('vi-VN')}</td>
+                      <td style={{ textAlign: 'center' }}>
+                         <span className="std-badge danger">Đã xóa</span>
+                      </td>
+                      <td style={{ padding: '15px', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button 
+                            className="btn-action-small review"
+                            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: 'var(--accent-light)', color: 'var(--accent)' }}
+                            onClick={() => handleArticleRestore(art.id)}
+                            title="Phục hồi"
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                          <button 
+                            className="btn-action-small delete"
+                            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#ef4444' }}
+                            onClick={() => handleArticleForceDelete(art.id)}
+                            title="Xóa vĩnh viễn"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )
+              ) : (
+                articles.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '15px' }}>
+                      <FileText size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
+                      <p>Bạn chưa có bài viết nào. Hãy bắt đầu chia sẻ kiến thức ngay!</p>
+                    </td>
+                  </tr>
+                ) : (
+                  articles.map(art => (
+                    <tr key={art.id} style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <td style={{ padding: '15px', fontWeight: 600, borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>{art.title}</td>
+                      <td>{art.category}</td>
+                      <td>{new Date(art.createdAt).toLocaleDateString('vi-VN')}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`std-badge ${
+                          art.articleStatus === 0 ? 'warning' : 
+                          art.articleStatus === 1 ? 'info' : 
+                          art.articleStatus === 2 ? 'success' : 'danger'
+                        }`} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {art.articleStatus === 0 ? 'Bản nháp' : 
+                          art.articleStatus === 1 ? 'Chờ duyệt' : 
+                          art.articleStatus === 2 ? 'Đã đăng' : 'Bị từ chối'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '15px', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button 
+                            className="btn-action-small view"
+                            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-main)' }}
+                            onClick={() => window.open(`/articles/${art.id}`, '_blank')}
+                            title="Xem"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {(art.articleStatus === 0 || art.articleStatus === 3) && (
+                            <>
+                              <button 
+                                className="btn-action-small review"
+                                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: 'var(--accent-light)', color: 'var(--accent)' }}
+                                onClick={() => {
+                                  setEditingArticleId(art.id);
+                                  setEditingArticleData(art);
+                                  setArticleView('editor');
+                                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                title="Sửa"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button 
+                                className="btn-action-small retake"
+                                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#10b981', color: 'white' }}
+                                onClick={() => handleArticleSubmit(art.id)}
+                                title="Gửi duyệt"
+                              >
+                                <Send size={16} />
+                              </button>
+                              <button 
+                                className="btn-action-small delete" 
+                                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#ef4444' }}
+                                onClick={() => handleArticleDelete(art.id)}
+                                title="Xóa"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                          {art.articleStatus === 1 && (
+                            <button 
+                              className="btn-action-small review"
+                              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer', border: 'none', background: '#fffbeb', color: '#f59e0b' }}
+                              onClick={() => handleUndoSubmit(art.id)}
+                              title="Thu hồi"
+                            >
+                              <Undo size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )
               )}
             </tbody>
           </table>
         </div>
+
       </div>
     );
   };
@@ -1066,7 +1246,7 @@ const StudentDashboard = () => {
           </div>
 
           <div className="std-actions-right">
-             <button className="std-action-btn glass" onClick={() => setShowCalendar(true)}><Calendar size={18} /></button>
+             <button className="std-action-btn glass" onClick={() => { setShowCalendar(true); setShowGlobalSearchDropdown(false); }}><Calendar size={18} /></button>
              <NotificationBell iconSize={18} buttonClassName="std-action-btn" />
              <button className="std-action-btn dark" onClick={toggleTheme}>
                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -1112,8 +1292,8 @@ const StudentDashboard = () => {
                           <p className="upcoming-desc">{goal.type} • {goal.time}</p>
                        </div>
                     ))
-                 )}
-                 <button className="std-all-events-btn" onClick={() => setShowCalendar(true)}>Quản lý lịch trình</button>
+                  )}
+                  <button className="std-all-events-btn" onClick={() => { setShowCalendar(true); setShowGlobalSearchDropdown(false); }}>Quản lý lịch trình</button>
               </section>
 
               <section>
@@ -1142,6 +1322,10 @@ const StudentDashboard = () => {
            </aside>
         </div>
       </div>
+      <ConfirmDialog 
+        {...confirmDialog} 
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
+      />
     </div>
   );
 };
