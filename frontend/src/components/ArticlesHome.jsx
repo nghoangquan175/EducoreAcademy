@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, User, ArrowRight, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, User, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { fetchArticlesAPI } from '../services/articleService';
 import './ArticlesHome.css';
 
@@ -35,9 +35,15 @@ const ArticleCard = ({ article, onClick }) => (
         </span>
       </div>
 
-      <button className="art-read-more">
-        Đọc tiếp <ArrowRight size={16} />
-      </button>
+      <div className="art-card-footer">
+        <button className="art-read-more">
+          Đọc tiếp <ArrowRight size={16} />
+        </button>
+        <div className="art-likes">
+          <Heart size={14} fill="#ef4444" stroke="#ef4444" />
+          <span>{article.likesCount || 0}</span>
+        </div>
+      </div>
     </div>
   </div>
 );

@@ -8,6 +8,7 @@ const { protect, instructor, optionalProtect } = require('../middleware/authMidd
 router.get('/', articleController.getArticles);
 router.get('/trash', protect, articleController.getTrashArticles);
 router.get('/:id', optionalProtect, articleController.getArticleById);
+router.post('/:id/like', protect, articleController.toggleLike);
 
 // Instructor routes (also allows admin)
 router.get('/instructor/my-articles', protect, instructor, articleController.getMyArticles);

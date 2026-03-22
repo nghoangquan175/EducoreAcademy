@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { uploadImage, uploadVideo } = require('../config/cloudinary');
+const { uploadImage, uploadVideo, uploadDocument } = require('../config/cloudinary');
 const { protect, instructor } = require('../middleware/authMiddleware');
 
 // @desc    Upload an image (e.g. course thumbnail)
@@ -43,6 +43,27 @@ router.post('/video', protect, instructor, uploadVideo.single('video'), (req, re
   } catch (error) {
     console.error('Video upload error:', error);
     res.status(500).json({ message: 'Video upload error: ' + (error.message || error.toString()) });
+  }
+});
+
+// @desc    Upload a document (e.g. CV)
+// @route   POST /api/upload/document
+// @access  Public (for partner application)
+router.post('/document', uploadDocument.single('document'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No document file provided' });
+    }
+
+    res.status(200).json({
+      message: 'Document uploaded successfully',
+      url: req.file.path,
+      format: req.file.mimetype,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Document upload error:', error);
+    res.status(500).json({ message: 'Document upload error: ' + (error.message || error.toString()) });
   }
 });
 

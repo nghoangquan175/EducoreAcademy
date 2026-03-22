@@ -31,14 +31,25 @@ const videoStorage = new CloudinaryStorage({
   }
 });
 
+// Storage for Documents (CVs)
+const documentStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'documents',
+    resource_type: 'raw'
+  }
+});
+
 const uploadImage = multer({ storage: imageStorage });
 const uploadVideo = multer({ 
   storage: videoStorage,
   limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit for demo
 });
+const uploadDocument = multer({ storage: documentStorage });
 
 module.exports = {
   cloudinary,
   uploadImage,
-  uploadVideo
+  uploadVideo,
+  uploadDocument
 };

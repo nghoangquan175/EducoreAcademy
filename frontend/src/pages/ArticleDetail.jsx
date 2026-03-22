@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchArticleByIdAPI } from '../services/articleService';
-import { Loader2, AlertCircle, Calendar, User, ChevronLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, User, ChevronLeft, Heart } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 import CommentSection from '../components/CommentSection';
 import './ArticleDetail.css';
 
 const ArticleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [article, setArticle] = useState(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,7 +24,10 @@ const ArticleDetail = () => {
       try {
         setLoading(true);
         const res = await fetchArticleByIdAPI(id);
-        setArticle(res.data);
+        const data = res.data;
+        setArticle(data);
+        setIsLiked(data.isLiked || false);
+        setLikesCount(data.likesCount || 0);
         window.scrollTo(0, 0);
       } catch (err) {
         setError(err.response?.data?.message || 'Không thể tải bài viết');
@@ -46,6 +56,32 @@ const ArticleDetail = () => {
       }
     }
   }, [article]);
+
+  const handleLike = async () => {
+    if (!user) {
+      toast.error('Vui lòng đăng nhập để thích bài viết');
+      navigate('/login', { state: { returnUrl: window.location.pathname } });
+      return;
+    }
+
+    if (likeLoading) return;
+
+    try {
+      setLikeLoading(true);
+      const token = localStorage.getItem('token');
+      const { data } = await axios.post(`http://localhost:5000/api/articles/${id}/like`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setIsLiked(data.isLiked);
+      setLikesCount(data.likesCount);
+    } catch (error) {
+      console.error('Lỗi khi thích bài viết:', error);
+      toast.error('Có lỗi xảy ra');
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -96,6 +132,16 @@ const ArticleDetail = () => {
         <div className="article-meta-item">
           <Calendar size={18} />
           <span>Đăng ngày: <strong>{new Date(article.createdAt).toLocaleString('vi-VN')}</strong></span>
+        </div>
+        <div className="article-meta-item like-item">
+          <button 
+            className={`like-btn ${isLiked ? 'liked' : ''} ${likeLoading ? 'loading' : ''}`}
+            onClick={handleLike}
+            title={isLiked ? 'Bỏ thích' : 'Thích bài viết'}
+          >
+            <Heart size={20} fill={isLiked ? "#ef4444" : "none"} stroke={isLiked ? "#ef4444" : "currentColor"} />
+          </button>
+          <span className="likes-count">{likesCount}</span>
         </div>
       </div>
 

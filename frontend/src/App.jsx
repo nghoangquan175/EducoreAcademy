@@ -22,6 +22,8 @@ import PaymentResult from './pages/PaymentResult';
 import CoursePage from './pages/CoursePage';
 import CourseReview from './pages/CourseReview';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import PartnerApplication from './pages/PartnerApplication';
+import PartnerApplicationDetail from './pages/PartnerApplicationDetail';
 import LearningPage from './pages/LearningPage';
 import InstructorDashboard from './pages/InstructorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -90,6 +92,7 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/staff/login" element={<StaffLogin />} />
+                <Route path="/partner-application" element={<PartnerApplication />} />
               </Route>
 
               {/* Main pages — with header */}
@@ -137,6 +140,13 @@ function App() {
               <Route path="/admin-dashboard" element={
                 <PrivateRoute allowedRoles={['admin']}>
                   <AdminDashboard />
+                </PrivateRoute>
+              } />
+
+              {/* Instructor Application Detail (Separate tab) */}
+              <Route path="/admin/applications/:id" element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <PartnerApplicationDetail />
                 </PrivateRoute>
               } />
 

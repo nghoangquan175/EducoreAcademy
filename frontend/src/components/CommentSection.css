@@ -35,6 +35,33 @@
   margin-bottom: 32px;
 }
 
+.login-to-comment-prompt {
+  background: var(--main-bg);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 32px;
+  border: 1px solid var(--border-color);
+}
+
+.login-to-comment-prompt p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.login-to-comment-prompt .login-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-to-comment-prompt .login-link:hover {
+  text-decoration: underline;
+}
+
 .comment-avatar {
   width: 40px;
   height: 40px;

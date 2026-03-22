@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, User, Eye, EyeOff, BookOpen, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { googleLoginAPI, facebookLoginAPI, sendOtpAPI, verifyOtpAPI } from '../services/authService';
@@ -10,7 +10,9 @@ const OTP_EXPIRY_SEC = 600; // 10 phút
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, user } = useAuth();
+  const returnUrl = location.state?.returnUrl;
 
   // ── Step 1: form state ──────────────────────────────────
   const [step, setStep] = useState(1); // 1 = form, 2 = OTP
@@ -126,7 +128,7 @@ const RegisterPage = () => {
     try {
       await verifyOtpAPI(email, code);
       clearInterval(timerRef.current);
-      navigate('/login?registered=1');
+      navigate(`/login?registered=1${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`, { state: { returnUrl } });
     } catch (err) {
       setError(err.response?.data?.message || 'Xác minh thất bại');
     } finally {
@@ -171,7 +173,7 @@ const RegisterPage = () => {
       try {
         const { data } = await googleLoginAPI(tokenResponse.access_token);
         login(data);
-        navigate('/');
+        navigate(returnUrl || '/');
       } catch (err) {
         setError(err.response?.data?.message || 'Đăng nhập Google thất bại');
       } finally {
@@ -194,7 +196,7 @@ const RegisterPage = () => {
           try {
             const { data } = await facebookLoginAPI(response.authResponse.accessToken);
             login(data);
-            navigate('/');
+            navigate(returnUrl || '/');
           } catch (err) {
             setError(err.response?.data?.message || 'Đăng nhập Facebook thất bại');
           } finally {
@@ -245,7 +247,7 @@ const RegisterPage = () => {
               <h1 className="auth-title">Tạo tài khoản</h1>
               <p className="auth-subtitle">
                 Đã có tài khoản?{' '}
-                <Link to="/login" className="auth-link">Đăng nhập</Link>
+                <Link to="/login" state={{ returnUrl }} className="auth-link">Đăng nhập</Link>
               </p>
 
               {error && <div className="auth-error">{error}</div>}

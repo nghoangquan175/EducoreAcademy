@@ -93,3 +93,57 @@
     font-size: 2rem;
   }
 }
+
+.article-meta-item.like-item {
+  margin-left: auto;
+  gap: 8px;
+}
+
+.like-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #6b7280;
+}
+
+.like-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+.like-btn.liked {
+  color: #ef4444;
+}
+
+.like-btn.liked:hover {
+  transform: scale(1.1);
+}
+
+.likes-count {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #111827;
+  min-width: 20px;
+}
+
+.like-btn.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.like-btn.liked svg {
+  animation: heartPulse 0.3s ease-in-out;
+}

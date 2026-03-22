@@ -1,4 +1,4 @@
-const { Article, User, Enrollment, Course, Notification } = require('../models');
+const { Article, User, Enrollment, Course, Notification, ArticleLike } = require('../models');
 const { sequelize } = require('../config/db');
 
 // @desc    Get all articles with pagination
@@ -13,6 +13,19 @@ exports.getArticles = async (req, res) => {
 
     const { count, rows } = await Article.findAndCountAll({
       where: { articleStatus },
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM ArticleLikes AS likes
+              WHERE
+                likes.articleId = Article.id
+            )`),
+            'likesCount'
+          ]
+        ]
+      },
       include: [
         {
           model: User,
@@ -68,12 +81,26 @@ exports.getArticleById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết' });
     }
 
+    // Get likes count
+    const likesCount = await ArticleLike.count({ where: { articleId: req.params.id } });
+    
+    // Check if current user liked it
+    let isLiked = false;
+    if (req.user) {
+      const like = await ArticleLike.findOne({ 
+        where: { articleId: req.params.id, userId: req.user.id } 
+      });
+      isLiked = !!like;
+    }
+
     // If published, allow everyone
     if (article.articleStatus === 2) {
       const articleData = article.toJSON();
       if (articleData.author && articleData.author.role === 'admin') {
         articleData.author.name = 'Educore Academy';
       }
+      articleData.likesCount = likesCount;
+      articleData.isLiked = isLiked;
       return res.json({ success: true, data: articleData });
     }
 
@@ -95,6 +122,8 @@ exports.getArticleById = async (req, res) => {
     if (articleData.author && articleData.author.role === 'admin') {
       articleData.author.name = 'Educore Academy';
     }
+    articleData.likesCount = likesCount;
+    articleData.isLiked = isLiked;
     res.json({ success: true, data: articleData });
   } catch (error) {
     console.error('getArticleById Error:', error);
@@ -542,3 +571,34 @@ exports.forceDeleteArticle = async (req, res) => {
   }
 };
 
+// @desc    Toggle Like on an article
+// @route   POST /api/articles/:id/like
+// @access  Private
+exports.toggleLike = async (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const userId = req.user.id;
+
+    const article = await Article.findByPk(articleId);
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'Bài viết không tồn tại' });
+    }
+
+    const existingLike = await ArticleLike.findOne({
+      where: { articleId, userId }
+    });
+
+    if (existingLike) {
+      await existingLike.destroy();
+      const count = await ArticleLike.count({ where: { articleId } });
+      return res.json({ success: true, isLiked: false, likesCount: count, message: 'Đã bỏ thích' });
+    } else {
+      await ArticleLike.create({ articleId, userId });
+      const count = await ArticleLike.count({ where: { articleId } });
+      return res.json({ success: true, isLiked: true, likesCount: count, message: 'Đã thích bài viết' });
+    }
+  } catch (error) {
+    console.error('toggleLike Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};

@@ -11,7 +11,9 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
   const location = useLocation();
-  const registered = new URLSearchParams(location.search).get('registered') === '1';
+  const searchParams = new URLSearchParams(location.search);
+  const registered = searchParams.get('registered') === '1';
+  const returnUrl = location.state?.returnUrl || searchParams.get('returnUrl');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -19,10 +21,10 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !returnUrl) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, returnUrl]);
 
 
   const handleLoginSuccess = async (data) => {
@@ -37,8 +39,8 @@ const LoginPage = () => {
         console.error('Lỗi khi đăng ký khóa học tự động:', err);
         navigate(location.state.returnUrl || '/');
       }
-    } else if (location.state?.returnUrl) {
-      navigate(location.state.returnUrl);
+    } else if (returnUrl) {
+      navigate(returnUrl);
     } else {
       // Logic mới: Nếu student chưa đăng ký khóa học thì về Home (/)
       // Nếu đã đăng ký rồi thì vào Dashboard (/student-dashboard)
@@ -167,7 +169,7 @@ const LoginPage = () => {
           <h1 className="auth-title">Đăng nhập</h1>
           <p className="auth-subtitle">
             Chưa có tài khoản?{' '}
-            <Link to="/register" className="auth-link">Đăng ký ngay</Link>
+            <Link to="/register" state={{ returnUrl }} className="auth-link">Đăng ký ngay</Link>
           </p>
 
           {registered && (

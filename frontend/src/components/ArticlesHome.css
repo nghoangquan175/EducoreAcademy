@@ -199,8 +199,16 @@
   overflow: hidden;
 }
 
-.art-read-more {
+.art-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: auto;
+  padding-top: 15px;
+  border-top: 1px solid hsla(var(--art-primary), 0.1);
+}
+
+.art-read-more {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -212,10 +220,30 @@
   cursor: pointer;
   padding: 0;
   width: fit-content;
+  transition: transform 0.2s ease;
 }
 
 .art-read-more:hover {
+  transform: translateX(4px);
   text-decoration: underline;
+}
+
+.art-likes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: hsla(0, 72%, 51%, 0.05);
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.art-likes:hover {
+  background: hsla(0, 72%, 51%, 0.1);
+  transform: translateY(-2px);
 }
 
 /* ─── Pagination ─────────────────────────────────────────────────────── */

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchCommentsAPI, addCommentAPI, deleteCommentAPI } from '../services/articleService';
 import { MessageSquare, Send, Trash2, Reply, MoreVertical, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -154,20 +155,27 @@ const CommentSection = ({ articleId }) => {
       </div>
 
       {/* Main Comment Form */}
-      <form className="main-comment-form" onSubmit={handleAddComment}>
-        <img src={user?.avatar || "https://i.pravatar.cc/150"} alt="avatar" className="comment-avatar" />
-        <div className="comment-input-wrapper">
-          <textarea 
-            placeholder={user ? "Viết bình luận của bạn..." : "Đăng nhập để bình luận"}
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            disabled={!user}
-          />
-          <button type="submit" disabled={!newComment.trim() || !user}>
-            <Send size={18} />
-          </button>
+      {user ? (
+        <form className="main-comment-form" onSubmit={handleAddComment}>
+          <img src={user?.avatar || "https://i.pravatar.cc/150"} alt="avatar" className="comment-avatar" />
+          <div className="comment-input-wrapper">
+            <textarea 
+              placeholder="Viết bình luận của bạn..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+            />
+            <button type="submit" disabled={!newComment.trim()}>
+              <Send size={18} />
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="login-to-comment-prompt">
+          <p>
+            Bạn cần <Link to="/login" state={{ returnUrl: window.location.pathname }} className="login-link">đăng nhập</Link> hoặc <Link to="/register" state={{ returnUrl: window.location.pathname }} className="login-link">đăng ký</Link> để tham gia bình luận.
+          </p>
         </div>
-      </form>
+      )}
 
       {loading ? (
         <div className="comments-loading">Đang tải bình luận...</div>

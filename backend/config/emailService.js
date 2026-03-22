@@ -59,5 +59,81 @@ const sendOtpEmail = async (to, otp) => {
 
   await transporter.sendMail(mailOptions);
 };
+/**
+ * Gửi email từ chối đơn đăng ký giảng viên
+ */
+const sendInstructorApplicationRejectEmail = async (to, name) => {
+  const mailOptions = {
+    from: '"EducoreAcademy" <no-reply@educoreacademy.com>',
+    to,
+    subject: 'Kết quả đăng ký trở thành đối tác – EducoreAcademy',
+    html: `
+      <div style="font-family: 'Inter', Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px;">
+        <h2 style="color: #0f172a; font-size: 20px;">Kính gửi ${name},</h2>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Cảm ơn bạn đã quan tâm và gửi hồ sơ đăng ký trở thành đối tác giảng dạy tại <strong>EducoreAcademy</strong>.
+        </p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Sau khi xem xét kỹ lưỡng hồ sơ của bạn, chúng tôi rất tiếc phải thông báo rằng ở thời điểm hiện tại, hồ sơ của bạn chưa phù hợp với định hướng phát triển của nền tảng.
+        </p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Chúng tôi đánh giá cao sự quan tâm của bạn và chúc bạn nhiều thành công trong tương lai. Bạn hoàn toàn có thể nộp lại hồ sơ trong những đợt tuyển dụng/đăng ký sau.
+        </p>
+        <br/>
+        <p style="color: #0f172a; font-size: 15px; font-weight: bold;">
+          Trân trọng,<br/>
+          Đội ngũ EducoreAcademy
+        </p>
+      </div>
+    `,
+  };
 
-module.exports = { sendOtpEmail };
+  await transporter.sendMail(mailOptions);
+};
+
+/**
+ * Gửi email phê duyệt đơn đăng ký giảng viên kèm thông tin đăng nhập
+ */
+const sendInstructorApplicationApproveEmail = async (to, name, email, password) => {
+  const mailOptions = {
+    from: '"EducoreAcademy" <no-reply@educoreacademy.com>',
+    to,
+    subject: 'Chào mừng đối tác mới – EducoreAcademy',
+    html: `
+      <div style="font-family: 'Inter', Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="color: #1d4ed8; font-size: 24px; margin: 0;">🎉 Chúc mừng ${name}!</h1>
+        </div>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Hồ sơ đăng ký trở thành đối tác giảng dạy của bạn đã được <strong>phê duyệt</strong>. Chào mừng bạn gia nhập đội ngũ giảng viên của EducoreAcademy!
+        </p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Dưới đây là thông tin tài khoản để bạn có thể truy cập vào hệ thống dành cho Giảng viên:
+        </p>
+        <div style="background: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0 0 10px; font-size: 15px; color: #0f172a;"><strong>Email đăng nhập:</strong> ${email}</p>
+          <p style="margin: 0; font-size: 15px; color: #0f172a;"><strong>Mật khẩu:</strong> ${password}</p>
+        </div>
+        <p style="color: #dc2626; font-size: 14px; line-height: 1.6; font-style: italic;">
+          Lưu ý: Bạn nên đăng nhập và đổi mật khẩu ngay trong lần truy cập đầu tiên để bảo mật tài khoản.
+        </p>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Nếu bạn có bất kỳ thắc mắc nào, đừng ngần ngại liên hệ lại với chúng tôi.
+        </p>
+        <br/>
+        <p style="color: #0f172a; font-size: 15px; font-weight: bold;">
+          Trân trọng,<br/>
+          Đội ngũ EducoreAcademy
+        </p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+module.exports = { 
+  sendOtpEmail,
+  sendInstructorApplicationRejectEmail,
+  sendInstructorApplicationApproveEmail
+};

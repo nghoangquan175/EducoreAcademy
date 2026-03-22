@@ -30,8 +30,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import ArticleEditor from './ArticleEditor';
 import CategoryManager from '../components/CategoryManager';
+import InstructorApplications from '../components/InstructorApplications';
 import {
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -109,6 +109,7 @@ const AdminDashboard = () => {
       subItems: [
         { id: 'students', label: 'Học viên', icon: <GraduationCap size={18} /> },
         { id: 'instructors', label: 'Giảng viên', icon: <UserCheck size={18} /> },
+        { id: 'applications', label: 'Đơn đăng ký GV', icon: <FileText size={18} /> },
       ]
     },
     { id: 'categories', label: 'Danh mục', icon: <Layers size={20} /> },
@@ -714,7 +715,7 @@ const AdminDashboard = () => {
                     <tbody>
                         {filteredUsers.length > 0 ? filteredUsers.map(u => (
                             <tr key={u.id}>
-                                <td>#{u.id.substring(0, 8)}</td>
+                                <td>#{String(u.id).substring(0, 8)}</td>
                                 <td className="user-name-cell">{u.name}</td>
                                 <td>{u.email}</td>
                                 <td>{new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
@@ -730,6 +731,8 @@ const AdminDashboard = () => {
         );
       case 'categories':
         return <CategoryManager setConfirmDialog={setConfirmDialog} />;
+      case 'applications':
+        return <InstructorApplications setConfirmDialog={setConfirmDialog} />;
       case 'banners':
         return (
           <div className="admin-content-fade-in">

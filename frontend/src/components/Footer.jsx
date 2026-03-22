@@ -33,6 +33,7 @@ const Footer = () => {
           <ul className="footer-links">
             <li><Link to="/about">Giới thiệu</Link></li>
             <li><Link to="/contact">Liên hệ</Link></li>
+            <li><Link to="/partner-application">Trở thành đối tác của chúng tôi</Link></li>
             <li><Link to="/terms">Điều khoản & Quy định</Link></li>
             <li><Link to="/privacy">Chính sách bảo mật</Link></li>
           </ul>

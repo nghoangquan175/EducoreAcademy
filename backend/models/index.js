@@ -16,6 +16,8 @@ const PaymentOrder = require('./PaymentOrder');
 const Payment = require('./Payment');
 const Comment = require('./Comment');
 const Category = require('./Category');
+const InstructorApplication = require('./InstructorApplication');
+const ArticleLike = require('./ArticleLike');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -65,6 +67,15 @@ Comment.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Comment.hasMany(Comment, { foreignKey: 'parentId', as: 'replies', onDelete: 'CASCADE' });
 Comment.belongsTo(Comment, { foreignKey: 'parentId', as: 'parent' });
 
+// Article Like
+User.belongsToMany(Article, { through: ArticleLike, as: 'likedArticles', foreignKey: 'userId' });
+Article.belongsToMany(User, { through: ArticleLike, as: 'likedByUsers', foreignKey: 'articleId' });
+
+Article.hasMany(ArticleLike, { foreignKey: 'articleId', as: 'likes' });
+ArticleLike.belongsTo(Article, { foreignKey: 'articleId' });
+User.hasMany(ArticleLike, { foreignKey: 'userId' });
+ArticleLike.belongsTo(User, { foreignKey: 'userId' });
+
 // Quiz
 Lesson.hasOne(Quiz, { foreignKey: 'lessonId', as: 'quiz', onDelete: 'CASCADE' });
 Quiz.belongsTo(Lesson, { foreignKey: 'lessonId' });
@@ -110,5 +121,7 @@ module.exports = {
   PaymentOrder,
   Payment,
   Comment,
-  Category
+  Category,
+  InstructorApplication,
+  ArticleLike
 };
