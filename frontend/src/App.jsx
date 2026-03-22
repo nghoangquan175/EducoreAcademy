@@ -9,6 +9,7 @@ import BannerCarousel from './components/BannerCarousel';
 import ProCourses from './components/ProCourses';
 import FreeCourses from './components/FreeCourses';
 import ArticlesHome from './components/ArticlesHome';
+import FloatingContactButtons from './components/FloatingContactButtons';
 import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -157,6 +158,7 @@ function App() {
                 <Route path="/course-completed/:courseId" element={<CourseCongrats />} />
               </Route>
             </Routes>
+            <FloatingContactButtons />
           </Router>
         </AuthProvider>
       </ThemeProvider>

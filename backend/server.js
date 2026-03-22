@@ -25,6 +25,7 @@ app.use('/api/quizzes', require('./routes/quizRoutes'));
 app.use('/api/articles', require('./routes/articleRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/instructor-applications', require('./routes/instructorApplicationRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
 const paymentController = require('./controllers/paymentController');
 
 // Callback route matching VNPay Return URL

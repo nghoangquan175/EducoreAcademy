@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, User, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { fetchArticlesAPI } from '../services/articleService';
+import { fetchAllCategoriesAPI } from '../services/categoryService';
 import './ArticlesHome.css';
 
 const ArticleCard = ({ article, onClick }) => (
@@ -54,13 +55,28 @@ const ArticlesHome = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [categories, setCategories] = useState(['Tất cả']);
+  const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const limit = 8;
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await fetchAllCategoriesAPI();
+        const names = data.map(c => c.name);
+        setCategories(['Tất cả', ...names]);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      }
+    };
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     const loadArticles = async () => {
       setLoading(true);
       try {
-        const { data } = await fetchArticlesAPI(2, currentPage, limit);
+        const { data } = await fetchArticlesAPI(2, currentPage, limit, selectedCategory);
         setArticles(data.articles);
         setTotalPages(data.totalPages);
       } catch (error) {
@@ -70,7 +86,12 @@ const ArticlesHome = () => {
       }
     };
     loadArticles();
-  }, [currentPage]);
+  }, [currentPage, selectedCategory]);
+
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
 
   return (
     <section className="art-section">
@@ -85,6 +106,21 @@ const ArticlesHome = () => {
             <p className="art-section-subtitle">
               Cập nhật kiến thức mới nhất, kinh nghiệm quý báu từ cộng đồng lập trình viên.
             </p>
+          </div>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="art-tabs-wrapper">
+          <div className="art-tabs">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={`art-tab ${selectedCategory === cat ? 'active' : ''}`}
+                onClick={() => handleCategoryChange(cat)}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
 

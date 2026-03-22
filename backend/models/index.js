@@ -18,6 +18,8 @@ const Comment = require('./Comment');
 const Category = require('./Category');
 const InstructorApplication = require('./InstructorApplication');
 const ArticleLike = require('./ArticleLike');
+const Conversation = require('./Conversation');
+const Message = require('./Message');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -103,6 +105,12 @@ PaymentOrder.belongsTo(Course, { foreignKey: 'courseId' });
 PaymentOrder.hasMany(Payment, { foreignKey: 'orderId' });
 Payment.belongsTo(PaymentOrder, { foreignKey: 'orderId' });
 
+// Chatbot
+User.hasMany(Conversation, { foreignKey: 'userId', as: 'conversations' });
+Conversation.belongsTo(User, { foreignKey: 'userId' });
+Conversation.hasMany(Message, { foreignKey: 'conversationId', as: 'messages', onDelete: 'CASCADE' });
+Message.belongsTo(Conversation, { foreignKey: 'conversationId' });
+
 module.exports = {
   User,
   Course,
@@ -123,5 +131,7 @@ module.exports = {
   Comment,
   Category,
   InstructorApplication,
-  ArticleLike
+  ArticleLike,
+  Conversation,
+  Message
 };

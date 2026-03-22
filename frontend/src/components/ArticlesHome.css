@@ -1,13 +1,11 @@
 .art-section {
   padding: 80px 0;
   background-color: var(--bg-primary);
-  /* Assuming these variables exist or use fallsbacks */
 }
 
-/* Light/Dark mode compatibility based on common variable naming */
+/* Light/Dark mode compatibility */
 :root {
   --art-primary: 215 90% 50%;
-  /* HSL for a nice blue */
   --art-text: 215 25% 20%;
   --art-text-muted: 215 15% 50%;
   --art-bg-card: 0 0% 100%;
@@ -24,13 +22,14 @@
 .art-container {
   max-width: 1280px;
   margin: 0 auto;
+  padding: 0 20px;
 }
 
 .art-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 48px;
+  margin-bottom: 24px;
 }
 
 .art-badge {
@@ -64,21 +63,46 @@
   margin: 0;
 }
 
-.art-view-all {
+/* Category Tabs */
+.art-tabs-wrapper {
+  margin-bottom: 44px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  color: hsl(var(--art-primary));
-  font-weight: 600;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 10px 0;
-  transition: gap 0.2s;
+  justify-content: flex-start;
 }
 
-.art-view-all:hover {
+.art-tabs {
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  padding: 4px;
+}
+
+.art-tab {
+  padding: 8px 24px;
+  border-radius: 100px;
+  background: white;
+  color: #475569;
+  font-weight: 600;
+  border: 1.5px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.art-tab:hover {
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  background: #f0f9ff;
+  transform: translateY(-1px);
+}
+
+.art-tab.active {
+  background: #0ea5e9;
+  color: white;
+  border-color: #0ea5e9;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
 }
 
 .art-grid {
@@ -101,7 +125,6 @@
 
 @media (min-width: 1280px) {
   .art-grid {
-    /* Show 4 if desired, or stay 3 for better readability */
     grid-template-columns: repeat(4, 1fr);
   }
 }
@@ -119,7 +142,6 @@
 .art-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-color: hsla(var(--art-primary), 0.3);
 }
 
 .art-thumb {
@@ -223,6 +245,23 @@
   transition: transform 0.2s ease;
 }
 
+.art-view-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: hsl(var(--art-primary));
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px 0;
+  transition: gap 0.2s;
+}
+
+.art-view-all:hover {
+  gap: 12px;
+}
+
 .art-read-more:hover {
   transform: translateX(4px);
   text-decoration: underline;
@@ -246,14 +285,13 @@
   transform: translateY(-2px);
 }
 
-/* ─── Pagination ─────────────────────────────────────────────────────── */
+/* Pagination */
 .art-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   margin-top: 54px;
-  padding-top: 0;
 }
 
 .art-page-btn {
@@ -272,8 +310,6 @@
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
-  position: relative;
-  overflow: hidden;
 }
 
 .art-page-btn:hover:not(:disabled) {
@@ -281,11 +317,6 @@
   color: hsl(var(--art-primary));
   background: hsla(var(--art-primary), 0.05);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px hsla(var(--art-primary), 0.12);
-}
-
-.art-page-btn:active:not(:disabled) {
-  transform: translateY(0);
 }
 
 .art-page-btn--active {
@@ -295,17 +326,9 @@
   box-shadow: 0 8px 20px hsla(var(--art-primary), 0.3);
 }
 
-.art-page-btn--active:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px hsla(var(--art-primary), 0.4);
-}
-
 .art-page-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: hsla(var(--art-text-muted), 0.1);
-  border-color: transparent;
-  color: hsl(var(--art-text-muted));
 }
 
 .art-page-nav {

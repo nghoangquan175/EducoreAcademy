@@ -1,0 +1,191 @@
+User: Thông tin người dùng đăng nhập và phân quyền
+id: khóa chính tự tăng (number)
+name: tên người dùng (string)
+email: địa chỉ email duy nhất (string)
+password: mật khẩu đã mã hóa (string)
+role: vai trò student, instructor hoặc admin (string)
+googleId: id đăng nhập bằng google (string)
+facebookId: id đăng nhập bằng facebook (string)
+provider: phương thức đăng nhập local, google hoặc facebook (string)
+avatar: đường dẫn ảnh đại diện (string)
+
+Course: Thông tin chi tiết về các khóa học
+id: khóa chính tự tăng (number)
+title: tiêu đề khóa học (string)
+description: mô tả chi tiết nội dung (text)
+price: giá tiền khóa học (number)
+category: tên danh mục phân loại (string)
+thumbnail: đường dẫn ảnh đại diện khóa học (string)
+previewVideoUrl: đường dẫn video xem trước (string)
+level: cấp độ Beginner, Intermediate hoặc Advanced (string)
+rating: số điểm đánh giá trung bình (number)
+studentsCount: tổng số học viên đã đăng ký (number)
+duration: tổng thời lượng khóa học (string)
+videoCount: số lượng video trong khóa học (number)
+quizCount: số lượng bài kiểm tra (number)
+published: trạng thái 0: Draft, 1: Pending, 2: Published, 3: Rejected (number)
+isPro: khóa học trả phí hay miễn phí (boolean)
+
+Article: Các bài viết tin tức và blog
+id: khóa chính tự tăng (number)
+title: tiêu đề bài viết (string)
+content: nội dung chi tiết bài viết (text)
+thumbnail: đường dẫn ảnh bìa bài viết (string)
+excerpt: đoạn trích tóm tắt ngắn (text)
+category: danh mục của bài viết (string)
+articleStatus: trạng thái 0: Draft, 1: Pending, 2: Approved, 3: Rejected (number)
+
+Category: Danh mục dùng chung để phân loại khóa học và bài viết
+id: khóa chính tự tăng (number)
+name: tên danh mục duy nhất (string)
+
+Chapter: Các chương mục trong một khóa học
+id: khóa chính tự tăng (number)
+title: tiêu đề của chương (string)
+chapterOrder: thứ tự hiển thị của chương (number)
+
+Lesson: Các bài học chi tiết trong từng chương
+id: khóa chính tự tăng (number)
+title: tiêu đề bài học (string)
+videoUrl: đường dẫn video bài học (string)
+content: nội dung văn bản bổ trợ (text)
+lessonOrder: thứ tự hiển thị bài học (number)
+duration: thời lượng của video bài học (string)
+isFree: bài học có cho phép xem thử không (boolean)
+
+Enrollment: Thông tin ghi danh học viên vào khóa học
+id: khóa chính tự tăng (number)
+status: trạng thái active, completed hoặc cancelled (string)
+enrolledAt: ngày giờ đăng ký (date)
+lastAccessedAt: ngày giờ truy cập cuối cùng (date)
+
+Payment: Chi tiết giao dịch thanh toán
+id: khóa chính tự tăng (number)
+orderId: id của đơn hàng liên quan (number)
+provider: nhà cung cấp thanh toán ví dụ vnpay (string)
+transactionCode: mã giao dịch từ nhà cung cấp (string)
+status: trạng thái thanh toán (string)
+rawResponse: phản hồi chi tiết từ cổng thanh toán (text)
+
+Review: Đánh giá và nhận xét của học viên về khóa học
+id: khóa chính tự tăng (number)
+rating: số sao đánh giá từ 1 đến 5 (number)
+comment: nội dung nhận xét (text)
+
+Progress: Theo dõi tiến độ hoàn thành từng bài học của học viên
+id: khóa chính tự tăng (number)
+completed: trạng thái đã hoàn thành bài học (boolean)
+videoWatched: trạng thái đã xem hết video (boolean)
+completedAt: ngày giờ hoàn thành (date)
+
+ArticleLike: Thông tin lượt thích bài viết của người dùng
+id: khóa chính tự tăng (number)
+userId: id người dùng thích bài viết (number)
+articleId: id bài viết được thích (number)
+
+Banner: Các banner quảng cáo hiển thị trên trang chủ
+id: khóa chính tự tăng (number)
+title: tiêu đề chính trên banner (string)
+description: mô tả ngắn trên banner (text)
+buttonText: chữ hiển thị trên nút bấm (string)
+gradient: mã màu gradient cho nền (string)
+imageUrl: đường dẫn ảnh minh họa (string)
+tag: nhãn đánh dấu ví dụ hot, mới (string)
+sortOrder: thứ tự hiển thị (number)
+isActive: trạng thái hiển thị hoặc ẩn (boolean)
+
+Comment: Bình luận của người dùng dưới các bài viết
+id: khóa chính tự tăng (number)
+content: nội dung bình luận (text)
+userId: id người dùng bình luận (number)
+articleId: id bài viết (number)
+parentId: id bình luận cha nếu là phản hồi (number)
+likesCount: số lượt thích bình luận (number)
+
+InstructorApplication: Đơn đăng ký trở thành giảng viên
+id: khóa chính tự tăng (number)
+name: họ tên người đăng ký (string)
+email: email liên hệ (string)
+phone: số điện thoại (string)
+cvUrl: đường dẫn tệp CV (string)
+bio: giới thiệu bản thân (text)
+status: trạng thái pending, approved hoặc rejected (string)
+
+Notification: Thông báo gửi tới người dùng
+id: khóa chính tự tăng (number)
+userId: id người dùng nhận thông báo (number)
+title: tiêu đề thông báo (string)
+message: nội dung chi tiết thông báo (text)
+isRead: trạng thái đã đọc hay chưa (boolean)
+
+PaymentOrder: Đơn hàng thanh toán cho khóa học
+id: khóa chính tự tăng (number)
+userId: id người mua (number)
+courseId: id khóa học được mua (number)
+amount: số tiền thanh toán (number)
+status: trạng thái pending, paid hoặc failed (string)
+
+Question: Câu hỏi trong bài kiểm tra trắc nghiệm
+id: khóa chính tự tăng (number)
+quizId: id bài kiểm tra chứa câu hỏi (number)
+text: nội dung câu hỏi (text)
+options: danh sách các lựa chọn dạng chuỗi json (text)
+correctOptionIndex: chỉ số của đáp án đúng (number)
+
+Quiz: Thông tin bài kiểm tra trắc nghiệm của bài học
+id: khóa chính tự tăng (number)
+lessonId: id bài học chứa bài kiểm tra (number)
+passingScore: điểm số tối thiểu để vượt qua theo phần trăm (number)
+
+QuizAttempt: Lượt làm bài kiểm tra của học viên
+id: khóa chính tự tăng (number)
+quizId: id bài kiểm tra (number)
+userId: id học viên làm bài (number)
+score: điểm số đạt được (number)
+status: kết quả passed hoặc failed (string)
+userAnswers: danh sách đáp án học viên đã chọn dạng json (text)
+
+StudyGoal: Mục tiêu và lịch trình học tập cá nhân
+id: khóa chính tự tăng (number)
+userId: id người dùng (number)
+title: tên mục tiêu học tập (string)
+type: loại mục tiêu ví dụ Task, Meeting (string)
+date: ngày thực hiện (date)
+time: giờ thực hiện (string)
+color: mã màu hiển thị trên lịch (string)
+isCompleted: trạng thái hoàn thành (boolean)
+
+Nhóm Quản lý Khóa học:
+User - Course : 1 - nhiều
+Course - Chapter : 1 - nhiều
+Chapter - Lesson : 1 - nhiều
+Course - Review : 1 - nhiều
+User - Review : 1 - nhiều
+
+Nhóm Quản lý Bài viết:
+User - Article : 1 - nhiều
+Article - Comment : 1 - nhiều
+User - Comment : 1 - nhiều
+Comment - Comment : 1 - nhiều
+User - Article : nhiều - nhiều
+Article - ArticleLike : 1 - nhiều
+User - ArticleLike : 1 - nhiều
+
+Nhóm Học tập và Tiến độ:
+User - Enrollment : 1 - nhiều
+Course - Enrollment : 1 - nhiều
+Enrollment - Progress : 1 - nhiều
+Lesson - Progress : 1 - nhiều
+Lesson - Quiz : 1 - 1
+Quiz - Question : 1 - nhiều
+User - QuizAttempt : 1 - nhiều
+Quiz - QuizAttempt : 1 - nhiều
+User - StudyGoal : 1 - nhiều
+
+Nhóm Thanh toán:
+User - PaymentOrder : 1 - nhiều
+Course - PaymentOrder : 1 - nhiều
+PaymentOrder - Payment : 1 - nhiều
+
+Nhóm Khác:
+User - Notification : 1 - nhiều                                         

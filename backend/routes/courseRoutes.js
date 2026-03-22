@@ -72,25 +72,12 @@ router.get('/', optionalProtect, async (req, res) => {
 // ── GET /api/courses/categories — Public: list available categories (optional ?type=pro/free) ───────────
 router.get('/categories', async (req, res) => {
   try {
-    const where = {
-      published: 2, // 2 = Published
-      category: { [Op.not]: null, [Op.ne]: '' }
-    };
-
-    if (req.query.type === 'free') {
-      where.isPro = false;
-    } else if (req.query.type === 'pro') {
-      where.isPro = true;
-    }
-
-    const categories = await Course.findAll({
-      attributes: ['category'],
-      where,
-      group: ['category'],
-      order: [['category', 'ASC']],
+    const { Category } = require('../models');
+    const categories = await Category.findAll({
+      order: [['name', 'ASC']],
     });
 
-    const categoryList = categories.map(c => c.category);
+    const categoryList = categories.map(c => c.name);
     res.json(['Tất cả', ...categoryList]);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -812,7 +799,8 @@ router.post('/:id/reviews', protect, async (req, res) => {
       // Update Course Average Rating
       const allReviews = await Review.findAll({ where: { courseId } });
       const avgRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
-      await Course.update({ rating: avgRating }, { where: { id: courseId } });
+      const roundedRating = Math.round(avgRating * 10) / 10;
+      await Course.update({ rating: roundedRating }, { where: { id: courseId } });
 
       return res.json({ message: 'Đã cập nhật đánh giá của bạn', review: existingReview });
     }
@@ -827,7 +815,8 @@ router.post('/:id/reviews', protect, async (req, res) => {
     // 4. Update Course Average Rating
     const allReviews = await Review.findAll({ where: { courseId } });
     const avgRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
-    await Course.update({ rating: avgRating }, { where: { id: courseId } });
+    const roundedRating = Math.round(avgRating * 10) / 10;
+    await Course.update({ rating: roundedRating }, { where: { id: courseId } });
 
     res.status(201).json({ message: 'Cảm ơn bạn đã đánh giá khóa học!', review });
   } catch (error) {

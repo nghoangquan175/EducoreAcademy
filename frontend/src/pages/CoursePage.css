@@ -71,7 +71,7 @@
   font-size: 1.1rem;
   color: var(--text-secondary);
   max-width: 700px;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
   line-height: 1.6;
 }
 
@@ -83,7 +83,8 @@
 }
 
 .course-meta .rating {
-  color: #facc15; /* Yellow */
+  color: #facc15;
+  /* Yellow */
   font-weight: 600;
 }
 
@@ -110,7 +111,7 @@
 .section-title {
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   color: var(--text-primary);
   padding-bottom: 10px;
   display: inline-block;
@@ -119,7 +120,8 @@
 /* VIDEO PLAYER */
 .video-player-wrapper {
   position: relative;
-  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  padding-top: 56.25%;
+  /* 16:9 Aspect Ratio */
   background-color: #000;
   border-radius: 12px;
   overflow: hidden;
@@ -218,6 +220,7 @@
   color: var(--text-primary);
   cursor: pointer;
 }
+
 .text-free:hover {
   color: var(--brand-primary);
   text-decoration: underline;
@@ -237,7 +240,8 @@
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 12px;
-  background-color: rgba(99, 102, 241, 0.15); /* text-indigo */
+  background-color: rgba(99, 102, 241, 0.15);
+  /* text-indigo */
   color: var(--brand-primary);
   font-weight: 600;
 }
@@ -258,7 +262,8 @@
 
 .purchase-card.sticky {
   position: sticky;
-  top: 100px; /* Space from top header */
+  top: 100px;
+  /* Space from top header */
 }
 
 .sidebar-video-section {
@@ -295,8 +300,10 @@
 .discount-badge {
   font-size: 0.8rem;
   padding: 4px 8px;
-  background-color: rgba(239, 68, 68, 0.15); /* Red tint */
-  color: #ef4444; /* Red */
+  background-color: rgba(239, 68, 68, 0.15);
+  /* Red tint */
+  color: #ef4444;
+  /* Red */
   border-radius: 4px;
   font-weight: 700;
 }
@@ -314,8 +321,10 @@
 }
 
 .btn-enroll.primary {
-  background-color: #0ea5e9; /* Nổi bật: Màu xanh lam (hoặc có thể dùng cam #f97316) */
-  color: #ffffff; /* Trắng tinh */
+  background-color: #0ea5e9;
+  /* Nổi bật: Màu xanh lam (hoặc có thể dùng cam #f97316) */
+  color: #ffffff;
+  /* Trắng tinh */
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
@@ -364,48 +373,48 @@
   color: var(--brand-primary);
   font-size: 1.1rem;
 }
- 
+
 /* --- REVIEWS SECTION --- */
 .reviews-section {
   border-top: 1px solid var(--border-color);
   padding-top: 40px;
 }
- 
+
 .write-review-box {
   background: var(--bg-secondary);
   padding: 24px;
   border-radius: 12px;
   margin-bottom: 40px;
 }
- 
+
 .write-review-box h3 {
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 16px;
   color: var(--text-primary);
 }
- 
+
 .star-rating-input {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
 }
- 
+
 .star-rating-input .star {
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--text-secondary);
   transition: transform 0.2s, color 0.2s;
 }
- 
+
 .star-rating-input .star:hover {
   transform: scale(1.2);
 }
- 
+
 .star-rating-input .star.active {
   color: #facc15;
 }
- 
+
 .write-review-box textarea {
   width: 100%;
   min-height: 100px;
@@ -418,7 +427,7 @@
   resize: vertical;
   outline: none;
 }
- 
+
 .btn-submit-review {
   padding: 10px 24px;
   background: var(--brand-primary);
@@ -429,12 +438,12 @@
   cursor: pointer;
   transition: opacity 0.2s;
 }
- 
+
 .btn-submit-review:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
- 
+
 /* Write Review Prompt */
 .write-review-prompt {
   background: var(--card-bg);
@@ -483,8 +492,15 @@
 }
 
 @keyframes slideInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .reviews-list {
@@ -499,67 +515,70 @@
 .reviews-list::-webkit-scrollbar {
   width: 6px;
 }
+
 .reviews-list::-webkit-scrollbar-track {
   background: var(--bg-secondary);
   border-radius: 4px;
 }
+
 .reviews-list::-webkit-scrollbar-thumb {
   background: var(--text-muted);
   border-radius: 4px;
 }
+
 .reviews-list::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
- 
+
 .review-item {
   display: flex;
   gap: 16px;
 }
- 
+
 .review-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
   object-fit: cover;
 }
- 
+
 .review-content {
   flex: 1;
 }
- 
+
 .review-user-name {
   font-weight: 700;
   font-size: 1rem;
   margin-bottom: 4px;
 }
- 
+
 .review-stars {
   display: flex;
   gap: 4px;
   margin-bottom: 8px;
 }
- 
+
 .review-stars .star {
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
- 
+
 .review-stars .star.active {
   color: #facc15;
 }
- 
+
 .review-text {
   font-size: 0.95rem;
   line-height: 1.5;
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
- 
+
 .review-date {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
- 
+
 .no-reviews {
   text-align: center;
   padding: 40px;

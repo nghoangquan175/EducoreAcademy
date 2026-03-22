@@ -165,7 +165,7 @@ const CoursePage = () => {
             <h1 className="course-main-title">{course.title}</h1>
             <p className="course-short-desc">{course.description}</p>
             <div className="course-meta">
-              <span className="rating">⭐ {course.rating || 4.8} ({course.studentsCount || 0} học viên)</span>
+              <span className="rating">⭐ {(course.rating || 4.8).toFixed(1)} ({course.studentsCount || 0} học viên)</span>
               <span className="instructor">Giảng viên: <strong>{course.instructor?.name || 'Giảng viên'}</strong></span>
             </div>
           </div>

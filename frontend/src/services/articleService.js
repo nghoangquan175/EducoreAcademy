@@ -9,10 +9,13 @@ const getAuthConfig = () => {
   };
 };
 
-export const fetchArticlesAPI = async (status = 2, page = 1, limit = 8) => {
+export const fetchArticlesAPI = async (status = 2, page = 1, limit = 8, category = '') => {
   try {
+    const params = { status, page, limit };
+    if (category && category !== 'Tất cả') params.category = category;
+    
     const response = await axios.get(`${API_URL}/articles`, {
-      params: { status, page, limit }
+      params
     });
     return response.data;
   } catch (error) {

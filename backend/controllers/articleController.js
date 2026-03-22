@@ -10,9 +10,15 @@ exports.getArticles = async (req, res) => {
     const limit = parseInt(req.query.limit) || 8;
     const offset = (page - 1) * limit;
     const articleStatus = req.query.status !== undefined ? parseInt(req.query.status) : 2; // Default to published
+    const category = req.query.category;
+
+    const where = { articleStatus };
+    if (category && category !== 'Tất cả') {
+      where.category = category;
+    }
 
     const { count, rows } = await Article.findAndCountAll({
-      where: { articleStatus },
+      where,
       attributes: {
         include: [
           [
