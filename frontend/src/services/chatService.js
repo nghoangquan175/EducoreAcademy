@@ -10,11 +10,16 @@ const getAuthConfig = () => {
   return {};
 };
 
-export const sendMessageAPI = async (message, conversationId = null) => {
+export const sendMessageAPI = async (message, conversationId = null, sessionId = null) => {
   const response = await axios.post(`${API_URL}/chat/send`, 
-    { message, conversationId },
+    { message, conversationId, sessionId },
     getAuthConfig()
   );
+  return response.data;
+};
+
+export const getLatestConversationAPI = async () => {
+  const response = await axios.get(`${API_URL}/chat/latest`, getAuthConfig());
   return response.data;
 };
 
@@ -23,8 +28,14 @@ export const getConversationsAPI = async () => {
   return response.data;
 };
 
-export const getMessagesAPI = async (conversationId) => {
-  const response = await axios.get(`${API_URL}/chat/conversations/${conversationId}`, getAuthConfig());
+export const getMessagesAPI = async (conversationId, { before, limit = 10 } = {}) => {
+  const params = new URLSearchParams();
+  if (before) params.append('before', before);
+  params.append('limit', limit);
+  const response = await axios.get(
+    `${API_URL}/chat/conversations/${conversationId}?${params.toString()}`,
+    getAuthConfig()
+  );
   return response.data;
 };
 

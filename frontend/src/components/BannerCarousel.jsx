@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -11,6 +12,7 @@ import './BannerCarousel.css';
 const BannerCarousel = () => {
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadBanners = async () => {
@@ -25,6 +27,14 @@ const BannerCarousel = () => {
     };
     loadBanners();
   }, []);
+
+  const handleBannerClick = (slide) => {
+    if (slide.linkType === 'course' && slide.linkId) {
+      navigate(`/course/${slide.linkId}`);
+    } else if (slide.linkType === 'article' && slide.linkId) {
+      navigate(`/articles/${slide.linkId}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -68,7 +78,11 @@ const BannerCarousel = () => {
                 {slide.tag && <span className="banner-tag">{slide.tag}</span>}
                 <h2 className="banner-title">{slide.title}</h2>
                 <p className="banner-desc">{slide.description}</p>
-                <button className="banner-btn-cta">
+                <button
+                  className="banner-btn-cta"
+                  onClick={() => handleBannerClick(slide)}
+                  style={{ cursor: slide.linkType && slide.linkId ? 'pointer' : 'default' }}
+                >
                   {slide.buttonText || 'Khám phá ngay'}
                   <ArrowRight size={18} className="btn-icon" />
                 </button>

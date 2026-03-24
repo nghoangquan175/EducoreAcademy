@@ -11,6 +11,12 @@ export const fetchAllBannersAPI = (token) =>
     headers: { Authorization: `Bearer ${token}` },
   });
 
+// Admin: fetch trash banners
+export const fetchTrashBannersAPI = (token) =>
+  axios.get(`${API_URL}/banners/trash`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
 // Admin: create a new banner
 export const createBannerAPI = (data, token) =>
   axios.post(`${API_URL}/banners`, data, {
@@ -23,10 +29,20 @@ export const updateBannerAPI = (id, data, token) =>
     headers: { Authorization: `Bearer ${token}` },
   });
 
-// Admin: delete a banner
+// Admin: soft delete a banner
 export const deleteBannerAPI = (id, token) =>
   axios.delete(`${API_URL}/banners/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
+// Admin: restore a soft-deleted banner
+export const restoreBannerAPI = (id, token) =>
+  axios.put(`${API_URL}/banners/${id}/restore`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
+// Admin: permanently delete a banner
+export const forceDeleteBannerAPI = (id, token) =>
+  axios.delete(`${API_URL}/banners/${id}/force`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });

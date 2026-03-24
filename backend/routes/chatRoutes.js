@@ -23,6 +23,7 @@ router.post('/send', async (req, res, next) => {
 });
 
 // Protected routes: require login
+router.get('/latest', protect, chatController.getLatestConversation);
 router.get('/conversations', protect, chatController.getConversations);
 router.get('/conversations/:id', protect, chatController.getMessages);
 router.delete('/conversations/:id', protect, chatController.deleteConversation);

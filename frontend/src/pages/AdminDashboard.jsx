@@ -14,6 +14,7 @@ import {
   CheckCircle, 
   XCircle, 
   ArrowDownCircle,
+  ArrowUpCircle,
   Eye, 
   Check,
   ChevronDown,
@@ -23,7 +24,8 @@ import {
   Bell,
   Search,
   User,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -54,7 +56,12 @@ const AdminDashboard = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [newBanner, setNewBanner] = useState({
+  const [editingBanner, setEditingBanner] = useState(null);
+  const [bannerTrashView, setBannerTrashView] = useState(false);
+  const [trashBanners, setTrashBanners] = useState([]);
+  const [bannerLinkCourses, setBannerLinkCourses] = useState([]);
+  const [bannerLinkArticles, setBannerLinkArticles] = useState([]);
+  const defaultBanner = {
     title: '',
     description: '',
     buttonText: 'Khám phá ngay',
@@ -62,8 +69,11 @@ const AdminDashboard = () => {
     imageUrl: '',
     tag: 'Mới',
     sortOrder: 0,
-    isActive: true
-  });
+    isActive: true,
+    linkType: '',
+    linkId: null,
+  };
+  const [newBanner, setNewBanner] = useState({ ...defaultBanner });
   
   // Articles State
   const [articles, setArticles] = useState([]);
@@ -223,33 +233,45 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleBannerToggle = async (bannerId, currentStatus) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/banners/${bannerId}`, 
-        { isActive: !currentStatus }, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      fetchData(); // Refresh list
-    } catch (error) {
-      console.error('Lỗi khi cập nhật banner:', error);
-      alert('Có lỗi xảy ra khi cập nhật trạng thái banner.');
-    }
+  const handleBannerToggle = (bannerId, currentStatus) => {
+    const isDeactivating = currentStatus;
+    setConfirmDialog({
+      isOpen: true,
+      title: isDeactivating ? 'Gỡ xuống Banner' : 'Đăng Banner',
+      message: isDeactivating
+        ? 'Bạn có chắc chắn muốn gỡ xuống banner này?'
+        : 'Bạn có chắc chắn muốn đăng banner này lên trang chủ?',
+      type: isDeactivating ? 'warning' : 'info',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(`http://localhost:5000/api/banners/${bannerId}`,
+            { isActive: !currentStatus },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          toast.success(isDeactivating ? 'Đã gỡ xuống banner' : 'Đã đăng banner lên trang chủ');
+          fetchData();
+        } catch (error) {
+          console.error('Lỗi khi cập nhật banner:', error);
+          toast.error('Có lỗi xảy ra khi cập nhật trạng thái banner.');
+        }
+      }
+    });
   };
 
   const handleBannerDelete = (bannerId) => {
     setConfirmDialog({
       isOpen: true,
       title: 'Xóa Banner',
-      message: 'Bạn có chắc chắn muốn xóa banner này? Thao tác này không thể hoàn tác.',
-      type: 'danger',
+      message: 'Banner sẽ được chuyển vào thùng rác. Bạn có chắc chắn?',
+      type: 'warning',
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.delete(`http://localhost:5000/api/banners/${bannerId}`, 
+          await axios.delete(`http://localhost:5000/api/banners/${bannerId}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          toast.success('Đã xóa banner thành công!');
+          toast.success('Đã chuyển banner vào thùng rác');
           fetchData();
         } catch (error) {
           console.error('Lỗi khi xóa banner:', error);
@@ -257,6 +279,99 @@ const AdminDashboard = () => {
         }
       }
     });
+  };
+
+  const fetchTrashBanners = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get('http://localhost:5000/api/banners/trash', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTrashBanners(data);
+    } catch (error) {
+      console.error('Lỗi khi tải thùng rác banner:', error);
+    }
+  };
+
+  const handleRestoreBanner = (bannerId) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Khôi phục Banner',
+      message: 'Bạn có chắc chắn muốn khôi phục banner này?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(`http://localhost:5000/api/banners/${bannerId}/restore`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          toast.success('Đã khôi phục banner');
+          fetchTrashBanners();
+          fetchData();
+        } catch (error) {
+          toast.error('Lỗi khi khôi phục banner');
+        }
+      }
+    });
+  };
+
+  const handleForceDeleteBanner = (bannerId) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xóa vĩnh viễn Banner',
+      message: 'Xóa vĩnh viễn banner này? Hành động này không thể hoàn tác.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.delete(`http://localhost:5000/api/banners/${bannerId}/force`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          toast.success('Đã xóa vĩnh viễn banner');
+          fetchTrashBanners();
+        } catch (error) {
+          toast.error('Lỗi khi xóa vĩnh viễn banner');
+        }
+      }
+    });
+  };
+
+  const fetchBannerLinkData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const [coursesRes, articlesRes] = await Promise.all([
+        axios.get('http://localhost:5000/api/admin/courses', { headers }),
+        axios.get('http://localhost:5000/api/admin/articles/all', { headers }),
+      ]);
+      setBannerLinkCourses(coursesRes.data || []);
+      setBannerLinkArticles(articlesRes.data?.data || articlesRes.data || []);
+    } catch (error) {
+      console.error('Lỗi khi tải dữ liệu liên kết:', error);
+    }
+  };
+
+  const openBannerModal = (banner = null) => {
+    if (banner) {
+      setEditingBanner(banner);
+      setNewBanner({
+        title: banner.title || '',
+        description: banner.description || '',
+        buttonText: banner.buttonText || 'Khám phá ngay',
+        gradient: banner.gradient || '',
+        imageUrl: banner.imageUrl || '',
+        tag: banner.tag || '',
+        sortOrder: banner.sortOrder || 0,
+        isActive: banner.isActive,
+        linkType: banner.linkType || '',
+        linkId: banner.linkId || null,
+      });
+    } else {
+      setEditingBanner(null);
+      setNewBanner({ ...defaultBanner });
+    }
+    fetchBannerLinkData();
+    setShowBannerModal(true);
   };
 
   const handleBannerThumbnailUpload = async (e) => {
@@ -278,7 +393,7 @@ const AdminDashboard = () => {
       setNewBanner({ ...newBanner, imageUrl: res.data.url });
     } catch (error) {
       console.error("Upload error:", error);
-      alert('Tải ảnh banner thất bại!');
+      toast.error('Tải ảnh banner thất bại!');
     } finally {
       setUploadingBanner(false);
     }
@@ -288,19 +403,24 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/banners', newBanner, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Thêm banner thành công!');
+      const payload = { ...newBanner, linkType: newBanner.linkType || null, linkId: newBanner.linkId || null };
+      if (editingBanner) {
+        await axios.put(`http://localhost:5000/api/banners/${editingBanner.id}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Đã cập nhật banner!');
+      } else {
+        await axios.post('http://localhost:5000/api/banners', payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Đã thêm banner mới!');
+      }
       setShowBannerModal(false);
-      setNewBanner({
-        title: '', description: '', buttonText: 'Khám phá ngay',
-        gradient: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-        imageUrl: '', tag: 'Mới', sortOrder: 0, isActive: true
-      });
+      setEditingBanner(null);
+      setNewBanner({ ...defaultBanner });
       fetchData();
     } catch (error) {
-      alert('Thêm banner thất bại: ' + (error.response?.data?.message || error.message));
+      toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -737,10 +857,24 @@ const AdminDashboard = () => {
         return (
           <div className="admin-content-fade-in">
             <div className="section-header">
-                <h2 className="content-title">Quản lý Banners</h2>
-                <button className="add-btn primary" onClick={() => setShowBannerModal(true)}>
-                    <Plus size={18} /> Thêm Banner mới
-                </button>
+                <h2 className="content-title">{bannerTrashView ? 'Thùng rác Banners' : 'Quản lý Banners'}</h2>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      className="add-btn"
+                      style={{ background: '#f3f4f6', color: '#4b5563' }}
+                      onClick={() => {
+                        setBannerTrashView(!bannerTrashView);
+                        if (!bannerTrashView) fetchTrashBanners();
+                      }}
+                    >
+                      {bannerTrashView ? 'Quay lại' : <><Trash2 size={18} /> Thùng rác</>}
+                    </button>
+                    {!bannerTrashView && (
+                      <button className="add-btn primary" onClick={() => openBannerModal()}>
+                          <Plus size={18} /> Thêm Banner mới
+                      </button>
+                    )}
+                </div>
             </div>
             <div className="table-container">
                 <table className="admin-table">
@@ -748,25 +882,60 @@ const AdminDashboard = () => {
                         <tr>
                             <th>Banner</th>
                             <th>Tag</th>
-                            <th>Thứ tự</th>
-                            <th>Trạng thái</th>
+                            <th>Liên kết</th>
+                            <th>{bannerTrashView ? 'Ngày xóa' : 'Thứ tự'}</th>
+                            {!bannerTrashView && <th>Trạng thái</th>}
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {banners.length > 0 ? banners.map(banner => (
+                        {bannerTrashView ? (
+                          trashBanners.length > 0 ? trashBanners.map(banner => (
                             <tr key={banner.id}>
                                 <td>
                                     <div className="banner-cell">
-                                        <div className="banner-preview-box" style={{ background: banner.gradient }}>
+                                        <div className="banner-thumb-wrapper" style={{ background: banner.gradient }}>
                                             {banner.imageUrl && <img src={banner.imageUrl} alt="" />}
                                         </div>
-                                        <div className="banner-info">
-                                            <span className="banner-title">{banner.title}</span>
+                                        <div className="banner-info-cell">
+                                            <span className="banner-title-text">{banner.title}</span>
                                         </div>
                                     </div>
                                 </td>
-                                <td><span className="tag-badge">{banner.tag}</span></td>
+                                <td><span className="banner-tag-badge">{banner.tag}</span></td>
+                                <td>—</td>
+                                <td>{new Date(banner.deletedAt).toLocaleDateString('vi-VN')}</td>
+                                <td>
+                                    <div className="admin-actions">
+                                        <button className="admin-btn approve" onClick={() => handleRestoreBanner(banner.id)} title="Phục hồi">
+                                            Phục hồi
+                                        </button>
+                                        <button className="admin-btn reject" onClick={() => handleForceDeleteBanner(banner.id)} title="Xóa vĩnh viễn">
+                                            <XCircle size={18} />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                          )) : (
+                            <tr><td colSpan="5" className="empty-table-cell">Thùng rác trống</td></tr>
+                          )
+                        ) : (
+                          banners.length > 0 ? banners.map(banner => (
+                            <tr key={banner.id}>
+                                <td>
+                                    <div className="banner-cell">
+                                        <div className="banner-thumb-wrapper" style={{ background: banner.gradient }}>
+                                            {banner.imageUrl && <img src={banner.imageUrl} alt="" />}
+                                        </div>
+                                        <div className="banner-info-cell">
+                                            <span className="banner-title-text">{banner.title}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span className="banner-tag-badge">{banner.tag}</span></td>
+                                <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                    {banner.linkType === 'course' ? '📚 Khóa học' : banner.linkType === 'article' ? '📝 Bài viết' : '—'}
+                                </td>
                                 <td>{banner.sortOrder}</td>
                                 <td>
                                     <span className={`status-badge ${banner.isActive ? 'active' : 'draft'}`}>
@@ -775,21 +944,29 @@ const AdminDashboard = () => {
                                 </td>
                                 <td>
                                     <div className="admin-actions">
-                                        <button 
-                                            className={`admin-btn ${banner.isActive ? 'reject' : 'approve'}`} 
-                                            title={banner.isActive ? "Tạm dừng" : "Kích hoạt"}
-                                            onClick={() => handleBannerToggle(banner.id, banner.isActive)}
-                                        >
-                                            <XCircle size={18} />
+                                        <button className="admin-btn view" onClick={() => openBannerModal(banner)} title="Sửa">
+                                            <Pencil size={18} />
                                         </button>
-                                        <button className="admin-btn reject" onClick={() => handleBannerDelete(banner.id)} title="Xóa">
-                                            <FileText size={18} />
-                                        </button>
+                                        {banner.isActive ? (
+                                            <button className="admin-btn reject" title="Gỡ xuống" onClick={() => handleBannerToggle(banner.id, banner.isActive)}>
+                                                <ArrowDownCircle size={18} />
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button className="admin-btn approve" title="Đăng lên" onClick={() => handleBannerToggle(banner.id, banner.isActive)}>
+                                                    <ArrowUpCircle size={18} />
+                                                </button>
+                                                <button className="admin-btn reject" title="Xóa" onClick={() => handleBannerDelete(banner.id)}>
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
-                        )) : (
-                            <tr><td colSpan="5" className="empty-table-cell">Chưa có banner nào</td></tr>
+                          )) : (
+                            <tr><td colSpan="6" className="empty-table-cell">Chưa có banner nào</td></tr>
+                          )
                         )}
                     </tbody>
                 </table>
@@ -1121,13 +1298,13 @@ const AdminDashboard = () => {
           {renderContent()}
         </div>
 
-        {/* Create Banner Modal */}
+        {/* Create/Edit Banner Modal */}
         {showBannerModal && (
             <div className="admin-modal-overlay">
                 <div className="admin-modal-content">
                     <div className="modal-header">
-                        <h3>Thêm Banner Mới</h3>
-                        <button className="close-modal" onClick={() => setShowBannerModal(false)}><X size={20} /></button>
+                        <h3>{editingBanner ? 'Chỉnh sửa Banner' : 'Thêm Banner Mới'}</h3>
+                        <button className="close-modal" onClick={() => { setShowBannerModal(false); setEditingBanner(null); setNewBanner({ ...defaultBanner }); }}><X size={20} /></button>
                     </div>
                     <form onSubmit={handleBannerSubmit} className="admin-form">
                         <div className="form-grid">
@@ -1173,7 +1350,7 @@ const AdminDashboard = () => {
                                 <input 
                                     type="number" 
                                     value={newBanner.sortOrder} 
-                                    onChange={(e) => setNewBanner({...newBanner, sortOrder: parseInt(e.target.value)})} 
+                                    onChange={(e) => setNewBanner({...newBanner, sortOrder: parseInt(e.target.value) || 0})} 
                                 />
                             </div>
                         </div>
@@ -1188,6 +1365,38 @@ const AdminDashboard = () => {
                             />
                         </div>
 
+                        <div className="form-grid">
+                            <div className="form-group">
+                                <label>Liên kết đến</label>
+                                <select
+                                    value={newBanner.linkType || ''}
+                                    onChange={(e) => setNewBanner({...newBanner, linkType: e.target.value, linkId: null})}
+                                    style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', background: 'white' }}
+                                >
+                                    <option value="">Không liên kết</option>
+                                    <option value="course">Khóa học</option>
+                                    <option value="article">Bài viết</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>{newBanner.linkType === 'course' ? 'Chọn khóa học' : newBanner.linkType === 'article' ? 'Chọn bài viết' : 'Chọn nội dung'}</label>
+                                <select
+                                    value={newBanner.linkId || ''}
+                                    onChange={(e) => setNewBanner({...newBanner, linkId: e.target.value ? parseInt(e.target.value) : null})}
+                                    disabled={!newBanner.linkType}
+                                    style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', background: newBanner.linkType ? 'white' : '#f1f5f9' }}
+                                >
+                                    <option value="">{newBanner.linkType ? '-- Chọn --' : '-- Chọn loại liên kết trước --'}</option>
+                                    {newBanner.linkType === 'course' && bannerLinkCourses.map(c => (
+                                        <option key={c.id} value={c.id}>{c.title}</option>
+                                    ))}
+                                    {newBanner.linkType === 'article' && bannerLinkArticles.map(a => (
+                                        <option key={a.id} value={a.id}>{a.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         <div className="form-group">
                             <label>Hình ảnh Banner</label>
                             <div className="modal-upload-area">
@@ -1198,15 +1407,15 @@ const AdminDashboard = () => {
                                     style={{ display: 'none' }}
                                 />
                                 <label htmlFor="banner-upload" className="modal-upload-label">
-                                    {uploadingBanner ? 'Đang tải lên...' : newBanner.imageUrl ? 'Đã tải ảnh lên' : 'Nhấn để chọn ảnh'}
+                                    {uploadingBanner ? 'Đang tải lên...' : newBanner.imageUrl ? 'Đổi ảnh' : 'Nhấn để chọn ảnh'}
                                 </label>
                                 {newBanner.imageUrl && <img src={newBanner.imageUrl} alt="" className="modal-preview-img" />}
                             </div>
                         </div>
 
                         <div className="modal-footer">
-                            <button type="button" className="btn-cancel" onClick={() => setShowBannerModal(false)}>Hủy</button>
-                            <button type="submit" className="btn-submit" disabled={uploadingBanner}>Tạo Banner</button>
+                            <button type="button" className="btn-cancel" onClick={() => { setShowBannerModal(false); setEditingBanner(null); setNewBanner({ ...defaultBanner }); }}>Hủy</button>
+                            <button type="submit" className="btn-submit" disabled={uploadingBanner}>{editingBanner ? 'Cập nhật' : 'Tạo Banner'}</button>
                         </div>
                     </form>
                 </div>

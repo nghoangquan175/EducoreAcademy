@@ -369,7 +369,7 @@
     background: white;
     border-radius: 16px;
     border: 1px solid #e2e8f0;
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 .admin-table {
@@ -509,6 +509,12 @@
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.banner-thumb-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .banner-info-cell {

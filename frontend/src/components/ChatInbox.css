@@ -16,6 +16,11 @@
   font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+/* Hidden state — keeps component mounted but invisible */
+.chat-inbox--hidden {
+  display: none !important;
+}
+
 @keyframes chatSlideUp {
   from {
     opacity: 0;
@@ -210,6 +215,28 @@
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Load more / spinner */
+.chat-load-more {
+  text-align: center;
+  padding: 8px 0;
+  flex-shrink: 0;
+}
+
+.chat-load-more-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.chat-spinner {
+  animation: spin 1s linear infinite;
+  color: #6366f1;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Footer */

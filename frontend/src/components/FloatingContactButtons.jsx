@@ -14,8 +14,8 @@ const FloatingContactButtons = () => {
 
   return (
     <>
-      {/* Chat Inbox Popup */}
-      {isChatOpen && <ChatInbox onClose={() => setIsChatOpen(false)} />}
+      {/* Chat Inbox — always rendered, toggled via CSS */}
+      <ChatInbox isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
 
       <div className="floating-contact-container">
         {/* AI Chat Button */}
