@@ -146,12 +146,21 @@ exports.vnpayIpn = async (req, res) => {
               order.status = 'failed';
               await order.save();
 
-              await Payment.create({
-                orderId: orderId,
-                transactionCode: vnp_Params['vnp_TransactionNo'],
-                status: 'failed',
-                rawResponse: JSON.stringify(vnp_Params)
-              });
+              // Update existing pending payment to failed
+              const payment = await Payment.findOne({ where: { orderId: orderId, status: 'pending' } });
+              if (payment) {
+                payment.status = 'failed';
+                payment.transactionCode = vnp_Params['vnp_TransactionNo'];
+                payment.rawResponse = JSON.stringify(vnp_Params);
+                await payment.save();
+              } else {
+                await Payment.create({
+                  orderId: orderId,
+                  transactionCode: vnp_Params['vnp_TransactionNo'],
+                  status: 'failed',
+                  rawResponse: JSON.stringify(vnp_Params)
+                });
+              }
 
               res.status(200).json({ RspCode: '00', Message: 'Success' });
             }
@@ -182,13 +191,21 @@ async function fulfillOrder(orderId, transactionNo, rawParams) {
     order.status = 'paid';
     await order.save();
 
-    // Create payment record
-    await Payment.create({
-      orderId: orderId,
-      transactionCode: transactionNo,
-      status: 'success',
-      rawResponse: JSON.stringify(rawParams)
-    });
+    // Update existing pending payment to success
+    const payment = await Payment.findOne({ where: { orderId: orderId, status: 'pending' } });
+    if (payment) {
+      payment.status = 'success';
+      payment.transactionCode = transactionNo;
+      payment.rawResponse = JSON.stringify(rawParams);
+      await payment.save();
+    } else {
+      await Payment.create({
+        orderId: orderId,
+        transactionCode: transactionNo,
+        status: 'success',
+        rawResponse: JSON.stringify(rawParams)
+      });
+    }
 
     // Handle Enrollment
     const enrollment = await Enrollment.findOne({

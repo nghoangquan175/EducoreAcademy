@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import './FloatingContactButtons.css';
 import { FaFacebookF } from 'react-icons/fa';
 import { MessageCircle } from 'lucide-react';
@@ -6,11 +7,23 @@ import ChatInbox from './ChatInbox';
 
 const FloatingContactButtons = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const location = useLocation();
 
   const zaloPhone = import.meta.env.VITE_ZALO_PHONE || "your_phone_number"; 
   const facebookUrl = import.meta.env.VITE_FACEBOOK_URL || "https://facebook.com/your_page";
   
   const zaloUrl = `https://zalo.me/${zaloPhone}`;
+
+  // Chỉ hiện ở homepage (/), chi tiết khóa học (/course/:id) và chi tiết bài viết (/articles/:id)
+  const showOnPaths = [
+    /^\/$/,
+    /^\/course\/[^/]+$/,
+    /^\/articles\/[^/]+$/
+  ];
+
+  const shouldShow = showOnPaths.some(regex => regex.test(location.pathname));
+
+  if (!shouldShow) return null;
 
   return (
     <>

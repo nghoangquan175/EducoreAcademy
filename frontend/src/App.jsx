@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -62,16 +62,21 @@ const LearningLayout = () => (
 // Layout for Checkout — mini header, no footer, full screen gradient
 const CheckoutLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isResultPage = location.pathname === '/payment-result';
+
   return (
-    <div className="checkout-bg">
+    <div className="checkout-layout-container">
       <header className="checkout-mini-header">
-        <div className="mini-header-logo" onClick={() => window.location.href='/'}>
+        <div className="checkout-mini-logo" onClick={() => navigate('/')}>
           <BookOpen size={28} />
-          <span>Educore</span>
+          <span>Educore Academy</span>
         </div>
-        <button className="mini-header-close" onClick={() => window.history.back()}>
-          <X />
-        </button>
+        {!isResultPage && (
+          <button className="checkout-cancel-link" onClick={() => navigate(-1)}>
+            <X size={20} /> <span>Hủy thanh toán</span>
+          </button>
+        )}
       </header>
       <main className="checkout-main">
         <Outlet />
@@ -116,7 +121,7 @@ function App() {
               {/* Checkout page — custom layout */}
               <Route element={<CheckoutLayout />}>
                   <Route path="/checkout/:courseId" element={
-                    <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                    <PrivateRoute allowedRoles={['student']}>
                       <CheckoutPage />
                     </PrivateRoute>
                   } />
@@ -125,7 +130,7 @@ function App() {
 
               {/* ----- STUDENT ROUTES (Full Screen) ----- */}
               <Route path="/student-dashboard" element={
-                <PrivateRoute allowedRoles={['student', 'instructor', 'admin']}>
+                <PrivateRoute allowedRoles={['student']}>
                   <StudentDashboard />
                 </PrivateRoute>
               } />
@@ -152,7 +157,7 @@ function App() {
               } />
 
               {/* Learning pages — custom layout */}
-              <Route element={<LearningLayout />}>
+              <Route element={<PrivateRoute allowedRoles={['student']}><LearningLayout /></PrivateRoute>}>
                 <Route path="/learn/:courseId" element={<LearningPage />} />
                 <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPage />} />
                 <Route path="/course-completed/:courseId" element={<CourseCongrats />} />

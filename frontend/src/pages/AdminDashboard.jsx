@@ -25,7 +25,14 @@ import {
   Search,
   User,
   Trash2,
-  Pencil
+  Pencil,
+  ArrowLeft,
+  Send,
+  Mail,
+  Calendar,
+  Clock,
+  HelpCircle,
+  Play
 } from 'lucide-react';
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -48,6 +55,7 @@ const AdminDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isUsersMenuOpen, setIsUsersMenuOpen] = useState(false);
   const [isArticlesMenuOpen, setIsArticlesMenuOpen] = useState(false);
+  const [isCoursesMenuOpen, setIsCoursesMenuOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [pendingCourses, setPendingCourses] = useState([]);
   const [banners, setBanners] = useState([]);
@@ -61,6 +69,11 @@ const AdminDashboard = () => {
   const [trashBanners, setTrashBanners] = useState([]);
   const [bannerLinkCourses, setBannerLinkCourses] = useState([]);
   const [bannerLinkArticles, setBannerLinkArticles] = useState([]);
+  
+  // User detail state
+  const [selectedUserDetails, setSelectedUserDetails] = useState(null);
+  const [lastUserTab, setLastUserTab] = useState('students');
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false);
   const defaultBanner = {
     title: '',
     description: '',
@@ -68,7 +81,7 @@ const AdminDashboard = () => {
     gradient: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
     imageUrl: '',
     tag: 'Mới',
-    sortOrder: 0,
+    sortOrder: 1,
     isActive: true,
     linkType: '',
     linkId: null,
@@ -88,12 +101,26 @@ const AdminDashboard = () => {
   const [articleTotalPages, setArticleTotalPages] = useState(1);
   const [courseSearch, setCourseSearch] = useState('');
   const [debouncedCourseSearch, setDebouncedCourseSearch] = useState('');
+  const [instructorFilter, setInstructorFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [reviewCourseId, setReviewCourseId] = useState(null);
+  const [reviewCourseData, setReviewCourseData] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [lastCourseTab, setLastCourseTab] = useState('manage-courses');
   const [trashArticles, setTrashArticles] = useState([]);
   const [trashCourses, setTrashCourses] = useState([]);
   const [courseTrashView, setCourseTrashView] = useState(false);
   const [articleTrashView, setArticleTrashView] = useState(false);
   const prevTab = useRef(activeTab);
   const prevSubTab = useRef(articleSubTab);
+
+  // Bulk Notification State
+  const [bulkNotifData, setBulkNotifData] = useState({
+    target: 'all',
+    title: '',
+    message: ''
+  });
+  const [sendingBulkNotif, setSendingBulkNotif] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const { logout, user } = useAuth();
@@ -109,8 +136,16 @@ const AdminDashboard = () => {
 
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
-    { id: 'approvals', label: 'Phê duyệt', icon: <CheckSquare size={20} /> },
-    { id: 'courses', label: 'Khóa học', icon: <BookOpen size={20} /> },
+    { 
+      id: 'courses', 
+      label: 'Khóa học', 
+      icon: <BookOpen size={20} />,
+      hasSubmenu: true,
+      subItems: [
+        { id: 'manage-courses', label: 'Quản lý', icon: <Layers size={18} /> },
+        { id: 'approvals', label: 'Phê duyệt', icon: <CheckSquare size={18} /> },
+      ]
+    },
     { 
       id: 'users', 
       label: 'Người dùng', 
@@ -119,6 +154,7 @@ const AdminDashboard = () => {
       subItems: [
         { id: 'students', label: 'Học viên', icon: <GraduationCap size={18} /> },
         { id: 'instructors', label: 'Giảng viên', icon: <UserCheck size={18} /> },
+        { id: 'bulk-notification', label: 'Gửi thông báo', icon: <Send size={18} /> },
         { id: 'applications', label: 'Đơn đăng ký GV', icon: <FileText size={18} /> },
       ]
     },
@@ -173,7 +209,7 @@ const AdminDashboard = () => {
       } else if (activeTab === 'approvals') {
         const { data } = await axios.get(`http://localhost:5000/api/admin/courses/pending?search=${debouncedCourseSearch}`, { headers });
         setPendingCourses(data);
-      } else if (activeTab === 'courses') {
+      } else if (activeTab === 'manage-courses') {
         const { data } = await axios.get(`http://localhost:5000/api/admin/courses?search=${debouncedCourseSearch}`, { headers });
         // Lọc khóa học đã xuất bản (published: 2)
         setPendingCourses(data.filter(c => c.published === 2));
@@ -205,6 +241,28 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchReviewCourse = async (id) => {
+    setReviewLoading(true);
+    try {
+      const { data } = await axios.get(`http://localhost:5000/api/admin/courses/${id}/review`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setReviewCourseData(data);
+    } catch (error) {
+      toast.error('Không thể tải thông tin khóa học để review');
+      setActiveTab(lastCourseTab || 'manage-courses');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleReviewCourse = (id) => {
+    setLastCourseTab(activeTab);
+    setReviewCourseId(id);
+    setActiveTab('course-review');
+    fetchReviewCourse(id);
   };
 
   const handleStatusUpdate = (courseId, status) => {
@@ -368,7 +426,9 @@ const AdminDashboard = () => {
       });
     } else {
       setEditingBanner(null);
-      setNewBanner({ ...defaultBanner });
+      // Gợi ý số thứ tự tiếp theo (lớn nhất + 1)
+      const nextOrder = banners.length > 0 ? Math.max(...banners.map(b => b.sortOrder)) + 1 : 1;
+      setNewBanner({ ...defaultBanner, sortOrder: nextOrder });
     }
     fetchBannerLinkData();
     setShowBannerModal(true);
@@ -401,26 +461,84 @@ const AdminDashboard = () => {
 
   const handleBannerSubmit = async (e) => {
     e.preventDefault();
+    
+    // 1. Validation: sortOrder > 0
+    if (newBanner.sortOrder <= 0) {
+      toast.error('Thứ tự hiển thị phải lớn hơn 0');
+      return;
+    }
+
+    // 2. Nếu là Edit, kiểm tra xem có thay đổi gì không để tránh request thừa
+    if (editingBanner) {
+      const hasChanged = 
+        newBanner.title !== (editingBanner.title || '') ||
+        newBanner.description !== (editingBanner.description || '') ||
+        newBanner.buttonText !== (editingBanner.buttonText || 'Khám phá ngay') ||
+        newBanner.gradient !== (editingBanner.gradient || '') ||
+        newBanner.imageUrl !== (editingBanner.imageUrl || '') ||
+        newBanner.tag !== (editingBanner.tag || '') ||
+        newBanner.sortOrder !== (editingBanner.sortOrder || 1) ||
+        newBanner.linkType !== (editingBanner.linkType || '') ||
+        newBanner.linkId !== (editingBanner.linkId || null);
+
+      if (!hasChanged) {
+        toast.error('Không có thay đổi nào để cập nhật');
+        return;
+      }
+    }
+
+    // 3. Hiện Dialog xác nhận
+    setConfirmDialog({
+      isOpen: true,
+      title: editingBanner ? 'Xác nhận cập nhật Banner' : 'Xác nhận tạo Banner mới',
+      message: editingBanner 
+        ? 'Bạn có chắc chắn muốn lưu các thay đổi cho banner này? Hệ thống sẽ tự động sắp xếp lại thứ tự nếu cần thiết.' 
+        : 'Bạn có chắc chắn muốn tạo banner mới này?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const payload = { ...newBanner, linkType: newBanner.linkType || null, linkId: newBanner.linkId || null };
+          
+          if (editingBanner) {
+            await axios.put(`http://localhost:5000/api/banners/${editingBanner.id}`, payload, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success('Đã cập nhật banner!');
+          } else {
+            await axios.post('http://localhost:5000/api/banners', payload, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success('Đã thêm banner mới!');
+          }
+          
+          setShowBannerModal(false);
+          setEditingBanner(null);
+          setNewBanner({ ...defaultBanner });
+          fetchData();
+        } catch (error) {
+          toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+        }
+      }
+    });
+  };
+
+  const handleViewUser = async (user) => {
+    setSelectedUserDetails(null);
+    setLastUserTab(activeTab);
+    setActiveTab('user-detail');
+    setLoadingUserDetail(true);
     try {
       const token = localStorage.getItem('token');
-      const payload = { ...newBanner, linkType: newBanner.linkType || null, linkId: newBanner.linkId || null };
-      if (editingBanner) {
-        await axios.put(`http://localhost:5000/api/banners/${editingBanner.id}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Đã cập nhật banner!');
-      } else {
-        await axios.post('http://localhost:5000/api/banners', payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        toast.success('Đã thêm banner mới!');
-      }
-      setShowBannerModal(false);
-      setEditingBanner(null);
-      setNewBanner({ ...defaultBanner });
-      fetchData();
+      const { data } = await axios.get(`http://localhost:5000/api/admin/users/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedUserDetails(data);
     } catch (error) {
-      toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+      console.error('Lỗi khi tải chi tiết người dùng:', error);
+      toast.error('Không thể tải thông tin chi tiết');
+    } finally {
+      setLoadingUserDetail(false);
     }
   };
 
@@ -609,6 +727,35 @@ const AdminDashboard = () => {
     });
   };
 
+  const handleSendBulkNotification = async (e) => {
+    e.preventDefault();
+    if (!bulkNotifData.title || !bulkNotifData.message) {
+      return toast.error('Vui lòng nhập đầy đủ tiêu đề và nội dung.');
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận gửi thông báo',
+      message: `Bạn có chắc chắn muốn gửi thông báo này tới ${bulkNotifData.target === 'all' ? 'tất cả người dùng' : bulkNotifData.target === 'students' ? 'tất cả học viên' : 'tất cả giảng viên'}?`,
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          setSendingBulkNotif(true);
+          const token = localStorage.getItem('token');
+          const { data } = await axios.post('http://localhost:5000/api/admin/notifications/bulk', bulkNotifData, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          toast.success(data.message);
+          setBulkNotifData({ target: 'all', title: '', message: '' });
+        } catch (error) {
+          toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+        } finally {
+          setSendingBulkNotif(false);
+        }
+      }
+    });
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/staff/login');
@@ -652,86 +799,45 @@ const AdminDashboard = () => {
           </div>
         );
       case 'approvals':
-        return (
-          <div className="admin-content-fade-in">
-            <h2 className="content-title">Phê duyệt khóa học</h2>
-            <p className="section-desc">Danh sách các khóa học đang chờ bạn kiểm duyệt nội dung.</p>
-            
-            <div className="admin-search-wrapper" style={{ marginBottom: '20px', maxWidth: '400px', position: 'relative' }}>
-                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
-                <input 
-                    type="text" 
-                    placeholder="Tìm theo tên khóa học..." 
-                    value={courseSearch}
-                    onChange={(e) => setCourseSearch(e.target.value)}
-                    style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#ffffff', color: '#1f2937' }}
-                />
-            </div>
+      case 'manage-courses': {
+        const uniqueInstructors = Array.from(new Set(pendingCourses.map(c => c.instructor?.id)))
+          .map(id => pendingCourses.find(c => c.instructor?.id === id)?.instructor)
+          .filter(Boolean)
+          .sort((a, b) => a.name.localeCompare(b.name));
 
-            <div className="table-container">
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Khóa học</th>
-                            <th>Giảng viên</th>
-                            <th>Ngày gửi</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {pendingCourses.length > 0 ? pendingCourses.map(course => (
-                            <tr key={course.id}>
-                                <td>
-                                    <div className="course-cell">
-                                        <img src={course.thumbnail || 'https://via.placeholder.com/80x45'} alt="" className="admin-table-thumb" />
-                                        <span>{course.title}</span>
-                                    </div>
-                                </td>
-                                <td>{course.instructor?.name}</td>
-                                <td>{new Date(course.updatedAt).toLocaleDateString('vi-VN')}</td>
-                                <td>
-                                    <div className="admin-actions">
-                                        <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Phê duyệt">
-                                            <Check size={18} />
-                                        </button>
-                                        <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Từ chối">
-                                            <XCircle size={18} />
-                                        </button>
-                                        <button className="admin-btn view" onClick={() => window.open(`/course/${course.id}`, '_blank')} title="Xem trước">
-                                            <Eye size={18} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        )) : (
-                            <tr>
-                                <td colSpan="4" className="empty-table-cell">Không có yêu cầu phê duyệt nào</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
-          </div>
-        );
-      case 'courses':
+        const uniqueCategories = Array.from(new Set(pendingCourses.map(c => c.category).filter(Boolean)))
+          .sort((a, b) => a.localeCompare(b));
+
+        const filteredCourses = pendingCourses.filter(c => {
+          const matchesInstructor = instructorFilter === 'all' || Number(c.instructorId) === Number(instructorFilter);
+          const matchesCategory = categoryFilter === 'all' || c.category === categoryFilter;
+          return matchesInstructor && matchesCategory;
+        });
+
         return (
           <div className="admin-content-fade-in">
             <div className="section-header">
-                <h2 className="content-title">{courseTrashView ? 'Thùng rác Khóa học' : 'Quản lý khóa học'}</h2>
-                <button 
-                  className="add-btn" 
-                  style={{ background: '#f3f4f6', color: '#4b5563' }}
-                  onClick={() => {
-                    setCourseTrashView(!courseTrashView);
-                    if (!courseTrashView) fetchTrashCourses();
-                  }}
-                >
-                  {courseTrashView ? 'Quay lại' : <><Trash2 size={18} /> Thùng rác</>}
-                </button>
+                <h2 className="content-title">
+                  {activeTab === 'approvals' ? 'Phê duyệt khóa học' : 'Quản lý khóa học'}
+                  {courseTrashView && ' (Thùng rác)'}
+                </h2>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      className="add-btn"
+                      style={{ background: '#f3f4f6', color: '#4b5563' }}
+                      onClick={() => {
+                        setCourseTrashView(!courseTrashView);
+                        if (!courseTrashView) fetchTrashCourses();
+                      }}
+                    >
+                      {courseTrashView ? 'Quay lại' : <><Trash2 size={18} /> Thùng rác</>}
+                    </button>
+                </div>
             </div>
-            <p className="section-desc">
-              {courseTrashView ? 'Danh sách các khóa học đã xóa tạm thời từ tất cả giảng viên.' : 'Danh sách các khóa học đã được phê duyệt và đang hiển thị trên hệ thống.'}
-            </p>
+            
+            {!courseTrashView && activeTab === 'approvals' && (
+                <p className="section-desc">Danh sách các khóa học đang chờ bạn kiểm duyệt nội dung.</p>
+            )}
             
             <div className="admin-search-wrapper" style={{ marginBottom: '20px', maxWidth: '400px', position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280' }} />
@@ -743,15 +849,45 @@ const AdminDashboard = () => {
                     style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', background: '#ffffff', color: '#1f2937' }}
                 />
             </div>
-
-            <div className="table-container">
+              <div className="table-container">
                 <table className="admin-table">
                     <thead>
                         <tr>
                             <th>Khóa học</th>
-                            <th>Giảng viên</th>
-                            <th>{courseTrashView ? 'Ngày xóa' : 'Ngày xuất bản'}</th>
-                            {!courseTrashView && <th>Học viên</th>}
+                            <th>
+                              <div className="header-filter-wrapper">
+                                <span>Giảng viên</span>
+                                <select 
+                                  className={`header-filter-select ${instructorFilter !== 'all' ? 'active' : ''}`}
+                                  value={instructorFilter}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => setInstructorFilter(e.target.value)}
+                                >
+                                  <option value="all">Tất cả</option>
+                                  {uniqueInstructors.map(ins => (
+                                    <option key={ins.id} value={ins.id}>{ins.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </th>
+                            <th>
+                              <div className="header-filter-wrapper">
+                                <span>Danh mục</span>
+                                <select 
+                                  className={`header-filter-select ${categoryFilter !== 'all' ? 'active' : ''}`}
+                                  value={categoryFilter}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => setCategoryFilter(e.target.value)}
+                                >
+                                  <option value="all">Tất cả</option>
+                                  {uniqueCategories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </th>
+                            <th>{courseTrashView ? 'Ngày xóa' : (activeTab === 'approvals' ? 'Ngày gửi' : 'Ngày xuất bản')}</th>
+                            {!courseTrashView && activeTab === 'manage-courses' && <th>Học viên</th>}
                             <th>Thao tác</th>
                         </tr>
                     </thead>
@@ -766,6 +902,7 @@ const AdminDashboard = () => {
                                         </div>
                                     </td>
                                     <td>{course.instructor?.name}</td>
+                                    <td><span className="course-category-badge">{course.category || 'Chưa phân loại'}</span></td>
                                     <td>{new Date(course.deletedAt).toLocaleDateString('vi-VN')}</td>
                                     <td>
                                         <div className="admin-actions">
@@ -779,10 +916,10 @@ const AdminDashboard = () => {
                                     </td>
                                 </tr>
                             )) : (
-                                <tr><td colSpan="4" className="empty-table-cell">Thùng rác trống</td></tr>
+                                <tr><td colSpan="5" className="empty-table-cell">Thùng rác trống</td></tr>
                             )
                         ) : (
-                            pendingCourses.length > 0 ? pendingCourses.map(course => (
+                            filteredCourses.length > 0 ? filteredCourses.map(course => (
                                 <tr key={course.id}>
                                     <td>
                                         <div className="course-cell">
@@ -791,30 +928,153 @@ const AdminDashboard = () => {
                                         </div>
                                     </td>
                                     <td>{course.instructor?.name}</td>
+                                    <td><span className="course-category-badge">{course.category || 'Chưa phân loại'}</span></td>
                                     <td>{new Date(course.updatedAt).toLocaleDateString('vi-VN')}</td>
-                                    <td>{course.studentsCount || 0}</td>
+                                    {activeTab === 'manage-courses' && <td>{course.studentsCount || 0}</td>}
                                     <td>
                                         <div className="admin-actions">
-                                            <button className="admin-btn view" onClick={() => window.open(`/course/${course.id}`, '_blank')} title="Xem chi tiết">
+                                            <button className="admin-btn view" onClick={() => handleReviewCourse(course.id)} title="Xem chi tiết">
                                                 <Eye size={18} />
                                             </button>
-                                            <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Gỡ xuống (Hủy xuất bản)">
-                                                <XCircle size={18} />
-                                            </button>
+                                            {activeTab === 'approvals' ? (
+                                                <>
+                                                    <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Phê duyệt">
+                                                        <CheckCircle size={18} />
+                                                    </button>
+                                                    <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Từ chối">
+                                                        <XCircle size={18} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Gỡ xuống (Hủy xuất bản)">
+                                                    <XCircle size={18} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan="5" className="empty-table-cell">Không có khóa học nào đã xuất bản</td>
+                                    <td colSpan="6" className="empty-table-cell">
+                                        {activeTab === 'approvals' ? 'Không có yêu cầu phê duyệt nào phù hợp' : 'Không có khóa học nào phù hợp'}
+                                    </td>
                                 </tr>
                             )
                         )}
                     </tbody>
                 </table>
+              </div>
+          </div>
+        );
+      }
+      case 'course-review': {
+        if (reviewLoading) return <div className="admin-loading-container"><div className="admin-spinner"></div><p>Đang tải nội dung khóa học...</p></div>;
+        if (!reviewCourseData) return null;
+
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+              <div className="review-header">
+                <button className="review-back-btn" onClick={() => setActiveTab(lastCourseTab)} title="Quay lại">
+                  <ArrowLeft size={20} />
+                </button>
+                <h2 className="content-title">Review Khóa học: {reviewCourseData.title}</h2>
+              </div>
+            </div>
+
+            <div className="course-review-grid">
+              <div className="course-review-main">
+                <div className="review-card">
+                  <div className="review-course-header">
+                    <img src={reviewCourseData.thumbnail || 'https://via.placeholder.com/320x180'} alt="" className="review-thumb" />
+                    <div className="review-info">
+                      <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>{reviewCourseData.title}</h3>
+                      <p className="instructor-info" style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '12px' }}>
+                        Giảng viên: <strong style={{ color: '#4f46e5' }}>{reviewCourseData.instructor?.name}</strong> ({reviewCourseData.instructor?.email})
+                      </p>
+                      <div className="review-meta" style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                        <span className="course-category-badge">{reviewCourseData.category}</span>
+                        <span className="price-tag" style={{ background: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600' }}>
+                          {reviewCourseData.isPro ? (reviewCourseData.price ? `${reviewCourseData.price.toLocaleString()}đ` : 'Trả phí') : 'Miễn phí'}
+                        </span>
+                        <span className="level-tag" style={{ background: '#ecfdf5', color: '#065f46', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600' }}>
+                          {reviewCourseData.level}
+                        </span>
+                      </div>
+                      <p className="course-desc-preview" style={{ color: '#475569', fontSize: '0.875rem', lineHeight: '1.6' }}>{reviewCourseData.description}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="review-curriculum" style={{ marginTop: '25px' }}>
+                  <h3 className="review-sub-title" style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '15px' }}>Nội dung khóa học</h3>
+                  {reviewCourseData.chapters?.length > 0 ? (
+                    <div className="review-chapters" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                      {reviewCourseData.chapters.map((chapter, cIdx) => (
+                        <div key={chapter.id} className="review-chapter-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div className="chapter-header" style={{ padding: '12px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 className="chapter-title" style={{ fontSize: '0.95rem', color: '#334155' }}>Chương {cIdx + 1}: {chapter.title}</h4>
+                            <span className="lesson-count" style={{ fontSize: '0.8rem', color: '#64748b' }}>{chapter.lessons?.length || 0} bài học</span>
+                          </div>
+                          <div className="review-lessons">
+                            {chapter.lessons?.map((lesson, lIdx) => (
+                              <div key={lesson.id} className="review-lesson-item" style={{ padding: '10px 15px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div className="lesson-main-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <span className="lesson-order" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{lIdx + 1}</span>
+                                  <span className="lesson-title" style={{ fontSize: '0.9rem', color: '#475569' }}>{lesson.title}</span>
+                                  {lesson.isFree && <span className="free-badge" style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#eef2ff', color: '#4f46e5', borderRadius: '4px' }}>Học thử</span>}
+                                </div>
+                                <div className="lesson-meta-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                  <span className="lesson-duration" style={{ color: '#64748b', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {lesson.duration}p</span>
+                                  {lesson.quiz && <span className="quiz-badge" style={{ color: '#ca8a04', background: '#fefce8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}><HelpCircle size={14} /> Có quiz</span>}
+                                  {lesson.videoUrl && <button className="preview-video-btn" style={{ padding: '4px 8px', background: 'none', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.75rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => window.open(lesson.videoUrl, '_blank')}><Play size={12} /> Preview</button>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state" style={{ padding: '30px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px', color: '#94a3b8' }}>Khóa học này chưa có nội dung chương hồi.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="course-review-sidebar" style={{ minWidth: '280px' }}>
+                <div className="review-card stats-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '15px', position: 'sticky', top: '20px' }}>
+                  <h4 style={{ fontSize: '1rem', marginBottom: '15px', color: '#1e293b' }}>Thống kê nhanh</h4>
+                  <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.875rem' }}>
+                    <span style={{ color: '#64748b' }}>Số bài học:</span>
+                    <strong style={{ color: '#1e293b' }}>{reviewCourseData.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)}</strong>
+                  </div>
+                  <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.875rem' }}>
+                    <span style={{ color: '#64748b' }}>Tổng thời lượng:</span>
+                    <strong style={{ color: '#1e293b' }}>{reviewCourseData.duration || 0} phút</strong>
+                  </div>
+                  <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '0.875rem' }}>
+                    <span style={{ color: '#64748b' }}>Trạng thái:</span>
+                    <span className={`status-badge status-${reviewCourseData.published}`} style={{ fontSize: '0.75rem' }}>
+                      {reviewCourseData.published === 0 ? 'Nháp' : reviewCourseData.published === 1 ? 'Chờ duyệt' : reviewCourseData.published === 2 ? 'Đã xuất bản' : 'Bị từ chối'}
+                    </span>
+                  </div>
+                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px', marginTop: '15px' }}>
+                  {reviewCourseData.published === 1 && (
+                      <div className="admin-actions" style={{ display: 'flex', gap: '10px' }}>
+                        <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt</button>
+                        <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
+                      </div>
+                    )}
+                    {reviewCourseData.published === 2 && (
+                      <button className="admin-btn reject" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Gỡ xuống</button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
+      }
       case 'students':
       case 'instructors':
         const filteredUsers = usersList.filter(u => u.role === (activeTab === 'students' ? 'student' : 'instructor'));
@@ -833,19 +1093,104 @@ const AdminDashboard = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredUsers.length > 0 ? filteredUsers.map(u => (
-                            <tr key={u.id}>
-                                <td>#{String(u.id).substring(0, 8)}</td>
-                                <td className="user-name-cell">{u.name}</td>
-                                <td>{u.email}</td>
-                                <td>{new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
-                                <td><span className="status-badge active">Hoạt động</span></td>
-                            </tr>
-                        )) : (
+                        {filteredUsers.length > 0 ? filteredUsers.map(u => {
+                            const formattedId = u.role === 'student' ? `HV-${String(u.id).padStart(4, '0')}` : `GV-${String(u.id).padStart(4, '0')}`;
+                            return (
+                                <tr key={u.id}>
+                                    <td style={{ fontWeight: '600', color: '#6366f1' }}>{formattedId}</td>
+                                    <td className="user-name-cell">{u.name}</td>
+                                    <td>{u.email}</td>
+                                    <td>{new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                            <span className="status-badge active">Hoạt động</span>
+                                            <button 
+                                                className="admin-btn view" 
+                                                title="Xem chi tiết"
+                                                onClick={() => handleViewUser(u)}
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        }) : (
                             <tr><td colSpan="5" className="empty-table-cell">Không có dữ liệu người dùng</td></tr>
                         )}
                     </tbody>
                 </table>
+            </div>
+          </div>
+        );
+      case 'bulk-notification':
+        return (
+          <div className="admin-content-fade-in">
+            <h2 className="content-title">Gửi thông báo hàng loạt</h2>
+            <div className="notification-form-container">
+                <form onSubmit={handleSendBulkNotification} className="admin-form bulk-notif-form">
+                    <div className="form-group">
+                        <label>Đối tượng nhận thông báo</label>
+                        <select 
+                            value={bulkNotifData.target}
+                            onChange={(e) => setBulkNotifData({...bulkNotifData, target: e.target.value})}
+                            style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.95rem', background: 'white' }}
+                        >
+                            <option value="all">Tất cả người dùng</option>
+                            <option value="students">Tất cả Học viên</option>
+                            <option value="instructors">Tất cả Giảng viên</option>
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Tiêu đề thông báo</label>
+                        <input 
+                            type="text" 
+                            placeholder="Nhập tiêu đề ngắn gọn..."
+                            value={bulkNotifData.title}
+                            onChange={(e) => setBulkNotifData({...bulkNotifData, title: e.target.value})}
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Nội dung thông báo</label>
+                        <textarea 
+                            placeholder="Nhập nội dung chi tiết thông báo..."
+                            value={bulkNotifData.message}
+                            onChange={(e) => setBulkNotifData({...bulkNotifData, message: e.target.value})}
+                            rows="6"
+                            required
+                        />
+                    </div>
+
+                    <div className="form-submit-footer">
+                        <button 
+                            type="submit" 
+                            className="btn-submit" 
+                            disabled={sendingBulkNotif}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', width: 'auto', padding: '12px 30px' }}
+                        >
+                            {sendingBulkNotif ? 'Đang gửi...' : <><Send size={18} /> Gửi thông báo ngay</>}
+                        </button>
+                    </div>
+                </form>
+
+                <div className="bulk-notif-preview">
+                    <h3>Xem trước khi gửi</h3>
+                    <div className="preview-card">
+                        <div className="preview-header">
+                            <Bell size={20} color="#6366f1" />
+                            <span className="preview-title">{bulkNotifData.title || '(Tiêu đề thông báo)'}</span>
+                        </div>
+                        <div className="preview-body">
+                            {bulkNotifData.message || 'Nội dung thông báo sẽ hiển thị ở đây. Hãy nhập nội dung vào form bên cạnh để xem trước.'}
+                        </div>
+                        <div className="preview-footer">
+                            Vừa xong • EduCore Admin
+                        </div>
+                    </div>
+                </div>
             </div>
           </div>
         );
@@ -1150,6 +1495,181 @@ const AdminDashboard = () => {
             </div>
           </div>
         );
+      case 'user-detail':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header" style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button 
+                  className="add-btn" 
+                  style={{ background: '#f3f4f6', color: '#4b5563', padding: '8px 12px' }}
+                  onClick={() => setActiveTab(lastUserTab)}
+                >
+                  <ChevronDown size={20} style={{ transform: 'rotate(90deg)' }} /> Quay lại
+                </button>
+                <h2 className="content-title" style={{ margin: 0 }}>
+                    Chi tiết {selectedUserDetails?.role === 'instructor' ? 'Giảng Viên' : 'Học Viên'}
+                </h2>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                  <span className={`status-badge active`}>Đang hoạt động</span>
+              </div>
+            </div>
+
+            {loadingUserDetail ? (
+                <div className="loading-detail" style={{ minHeight: '400px' }}>
+                    <div className="spinner"></div>
+                    <p>Đang tải thông tin chi tiết...</p>
+                </div>
+            ) : selectedUserDetails ? (
+                <div className="user-detail-container" style={{ background: 'white', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                    <div className="user-profile-header">
+                        <div className="user-detail-avatar">
+                            {selectedUserDetails.avatar ? <img src={selectedUserDetails.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : selectedUserDetails.name.charAt(0)}
+                        </div>
+                        <div className="user-main-info">
+                            <h2>{selectedUserDetails.name}</h2>
+                            <div className="user-metadata">
+                                <div className="meta-item">
+                                    <FileText size={16} />
+                                    <span>ID: {selectedUserDetails.role === 'student' ? `HV-${String(selectedUserDetails.id).padStart(4, '0')}` : `GV-${String(selectedUserDetails.id).padStart(4, '0')}`}</span>
+                                </div>
+                                <div className="meta-item">
+                                    <Bell size={16} />
+                                    <span>Email: {selectedUserDetails.email}</span>
+                                </div>
+                                <div className="meta-item">
+                                    <CheckCircle size={16} />
+                                    <span>Ngày tham gia: {new Date(selectedUserDetails.createdAt).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="user-detail-sections">
+                        <div className="detail-section">
+                            <h3 className="detail-section-title">
+                                <BookOpen size={18} /> {selectedUserDetails.role === 'instructor' ? 'Khóa học đã xuất bản' : 'Khóa học đã đăng ký'} ({selectedUserDetails.role === 'instructor' ? (selectedUserDetails.instructedCourses?.length || 0) : (selectedUserDetails.Enrollments?.length || 0)})
+                            </h3>
+                            <div className="detail-courses-grid">
+                                {selectedUserDetails.role === 'instructor' ? (
+                                    selectedUserDetails.instructedCourses?.length > 0 ? selectedUserDetails.instructedCourses.map(course => (
+                                        <div key={course.id} className="mini-course-card">
+                                            <img src={course.thumbnail || 'https://via.placeholder.com/120x68'} alt="" className="mini-thumb" />
+                                            <div className="mini-course-info">
+                                                <span className="mini-course-name">{course.title}</span>
+                                                <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginTop: '4px' }}>
+                                                    <span className={`mini-status-tag ${course.published === 2 ? 'published' : 'draft'}`}>
+                                                        {course.published === 2 ? 'Đã xuất bản' : 'Nháp'}
+                                                    </span>
+                                                    <span className="course-category-badge" style={{ fontSize: '10px', padding: '2px 6px' }}>
+                                                        {course.category || 'Chưa phân loại'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <p className="empty-mini-list">Chưa có khóa học nào xuất bản</p>
+                                    )
+                                ) : (
+                                    selectedUserDetails.Enrollments?.length > 0 ? selectedUserDetails.Enrollments.map(en => (
+                                        <div key={en.id} className="mini-course-card">
+                                            <img src={en.Course?.thumbnail || 'https://via.placeholder.com/120x68'} alt="" className="mini-thumb" />
+                                            <div className="mini-course-info">
+                                                <span className="mini-course-name">{en.Course?.title}</span>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                                    <span className="mini-course-price">{en.Course?.price?.toLocaleString('vi-VN')}đ</span>
+                                                    <span className="course-category-badge" style={{ fontSize: '10px', padding: '2px 6px' }}>
+                                                        {en.Course?.category || 'Chưa phân loại'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <p className="empty-mini-list">Chưa đăng ký khóa học nào</p>
+                                    )
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Articles Section */}
+                        <div className="detail-section">
+                            <h3 className="detail-section-title">
+                                <FileText size={18} /> Bài viết đã đăng ({selectedUserDetails.articles?.length || 0})
+                            </h3>
+                            <div className="detail-articles-grid">
+                                {selectedUserDetails.articles?.length > 0 ? selectedUserDetails.articles.map(article => (
+                                    <div key={article.id} className="mini-article-card">
+                                        <img src={article.thumbnail || 'https://via.placeholder.com/120x68'} alt="" className="mini-article-thumb" />
+                                        <div className="mini-article-info">
+                                            <span className="mini-article-title">{article.title}</span>
+                                            <span className={`mini-status-tag ${article.articleStatus === 2 ? 'published' : 'draft'}`}>
+                                                {article.articleStatus === 2 ? 'Đã đăng' : 'Chờ duyệt'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p className="empty-mini-list">Chưa có bài viết nào</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Payment History (Only for Students) */}
+                        {selectedUserDetails.role !== 'instructor' && (
+                            <div className="detail-section">
+                                <h3 className="detail-section-title">
+                                    <Layers size={18} /> Lịch sử thanh toán ({selectedUserDetails.PaymentOrders?.filter(o => o.Payments?.some(p => p.status === 'success' || p.status === 'refunded')).length || 0})
+                                </h3>
+                                <div className="mini-table-wrapper">
+                                    <table className="mini-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Khóa học</th>
+                                                <th>Giá tiền</th>
+                                                <th>Ngày</th>
+                                                <th>Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(() => {
+                                                const filteredOrders = selectedUserDetails.PaymentOrders?.filter(order => {
+                                                    return order.Payments?.some(p => p.status === 'success' || p.status === 'refunded');
+                                                }) || [];
+
+                                                return filteredOrders.length > 0 ? filteredOrders.map(order => {
+                                                    const successfulPayment = order.Payments?.find(p => p.status === 'success' || p.status === 'refunded');
+                                                    const pStatus = successfulPayment?.status;
+                                                    
+                                                    return (
+                                                        <tr key={order.id}>
+                                                            <td style={{ fontWeight: '500' }}>{order.Course?.title}</td>
+                                                            <td>{order.Course?.price?.toLocaleString('vi-VN')}đ</td>
+                                                            <td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                                                            <td>
+                                                                <span className={`payment-status-pill ${pStatus === 'success' ? 'completed' : 'refunded'}`}>
+                                                                    {pStatus === 'success' ? 'Thành công' : 'Đã hoàn tiền'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }) : (
+                                                    <tr>
+                                                        <td colSpan="4" className="empty-table-row">
+                                                            Chưa có lịch sử giao dịch
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : null}
+          </div>
+        );
       case 'notifications':
         return (
           <div className="admin-content-fade-in">
@@ -1211,10 +1731,12 @@ const AdminDashboard = () => {
           {menuItems.map((item) => {
             const isUsersItem = item.id === 'users';
             const isArticlesItem = item.id === 'articles';
-            const isItemMenuOpen = isUsersItem ? isUsersMenuOpen : (isArticlesItem ? isArticlesMenuOpen : false);
+            const isCoursesItem = item.id === 'courses';
+            const isItemMenuOpen = isUsersItem ? isUsersMenuOpen : (isArticlesItem ? isArticlesMenuOpen : (isCoursesItem ? isCoursesMenuOpen : false));
             
             const isTabActive = activeTab === item.id || 
-              (isUsersItem && (activeTab === 'students' || activeTab === 'instructors')) ||
+              (isUsersItem && (activeTab === 'students' || activeTab === 'instructors' || activeTab === 'user-detail' || activeTab === 'bulk-notification')) ||
+              (isCoursesItem && (activeTab === 'manage-courses' || activeTab === 'approvals')) ||
               (isArticlesItem && (activeTab === 'all-articles' || activeTab === 'my-articles' || activeTab === 'review-articles'));
 
             return (
@@ -1225,6 +1747,7 @@ const AdminDashboard = () => {
                     if (item.hasSubmenu) {
                       if (isUsersItem) setIsUsersMenuOpen(!isUsersMenuOpen);
                       if (isArticlesItem) setIsArticlesMenuOpen(!isArticlesMenuOpen);
+                      if (isCoursesItem) setIsCoursesMenuOpen(!isCoursesMenuOpen);
                     } else {
                       setActiveTab(item.id);
                       if (window.innerWidth < 1024) setIsSidebarOpen(false);
@@ -1345,14 +1868,24 @@ const AdminDashboard = () => {
                                     onChange={(e) => setNewBanner({...newBanner, buttonText: e.target.value})} 
                                 />
                             </div>
-                            <div className="form-group">
-                                <label>Thứ tự hiển thị</label>
-                                <input 
-                                    type="number" 
-                                    value={newBanner.sortOrder} 
-                                    onChange={(e) => setNewBanner({...newBanner, sortOrder: parseInt(e.target.value) || 0})} 
-                                />
-                            </div>
+                             <div className="form-group">
+                                 <label>
+                                     Thứ tự hiển thị 
+                                     {banners.some(b => b.sortOrder === newBanner.sortOrder && b.id !== editingBanner?.id) && (
+                                         <span style={{ color: '#0ea5e9', marginLeft: '8px', fontSize: '0.75rem', fontWeight: '400' }}>(Số này đang dùng - sẽ tự động đẩy các banner khác xuống)</span>
+                                     )}
+                                 </label>
+                                 <input 
+                                     type="number" 
+                                     value={newBanner.sortOrder} 
+                                     onChange={(e) => setNewBanner({...newBanner, sortOrder: parseInt(e.target.value) || 1})} 
+                                     min="1"
+                                     required
+                                 />
+                                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
+                                     Số đã dùng: {banners.length > 0 ? banners.map(b => b.sortOrder).sort((a, b) => a - b).join(', ') : 'Chưa có'}
+                                 </div>
+                             </div>
                         </div>
 
                         <div className="form-group">
