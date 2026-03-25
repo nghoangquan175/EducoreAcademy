@@ -20,12 +20,17 @@ const InstructorApplication = require('./InstructorApplication');
 const ArticleLike = require('./ArticleLike');
 const Conversation = require('./Conversation');
 const Message = require('./Message');
+const CourseEditRequest = require('./CourseEditRequest');
 
 // ─── Associations ───────────────────────────────────────────
 
 // User (instructor) <--> Course
 User.hasMany(Course, { foreignKey: 'instructorId', as: 'instructedCourses' });
 Course.belongsTo(User, { foreignKey: 'instructorId', as: 'instructor' });
+
+// Course Versioning (Self-referencing)
+Course.hasMany(Course, { foreignKey: 'rootCourseId', as: 'versions' });
+Course.belongsTo(Course, { foreignKey: 'rootCourseId', as: 'rootCourse' });
 
 // Course <--> Chapter (1 khóa học có nhiều chương)
 Course.hasMany(Chapter, { foreignKey: 'courseId', as: 'chapters', onDelete: 'CASCADE' });
@@ -111,6 +116,12 @@ Conversation.belongsTo(User, { foreignKey: 'userId' });
 Conversation.hasMany(Message, { foreignKey: 'conversationId', as: 'messages', onDelete: 'CASCADE' });
 Message.belongsTo(Conversation, { foreignKey: 'conversationId' });
 
+// Course Edit Request
+Course.hasMany(CourseEditRequest, { foreignKey: 'courseId', as: 'editRequests' });
+CourseEditRequest.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+User.hasMany(CourseEditRequest, { foreignKey: 'instructorId', as: 'editRequests' });
+CourseEditRequest.belongsTo(User, { foreignKey: 'instructorId', as: 'instructor' });
+
 module.exports = {
   User,
   Course,
@@ -133,5 +144,6 @@ module.exports = {
   InstructorApplication,
   ArticleLike,
   Conversation,
-  Message
+  Message,
+  CourseEditRequest
 };

@@ -63,6 +63,18 @@ const Course = sequelize.define('Course', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  version: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1,
+  },
+  rootCourseId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  isLatest: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
 }, {
   paranoid: true,
   timestamps: true,
@@ -70,6 +82,8 @@ const Course = sequelize.define('Course', {
     { fields: ['title'] },
     { fields: ['category'] },
     { fields: ['published'] },
+    { fields: ['rootCourseId'] },
+    { fields: ['isLatest'] },
   ],
 });
 

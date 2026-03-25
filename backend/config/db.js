@@ -6,11 +6,18 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
   port: parseInt(process.env.DB_PORT, 10) || 1433,
   dialectOptions: {
     options: {
-      encrypt: true, // Use this if you're on Windows Azure
-      trustServerCertificate: true // Change to false if in production and you have a valid cert
+      encrypt: true,
+      trustServerCertificate: true,
+      requestTimeout: 60000 // Increase to 60s
     }
   },
-  logging: false // Disable logging if desired
+  pool: {
+    max: 10,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  },
+  logging: false
 });
 
 const connectDB = async () => {

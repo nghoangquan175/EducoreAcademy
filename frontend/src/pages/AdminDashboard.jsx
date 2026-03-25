@@ -60,6 +60,11 @@ const AdminDashboard = () => {
   const [pendingCourses, setPendingCourses] = useState([]);
   const [banners, setBanners] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [editRequests, setEditRequests] = useState([]);
+  const [selectedEditRequest, setSelectedEditRequest] = useState(null);
+  const [diffData, setDiffData] = useState(null);
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
+  const [isReviewRequestModalOpen, setIsReviewRequestModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showBannerModal, setShowBannerModal] = useState(false);
@@ -144,6 +149,7 @@ const AdminDashboard = () => {
       subItems: [
         { id: 'manage-courses', label: 'Quản lý', icon: <Layers size={18} /> },
         { id: 'approvals', label: 'Phê duyệt', icon: <CheckSquare size={18} /> },
+        { id: 'edit-requests', label: 'Yêu cầu sửa', icon: <Pencil size={18} /> },
       ]
     },
     { 
@@ -229,6 +235,9 @@ const AdminDashboard = () => {
       } else if (activeTab === 'review-articles') {
         const response = await adminFetchPendingArticlesAPI(debouncedArticleSearch);
         setPendingArticles(response.data || []);
+      } else if (activeTab === 'edit-requests') {
+        const { data } = await axios.get('http://localhost:5000/api/admin/courses/edit-requests', { headers });
+        setEditRequests(data);
       }
       
       // Always fetch notifications to update unread count
@@ -263,6 +272,45 @@ const AdminDashboard = () => {
     setReviewCourseId(id);
     setActiveTab('course-review');
     fetchReviewCourse(id);
+  };
+
+  const handleEditRequestStatus = (requestId, status, message = '') => {
+    const isApprove = status === 'approved';
+    setConfirmDialog({
+      isOpen: true,
+      title: isApprove ? 'Phê duyệt yêu cầu sửa' : 'Từ chối yêu cầu sửa',
+      message: isApprove 
+        ? 'Phê duyệt sẽ tạo một bản clone V2 cho giảng viên chỉnh sửa. Bạn có chắc chắn?' 
+        : 'Từ chối yêu cầu chỉnh sửa này?',
+      type: isApprove ? 'info' : 'danger',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.patch(`http://localhost:5000/api/admin/courses/edit-requests/${requestId}/status`, 
+            { status, message }, 
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          toast.success(isApprove ? 'Đã phê duyệt yêu cầu!' : 'Đã từ chối yêu cầu.');
+          setIsReviewRequestModalOpen(false);
+          fetchData();
+        } catch (error) {
+          toast.error('Lỗi khi xử lý yêu cầu');
+        }
+      }
+    });
+  };
+
+  const fetchDiffData = async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/admin/courses/${courseId}/diff`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDiffData(data);
+      setIsDiffModalOpen(true);
+    } catch (error) {
+      toast.error('Không thể tải dữ liệu so sánh');
+    }
   };
 
   const handleStatusUpdate = (courseId, status) => {
@@ -936,6 +984,11 @@ const AdminDashboard = () => {
                                             <button className="admin-btn view" onClick={() => handleReviewCourse(course.id)} title="Xem chi tiết">
                                                 <Eye size={18} />
                                             </button>
+                                            {course.rootCourseId && (
+                                                <button className="admin-btn approve" style={{ background: '#f59e0b' }} onClick={() => fetchDiffData(course.id)} title="So sánh bản cũ">
+                                                    <Layers size={18} />
+                                                </button>
+                                            )}
                                             {activeTab === 'approvals' ? (
                                                 <>
                                                     <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Phê duyệt">
@@ -1670,6 +1723,64 @@ const AdminDashboard = () => {
             ) : null}
           </div>
         );
+      case 'edit-requests':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+                <h2 className="content-title">Yêu cầu chỉnh sửa khóa học</h2>
+            </div>
+            <p className="section-desc">Giảng viên yêu cầu chỉnh sửa khóa học đã xuất bản.</p>
+            
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Giảng viên</th>
+                    <th>Khóa học</th>
+                    <th>Lý do</th>
+                    <th>Ngày yêu cầu</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editRequests.length > 0 ? editRequests.map(req => (
+                    <tr key={req.id}>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: '600' }}>{req.instructor?.name}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{req.instructor?.email}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: '500' }}>{req.course?.title}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Phiên bản hiện tại: v{req.course?.version}</span>
+                        </div>
+                      </td>
+                      <td style={{ maxWidth: '300px' }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{req.reason}</p>
+                      </td>
+                      <td>{new Date(req.createdAt).toLocaleDateString('vi-VN')}</td>
+                      <td>
+                        <button 
+                          className="admin-btn view" 
+                          onClick={() => {
+                            setSelectedEditRequest(req);
+                            setIsReviewRequestModalOpen(true);
+                          }}
+                        >
+                          Xem & Phê duyệt
+                        </button>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="5" className="empty-table-cell">Không có yêu cầu nào đang chờ</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
       case 'notifications':
         return (
           <div className="admin-content-fade-in">
@@ -1953,6 +2064,132 @@ const AdminDashboard = () => {
                     </form>
                 </div>
             </div>
+        )}
+
+        {/* Edit Request Review Modal */}
+        {isReviewRequestModalOpen && selectedEditRequest && (
+          <div className="admin-modal-overlay">
+            <div className="admin-modal-content" style={{ maxWidth: '600px' }}>
+              <div className="modal-header">
+                <h3>Phê duyệt yêu cầu chỉnh sửa</h3>
+                <button onClick={() => setIsReviewRequestModalOpen(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body" style={{ padding: '20px' }}>
+                <div className="review-info-section" style={{ marginBottom: '20px' }}>
+                  <label style={{ fontWeight: '600', display: 'block', marginBottom: '4px' }}>Khóa học:</label>
+                  <p style={{ margin: 0 }}>{selectedEditRequest.course?.title} (v{selectedEditRequest.course?.version})</p>
+                </div>
+                <div className="review-info-section" style={{ marginBottom: '20px' }}>
+                  <label style={{ fontWeight: '600', display: 'block', marginBottom: '4px' }}>Lý do chỉnh sửa:</label>
+                  <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {selectedEditRequest.reason}
+                  </div>
+                </div>
+                <div className="review-info-section" style={{ marginBottom: '20px' }}>
+                  <label style={{ fontWeight: '600', display: 'block', marginBottom: '4px' }}>Tóm tắt thay đổi:</label>
+                  <div style={{ padding: '12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                    {selectedEditRequest.contentSummary}
+                  </div>
+                </div>
+                <div className="review-info-section">
+                  <p style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
+                    * Khi phê duyệt, hệ thống sẽ tạo một bản sao v{selectedEditRequest.course?.version + 1} làm Bản nháp cho giảng viên. Khóa học hiện tại vẫn sẽ được hiển thị cho sinh viên cho đến khi bản mới được duyệt và xuất bản.
+                  </p>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn-cancel" onClick={() => handleEditRequestStatus(selectedEditRequest.id, 'rejected')}>Từ chối</button>
+                <button className="btn-submit" onClick={() => handleEditRequestStatus(selectedEditRequest.id, 'approved')}>Duyệt & Tạo bản sao</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Diff Comparison Modal */}
+        {isDiffModalOpen && diffData && (
+          <div className="admin-modal-overlay">
+            <div className="admin-modal-content" style={{ maxWidth: '90%', width: '1000px', height: '90vh', display: 'flex', flexDirection: 'column' }}>
+              <div className="modal-header">
+                <h3>So sánh thay đổi (v{diffData.v1.version} vs v{diffData.v2.version})</h3>
+                <button onClick={() => setIsDiffModalOpen(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                <div className="diff-container">
+                  <div className="diff-section">
+                    <h4>Thông tin chung</h4>
+                    <table className="diff-table">
+                      <thead>
+                        <tr>
+                          <th>Trường</th>
+                          <th>Cũ (v{diffData.v1.version})</th>
+                          <th>Mới (v{diffData.v2.version})</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { label: 'Tiêu đề', field: 'title' },
+                          { label: 'Mô tả ngắn', field: 'subtitle' },
+                          { label: 'Giá', field: 'price' },
+                          { label: 'Danh mục', field: 'category' }
+                        ].map(item => {
+                          const isChanged = diffData.v1[item.field] !== diffData.v2[item.field];
+                          return (
+                            <tr key={item.field} className={isChanged ? 'row-changed' : ''}>
+                              <td>{item.label}</td>
+                              <td className="old-val">{diffData.v1[item.field]}</td>
+                              <td className={isChanged ? 'new-val highlight' : 'new-val'}>{diffData.v2[item.field]}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="diff-section" style={{ marginTop: '30px' }}>
+                    <h4>Cấu trúc chương trình học</h4>
+                    <div className="diff-curriculum">
+                      {diffData.v2.chapters.map((chapter, cIdx) => {
+                        const oldChapter = diffData.v1.chapters.find(c => c.chapterOrder === chapter.chapterOrder);
+                        const isChapterNew = !oldChapter;
+                        const isTitleChanged = oldChapter && oldChapter.title !== chapter.title;
+
+                        return (
+                          <div key={chapter.id} className={`diff-chapter ${isChapterNew ? 'added' : ''}`}>
+                            <div className="chapter-header">
+                              <span className="chapter-order">Chương {chapter.chapterOrder}:</span>
+                              <span className={isTitleChanged ? 'highlight' : ''}>{chapter.title}</span>
+                              {isChapterNew && <span className="diff-tag added">MỚI</span>}
+                            </div>
+                            <div className="chapter-lessons">
+                              {chapter.lessons.map(lesson => {
+                                const oldLesson = oldChapter?.lessons.find(l => l.lessonOrder === lesson.lessonOrder);
+                                const isLessonNew = !oldLesson;
+                                const isLessonChanged = oldLesson && (oldLesson.title !== lesson.title || oldLesson.content !== lesson.content || oldLesson.videoUrl !== lesson.videoUrl);
+
+                                return (
+                                  <div key={lesson.id} className={`diff-lesson ${isLessonNew ? 'added' : isLessonChanged ? 'modified' : ''}`}>
+                                    <div className="lesson-info">
+                                      <span className="lesson-order">{lesson.lessonOrder}.</span>
+                                      <span className={isLessonChanged && oldLesson.title !== lesson.title ? 'highlight' : ''}>{lesson.title}</span>
+                                      {isLessonNew && <span className="diff-tag added">MỚI</span>}
+                                      {isLessonChanged && <span className="diff-tag modified">SỬA</span>}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn-cancel" onClick={() => setIsDiffModalOpen(false)}>Đóng</button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
       <ConfirmDialog 

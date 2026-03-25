@@ -12,7 +12,7 @@ router.get('/', optionalProtect, async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 8;
     const offset = (page - 1) * limit;
 
-    const where = { published: 2 };
+    const where = { published: 2, isLatest: true };
     
     // Logic mới: Lọc bỏ các khóa học đã đăng ký nếu được yêu cầu
     if (req.query.excludeEnrolled === 'true' && req.user) {
@@ -87,8 +87,8 @@ router.get('/categories', async (req, res) => {
 // ── GET /api/courses/instructor/my-courses — Instructor: get own courses (including drafts) ──
 router.get('/instructor/my-courses', protect, instructor, async (req, res) => {
   try {
-    const { sequelize } = require('../config/db');
-    const courses = await Course.findAll({
+    const { CourseEditRequest } = require('../models');
+    const allCourses = await Course.findAll({
       where: { instructorId: req.user.id },
       attributes: {
         include: [
@@ -102,9 +102,50 @@ router.get('/instructor/my-courses', protect, instructor, async (req, res) => {
           ]
         ]
       },
-      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: CourseEditRequest,
+          as: 'editRequests',
+          limit: 1,
+          order: [['createdAt', 'DESC']]
+        }
+      ],
+      order: [['version', 'DESC'], ['updatedAt', 'DESC']],
     });
-    res.json(courses);
+
+    // Grouping by rootCourseId to show only the "Working Copy"
+    const groupedCourses = {};
+    for (const course of allCourses) {
+      const rootId = course.rootCourseId || course.id;
+      if (!groupedCourses[rootId]) {
+        groupedCourses[rootId] = course;
+      } else {
+        // Priority: Draft (0) > Pending (1) > Published (2)
+        // Since we ordered by version DESC, we already likely have the latest version.
+        // But we want to prefer a Version that is NOT Published if it exists for that root.
+        const currentSelected = groupedCourses[rootId];
+        if (course.published < currentSelected.published) {
+             // If we find a version with lower status value (Draft=0 < Pending=1 < Published=2), 
+             // it means it's the "active working copy".
+             // However, usually the higher version IS the working copy.
+             // Let's stick to: Latest Version is the one shown.
+        }
+      }
+    }
+
+    // Simplified logic: For each unique rootCourseId (or id if NULL), 
+    // pick the version with the highest version number.
+    const result = [];
+    const rootsSeen = new Set();
+    for (const course of allCourses) {
+       const rootId = course.rootCourseId || course.id;
+       if (!rootsSeen.has(rootId)) {
+         result.push(course);
+         rootsSeen.add(rootId);
+       }
+    }
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -579,6 +620,67 @@ router.post('/:id/enroll', protect, async (req, res) => {
     }
 
     res.status(200).json({ message: 'Đăng ký khoá học thành công', courseId: course.id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/:id/edit-request — Instructor: request to edit a published course ──
+router.post('/:id/edit-request', protect, instructor, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+    if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
+    if (course.published !== 2) return res.status(400).json({ message: 'Chỉ có thể yêu cầu sửa khóa học đã xuất bản' });
+
+    const { reason, contentSummary } = req.body;
+    const { CourseEditRequest } = require('../models');
+
+    // Check if there's already a pending request
+    const existingRequest = await CourseEditRequest.findOne({
+      where: { courseId: course.id, status: 'pending' }
+    });
+    if (existingRequest) return res.status(400).json({ message: 'Đã có một yêu cầu đang chờ phê duyệt' });
+
+    const editRequest = await CourseEditRequest.create({
+      courseId: course.id,
+      instructorId: req.user.id,
+      reason,
+      contentSummary,
+      status: 'pending'
+    });
+
+    await notifyAdmins(
+      'Yêu cầu chỉnh sửa khóa học đã xuất bản',
+      `Giảng viên ${req.user.name} muốn chỉnh sửa khóa học: "${course.title}" (ID: ${course.id})`
+    );
+
+    res.status(201).json(editRequest);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── POST /api/courses/edit-requests/:id/reactivate — Instructor: request to reactivate an expired draft ──
+router.post('/edit-requests/:id/reactivate', protect, instructor, async (req, res) => {
+  try {
+    const { CourseEditRequest } = require('../models');
+    const editRequest = await CourseEditRequest.findByPk(req.params.id);
+
+    if (!editRequest) return res.status(404).json({ message: 'Yêu cầu không tồn tại' });
+    if (editRequest.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
+    if (editRequest.status !== 'expired') return res.status(400).json({ message: 'Yêu cầu chưa hết hạn hoặc đang ở trạng thái khác' });
+
+    // Mark as pending again for admin review
+    editRequest.status = 'pending';
+    await editRequest.save();
+
+    await notifyAdmins(
+      'Yêu cầu gia hạn chỉnh sửa khóa học',
+      `Giảng viên ${req.user.name} yêu cầu mở lại quyền chỉnh sửa cho khóa học ID: ${editRequest.courseId}`
+    );
+
+    res.json({ message: 'Đã gửi yêu cầu gia hạn nội dung' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

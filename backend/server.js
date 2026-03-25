@@ -6,6 +6,7 @@ dotenv.config();
 const { connectDB } = require('./config/db');
 
 // Connect to database
+require('./models'); // Ensure all models and associations are registered
 connectDB();
 
 const app = express();

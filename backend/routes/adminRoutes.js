@@ -4,6 +4,9 @@ const { User, Course, Enrollment, Article, PaymentOrder, Payment, Notification, 
 const { protect, admin } = require('../middleware/authMiddleware');
 const { sequelize } = require('../config/db');
 const { Op } = require('sequelize');
+const { CourseEditRequest } = require('../models');
+const { cloneCourse } = require('../utils/courseCloner');
+const { notifyUser } = require('../utils/notificationUtils');
 const { 
   adminGetPendingArticles, 
   adminUpdateArticleStatus,
@@ -112,6 +115,25 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
     }
 
     course.published = status;
+    
+    // If approving a new version, update isLatest
+    if (status === 2 && course.rootCourseId) {
+      // Set all other versions of the same root to isLatest = false
+      await Course.update(
+        { isLatest: false },
+        { 
+          where: { 
+            [Op.or]: [
+              { id: course.rootCourseId },
+              { rootCourseId: course.rootCourseId }
+            ],
+            id: { [Op.ne]: course.id }
+          } 
+        }
+      );
+      course.isLatest = true;
+    }
+    
     await course.save();
 
     res.json({ 
@@ -269,6 +291,95 @@ router.get('/courses/:id/review', protect, admin, async (req, res) => {
     }
 
     res.json(course);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── GET /api/admin/courses/edit-requests — Admin: Get all edit requests ──
+router.get('/courses/edit-requests', protect, admin, async (req, res) => {
+  try {
+    const requests = await CourseEditRequest.findAll({
+      where: { status: 'pending' },
+      include: [
+        { model: Course, as: 'course', attributes: ['id', 'title', 'version'] },
+        { model: User, as: 'instructor', attributes: ['id', 'name', 'email'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── PATCH /api/admin/courses/edit-requests/:id/status — Admin: Approve/Reject ──
+router.patch('/courses/edit-requests/:id/status', protect, admin, async (req, res) => {
+  try {
+    const { status, message } = req.body; // status: 'approved' or 'rejected'
+    const editRequest = await CourseEditRequest.findByPk(req.params.id, {
+      include: [{ model: Course, as: 'course' }]
+    });
+
+    if (!editRequest) return res.status(404).json({ message: 'Yêu cầu không tồn tại' });
+    if (editRequest.status !== 'pending') return res.status(400).json({ message: 'Yêu cầu đã được xử lý' });
+
+    editRequest.status = status;
+    await editRequest.save();
+
+    if (status === 'approved') {
+      // Clone course to create V2
+      const newVersion = await cloneCourse(editRequest.courseId);
+      
+      // Notify instructor
+      await Notification.create({
+        userId: editRequest.instructorId,
+        title: 'Yêu cầu chỉnh sửa được duyệt',
+        message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã được duyệt. Bạn có thể bắt đầu chỉnh sửa bản nháp mới (v${newVersion.version}).`
+      });
+
+      res.json({ message: 'Đã duyệt yêu cầu và tạo bản sao mới', newCourseId: newVersion.id });
+    } else {
+      // Notify instructor about rejection
+      await Notification.create({
+        userId: editRequest.instructorId,
+        title: 'Yêu cầu chỉnh sửa bị từ chối',
+        message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã bị từ chối. Lý do: ${message || 'Không có'}`
+      });
+      res.json({ message: 'Đã từ chối yêu cầu chỉnh sửa' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── GET /api/admin/courses/:id/diff — Admin: Compare V2 draft with V1 ──
+router.get('/courses/:id/diff', protect, admin, async (req, res) => {
+  try {
+    const v2Course = await Course.findByPk(req.params.id, {
+      include: [
+        {
+          model: Chapter,
+          as: 'chapters',
+          include: [{ model: Lesson, as: 'lessons', include: [{ model: Quiz, as: 'quiz', include: [{ model: Question, as: 'questions' }] }] }]
+        }
+      ]
+    });
+
+    if (!v2Course) return res.status(404).json({ message: 'Bản nháp không tồn tại' });
+    if (!v2Course.rootCourseId) return res.status(400).json({ message: 'Đây không phải là một bản nháp chỉnh sửa' });
+
+    const v1Course = await Course.findByPk(v2Course.rootCourseId, {
+      include: [
+        {
+          model: Chapter,
+          as: 'chapters',
+          include: [{ model: Lesson, as: 'lessons', include: [{ model: Quiz, as: 'quiz', include: [{ model: Question, as: 'questions' }] }] }]
+        }
+      ]
+    });
+
+    res.json({ v1: v1Course, v2: v2Course });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

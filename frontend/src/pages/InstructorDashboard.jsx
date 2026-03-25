@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { RefreshCw, ShieldAlert, History } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import CourseEditor from './CourseEditor';
@@ -59,6 +60,9 @@ const InstructorDashboard = () => {
   const [trashCourses, setTrashCourses] = useState([]);
   const [courseTrashView, setCourseTrashView] = useState(false);
   const [articleTrashView, setArticleTrashView] = useState(false);
+  const [isEditRequestModalOpen, setIsEditRequestModalOpen] = useState(false);
+  const [editRequestData, setEditRequestData] = useState({ reason: '', contentSummary: '' });
+  const [selectedCourseForRequest, setSelectedCourseForRequest] = useState(null);
 
 
   const [courses, setCourses] = useState([]);
@@ -160,6 +164,41 @@ const InstructorDashboard = () => {
         }
       }
     });
+  };
+
+  const handleRequestEdit = (course) => {
+    setSelectedCourseForRequest(course);
+    setIsEditRequestModalOpen(true);
+  };
+
+  const submitEditRequest = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/courses/${selectedCourseForRequest.id}/edit-request`, editRequestData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Đã gửi yêu cầu chỉnh sửa thành công! Vui lòng chờ Admin phê duyệt.');
+      setIsEditRequestModalOpen(false);
+      setEditRequestData({ reason: '', contentSummary: '' });
+      fetchMyCourses();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu');
+    }
+  };
+
+  const handleReactivate = async (course) => {
+    const editReq = course.editRequests?.[0];
+    if (!editReq) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/courses/edit-requests/${editReq.id}/reactivate`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Đã gửi yêu cầu mở lại nội dung. Vui lòng chờ Admin phê duyệt.');
+      fetchMyCourses();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu');
+    }
   };
 
   const handleArticleDelete = (id) => {
@@ -396,6 +435,7 @@ const InstructorDashboard = () => {
                     <thead>
                         <tr>
                             <th>Khóa học</th>
+                            <th>Phiên bản</th>
                             <th>Danh mục</th>
                             {courseTrashView ? <th>Ngày xóa</th> : <><th>Giá</th><th>Học viên</th></>}
                             <th>Trạng thái</th>
@@ -438,22 +478,39 @@ const InstructorDashboard = () => {
                                             <span>{course.title}</span>
                                         </div>
                                     </td>
+                                    <td>
+                                        <div className="inst-version-badge">v{course.version}</div>
+                                    </td>
                                     <td>{course.category}</td>
                                     <td>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(course.price)}</td>
                                     <td>{course.studentsCount}</td>
                                     <td>
-                                        <span className={`inst-status-badge ${Number(course.published) === 2 ? 'published' : Number(course.published) === 1 ? 'pending' : Number(course.published) === 3 ? 'rejected' : 'draft'}`}>
-                                            {Number(course.published) === 2 && 'Đã xuất bản'}
-                                            {Number(course.published) === 0 && 'Bản nháp'}
-                                            {Number(course.published) === 1 && 'Đang chờ duyệt'}
-                                            {Number(course.published) === 3 && 'Bị từ chối'}
-                                        </span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <span className={`inst-status-badge ${Number(course.published) === 2 ? 'published' : Number(course.published) === 1 ? 'pending' : Number(course.published) === 3 ? 'rejected' : 'draft'}`}>
+                                                {Number(course.published) === 2 && 'Đã xuất bản'}
+                                                {Number(course.published) === 0 && 'Bản nháp'}
+                                                {Number(course.published) === 1 && 'Đang chờ duyệt'}
+                                                {Number(course.published) === 3 && 'Bị từ chối'}
+                                            </span>
+                                            {course.editRequests?.[0]?.status === 'pending' && <span className="inst-request-badge pending">Chờ duyệt sửa</span>}
+                                            {course.editRequests?.[0]?.status === 'expired' && <span className="inst-request-badge expired">Đã hết hạn</span>}
+                                        </div>
                                     </td>
                                     <td>
                                         <div className="inst-actions">
                                             {(course.published === 0 || course.published === 3) && (
                                                 <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
                                                     <Send size={16} />
+                                                </button>
+                                            )}
+                                            {course.published === 2 && !course.editRequests?.some(r => r.status === 'pending') && (
+                                                <button className="inst-btn approve" onClick={() => handleRequestEdit(course)} title="Yêu cầu sửa">
+                                                    <Edit size={16} />
+                                                </button>
+                                            )}
+                                            {course.editRequests?.[0]?.status === 'expired' && (
+                                                <button className="inst-btn approve" onClick={() => handleReactivate(course)} title="Mở lại bản nháp">
+                                                    <RefreshCw size={16} />
                                                 </button>
                                             )}
                                             <button 
@@ -463,6 +520,7 @@ const InstructorDashboard = () => {
                                                     setEditingCourseId(course.id);
                                                 }} 
                                                 title="Sửa"
+                                                disabled={course.published === 2}
                                             >
                                                 <Edit size={16} />
                                             </button>
@@ -473,6 +531,7 @@ const InstructorDashboard = () => {
                                                     setSelectedCourseId(course.id);
                                                 }} 
                                                 title="Bài giảng"
+                                                disabled={course.editRequests?.[0]?.status === 'expired'}
                                             >
                                                 <BookOpen size={16} />
                                             </button>
@@ -748,6 +807,47 @@ const InstructorDashboard = () => {
         {...confirmDialog} 
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
       />
+
+      {/* Edit Request Modal */}
+      {isEditRequestModalOpen && (
+        <div className="inst-modal-overlay">
+            <div className="inst-modal-content">
+                <div className="inst-modal-header">
+                    <h3>Yêu cầu chỉnh sửa khóa học</h3>
+                    <button onClick={() => setIsEditRequestModalOpen(false)}><X size={20} /></button>
+                </div>
+                <div className="inst-modal-body">
+                    <p className="inst-modal-hint">Khóa học đã xuất bản không thể sửa trực tiếp. Vui lòng nêu lý do và nội dung dự kiến thay đổi.</p>
+                    <div className="inst-form-group">
+                        <label>Lý do chỉnh sửa</label>
+                        <textarea 
+                            value={editRequestData.reason}
+                            onChange={(e) => setEditRequestData(prev => ({ ...prev, reason: e.target.value }))}
+                            placeholder="Ví dụ: Cập nhật nội dung mới, sửa lỗi bài học..."
+                        />
+                    </div>
+                    <div className="inst-form-group">
+                        <label>Tóm tắt thay đổi</label>
+                        <textarea 
+                            value={editRequestData.contentSummary}
+                            onChange={(e) => setEditRequestData(prev => ({ ...prev, contentSummary: e.target.value }))}
+                            placeholder="Ví dụ: Thêm 2 bài mới vào Chương 1, sửa Quiz bài 3..."
+                        />
+                    </div>
+                </div>
+                <div className="inst-modal-footer">
+                    <button className="inst-btn secondary" onClick={() => setIsEditRequestModalOpen(false)}>Hủy</button>
+                    <button 
+                        className="inst-btn primary" 
+                        onClick={submitEditRequest}
+                        disabled={!editRequestData.reason || !editRequestData.contentSummary}
+                    >
+                        Gửi yêu cầu
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
