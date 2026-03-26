@@ -25,6 +25,7 @@ A full-stack application built with React, Vite, Node.js, Express, and SQL Serve
 1. Navigate to the frontend folder:
    ```bash
    cd frontend
+   npm install
    ```
 2. Start the Vite development server:
    ```bash
