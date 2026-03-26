@@ -41,6 +41,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import CategoryManager from '../components/CategoryManager';
 import InstructorApplications from '../components/InstructorApplications';
+import CourseDetailView from '../components/CourseDetailView';
 import {
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -217,8 +218,8 @@ const AdminDashboard = () => {
         setPendingCourses(data);
       } else if (activeTab === 'manage-courses') {
         const { data } = await axios.get(`http://localhost:5000/api/admin/courses?search=${debouncedCourseSearch}`, { headers });
-        // Lọc khóa học đã xuất bản (published: 2)
-        setPendingCourses(data.filter(c => c.published === 2));
+        // Lọc khóa học đã xuất bản (2) và tạm gỡ (4)
+        setPendingCourses(data.filter(c => Number(c.published) === 2 || Number(c.published) === 4));
       } else if (activeTab === 'students' || activeTab === 'instructors') {
         const { data } = await axios.get('http://localhost:5000/api/admin/users', { headers });
         setUsersList(data);
@@ -315,12 +316,25 @@ const AdminDashboard = () => {
 
   const handleStatusUpdate = (courseId, status) => {
     const isApprove = status === 2;
+    const isManagement = activeTab === 'manage-courses';
+
+    let title = isApprove ? 'Phê duyệt khóa học' : 'Từ chối khóa học';
+    let message = isApprove 
+      ? 'Bạn có chắc chắn muốn phê duyệt khóa học này? Khóa học sẽ được hiển thị cho tất cả học viên.' 
+      : 'Bạn có chắc chắn muốn từ chối khóa học này?';
+    
+    // Nếu là ở tab quản lý thì dùng từ "Gỡ xuống" thay vì "Từ chối"
+    if (isManagement) {
+      title = isApprove ? 'Đăng lên khóa học' : 'Gỡ xuống khóa học';
+      message = isApprove 
+        ? 'Bạn có chắc chắn muốn tái bản khóa học này?' 
+        : 'Tạm gỡ khóa học này? Học viên sẽ không thể đăng ký mới, nội dung sẽ được ẩn khỏi trang chủ.';
+    }
+
     setConfirmDialog({
       isOpen: true,
-      title: isApprove ? 'Phê duyệt khóa học' : 'Từ chối khóa học',
-      message: isApprove 
-        ? 'Bạn có chắc chắn muốn phê duyệt khóa học này? Khóa học sẽ được hiển thị cho tất cả học viên.' 
-        : 'Bạn có chắc chắn muốn từ chối khóa học này?',
+      title,
+      message,
       type: isApprove ? 'info' : 'danger',
       onConfirm: async () => {
         try {
@@ -329,7 +343,7 @@ const AdminDashboard = () => {
             { status }, 
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          toast.success(isApprove ? 'Đã phê duyệt thành công!' : 'Đã từ chối khóa học.');
+          toast.success(isApprove ? 'Đã phê duyệt thành công!' : (isManagement ? 'Đã gỡ khóa học xuống thành công!' : 'Đã từ chối khóa học.'));
           fetchData();
         } catch (error) {
           console.error('Lỗi khi cập nhật trạng thái:', error);
@@ -611,6 +625,24 @@ const AdminDashboard = () => {
       fetchData();
     } catch (error) {
       console.error('Lỗi khi đánh dấu tất cả đã đọc:', error);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      await handleMarkAsRead(notif.id);
+    }
+    
+    if (notif.relatedId) {
+       if (notif.type === 'course_submission') {
+          setActiveTab('approvals');
+          setCourseSearch(notif.relatedId);
+       } else if (notif.type === 'edit_request') {
+          setActiveTab('edit-requests');
+       } else if (notif.type === 'article_submission') {
+          setActiveTab('review-articles');
+          setArticleSubTab('review-articles');
+       }
     }
   };
 
@@ -999,9 +1031,15 @@ const AdminDashboard = () => {
                                                     </button>
                                                 </>
                                             ) : (
-                                                <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Gỡ xuống (Hủy xuất bản)">
-                                                    <XCircle size={18} />
-                                                </button>
+                                                Number(course.published) === 4 ? (
+                                                    <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Đăng lên">
+                                                        <ArrowUpCircle size={18} />
+                                                    </button>
+                                                ) : (
+                                                    <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Gỡ xuống">
+                                                        <ArrowDownCircle size={18} />
+                                                    </button>
+                                                )
                                             )}
                                         </div>
                                     </td>
@@ -1024,108 +1062,27 @@ const AdminDashboard = () => {
         if (reviewLoading) return <div className="admin-loading-container"><div className="admin-spinner"></div><p>Đang tải nội dung khóa học...</p></div>;
         if (!reviewCourseData) return null;
 
+        const adminActions = (
+          <>
+            {reviewCourseData.published === 1 && (
+              <div className="admin-actions" style={{ display: 'flex', gap: '10px' }}>
+                <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt</button>
+                <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
+              </div>
+            )}
+            {reviewCourseData.published === 2 && (
+              <button className="admin-btn reject" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Gỡ xuống</button>
+            )}
+          </>
+        );
+
         return (
-          <div className="admin-content-fade-in">
-            <div className="section-header">
-              <div className="review-header">
-                <button className="review-back-btn" onClick={() => setActiveTab(lastCourseTab)} title="Quay lại">
-                  <ArrowLeft size={20} />
-                </button>
-                <h2 className="content-title">Review Khóa học: {reviewCourseData.title}</h2>
-              </div>
-            </div>
-
-            <div className="course-review-grid">
-              <div className="course-review-main">
-                <div className="review-card">
-                  <div className="review-course-header">
-                    <img src={reviewCourseData.thumbnail || 'https://via.placeholder.com/320x180'} alt="" className="review-thumb" />
-                    <div className="review-info">
-                      <h3 style={{ fontSize: '1.4rem', color: '#1e293b', marginBottom: '8px' }}>{reviewCourseData.title}</h3>
-                      <p className="instructor-info" style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '12px' }}>
-                        Giảng viên: <strong style={{ color: '#4f46e5' }}>{reviewCourseData.instructor?.name}</strong> ({reviewCourseData.instructor?.email})
-                      </p>
-                      <div className="review-meta" style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                        <span className="course-category-badge">{reviewCourseData.category}</span>
-                        <span className="price-tag" style={{ background: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600' }}>
-                          {reviewCourseData.isPro ? (reviewCourseData.price ? `${reviewCourseData.price.toLocaleString()}đ` : 'Trả phí') : 'Miễn phí'}
-                        </span>
-                        <span className="level-tag" style={{ background: '#ecfdf5', color: '#065f46', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600' }}>
-                          {reviewCourseData.level}
-                        </span>
-                      </div>
-                      <p className="course-desc-preview" style={{ color: '#475569', fontSize: '0.875rem', lineHeight: '1.6' }}>{reviewCourseData.description}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="review-curriculum" style={{ marginTop: '25px' }}>
-                  <h3 className="review-sub-title" style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '15px' }}>Nội dung khóa học</h3>
-                  {reviewCourseData.chapters?.length > 0 ? (
-                    <div className="review-chapters" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                      {reviewCourseData.chapters.map((chapter, cIdx) => (
-                        <div key={chapter.id} className="review-chapter-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div className="chapter-header" style={{ padding: '12px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 className="chapter-title" style={{ fontSize: '0.95rem', color: '#334155' }}>Chương {cIdx + 1}: {chapter.title}</h4>
-                            <span className="lesson-count" style={{ fontSize: '0.8rem', color: '#64748b' }}>{chapter.lessons?.length || 0} bài học</span>
-                          </div>
-                          <div className="review-lessons">
-                            {chapter.lessons?.map((lesson, lIdx) => (
-                              <div key={lesson.id} className="review-lesson-item" style={{ padding: '10px 15px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div className="lesson-main-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <span className="lesson-order" style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{lIdx + 1}</span>
-                                  <span className="lesson-title" style={{ fontSize: '0.9rem', color: '#475569' }}>{lesson.title}</span>
-                                  {lesson.isFree && <span className="free-badge" style={{ fontSize: '0.65rem', padding: '2px 6px', background: '#eef2ff', color: '#4f46e5', borderRadius: '4px' }}>Học thử</span>}
-                                </div>
-                                <div className="lesson-meta-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                  <span className="lesson-duration" style={{ color: '#64748b', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> {lesson.duration}p</span>
-                                  {lesson.quiz && <span className="quiz-badge" style={{ color: '#ca8a04', background: '#fefce8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}><HelpCircle size={14} /> Có quiz</span>}
-                                  {lesson.videoUrl && <button className="preview-video-btn" style={{ padding: '4px 8px', background: 'none', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.75rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => window.open(lesson.videoUrl, '_blank')}><Play size={12} /> Preview</button>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="empty-state" style={{ padding: '30px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px', color: '#94a3b8' }}>Khóa học này chưa có nội dung chương hồi.</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="course-review-sidebar" style={{ minWidth: '280px' }}>
-                <div className="review-card stats-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '15px', position: 'sticky', top: '20px' }}>
-                  <h4 style={{ fontSize: '1rem', marginBottom: '15px', color: '#1e293b' }}>Thống kê nhanh</h4>
-                  <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.875rem' }}>
-                    <span style={{ color: '#64748b' }}>Số bài học:</span>
-                    <strong style={{ color: '#1e293b' }}>{reviewCourseData.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0)}</strong>
-                  </div>
-                  <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.875rem' }}>
-                    <span style={{ color: '#64748b' }}>Tổng thời lượng:</span>
-                    <strong style={{ color: '#1e293b' }}>{reviewCourseData.duration || 0} phút</strong>
-                  </div>
-                  <div className="stat-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '0.875rem' }}>
-                    <span style={{ color: '#64748b' }}>Trạng thái:</span>
-                    <span className={`status-badge status-${reviewCourseData.published}`} style={{ fontSize: '0.75rem' }}>
-                      {reviewCourseData.published === 0 ? 'Nháp' : reviewCourseData.published === 1 ? 'Chờ duyệt' : reviewCourseData.published === 2 ? 'Đã xuất bản' : 'Bị từ chối'}
-                    </span>
-                  </div>
-                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px', marginTop: '15px' }}>
-                  {reviewCourseData.published === 1 && (
-                      <div className="admin-actions" style={{ display: 'flex', gap: '10px' }}>
-                        <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt</button>
-                        <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
-                      </div>
-                    )}
-                    {reviewCourseData.published === 2 && (
-                      <button className="admin-btn reject" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Gỡ xuống</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CourseDetailView 
+            courseData={reviewCourseData} 
+            onBack={() => setActiveTab(lastCourseTab)} 
+            actions={adminActions}
+            isReviewMode={true}
+          />
         );
       }
       case 'students':
@@ -1794,7 +1751,12 @@ const AdminDashboard = () => {
             
             <div className="notifications-list">
                 {notifications.length > 0 ? notifications.map(notif => (
-                    <div key={notif.id} className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}>
+                    <div 
+                        key={notif.id} 
+                        className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}
+                        onClick={() => handleNotificationClick(notif)}
+                        style={{ cursor: 'pointer' }}
+                    >
                         <div className="notif-content">
                             <div className="notif-header">
                                 <span className="notif-title">{notif.title}</span>

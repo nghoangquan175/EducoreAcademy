@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review } = require('../models');
+const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review, Category, CourseEditRequest } = require('../models');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/db');
 const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
 const { notifyAdmins } = require('../utils/notificationUtils');
 
@@ -36,7 +37,6 @@ router.get('/', optionalProtect, async (req, res) => {
       where.isPro = true;
     }
 
-    const { sequelize } = require('../config/db');
     const { count, rows: courses } = await Course.findAndCountAll({
       where,
       attributes: {
@@ -72,7 +72,6 @@ router.get('/', optionalProtect, async (req, res) => {
 // ── GET /api/courses/categories — Public: list available categories (optional ?type=pro/free) ───────────
 router.get('/categories', async (req, res) => {
   try {
-    const { Category } = require('../models');
     const categories = await Category.findAll({
       order: [['name', 'ASC']],
     });
@@ -87,7 +86,6 @@ router.get('/categories', async (req, res) => {
 // ── GET /api/courses/instructor/my-courses — Instructor: get own courses (including drafts) ──
 router.get('/instructor/my-courses', protect, instructor, async (req, res) => {
   try {
-    const { CourseEditRequest } = require('../models');
     const allCourses = await Course.findAll({
       where: { instructorId: req.user.id },
       attributes: {
@@ -388,11 +386,29 @@ router.post('/:id/activity', protect, async (req, res) => {
 router.get('/instructor/:id/full-curriculum', protect, instructor, async (req, res) => {
   try {
     const course = await Course.findByPk(req.params.id, {
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM [Enrollments]
+              WHERE [Enrollments].[courseId] = [Course].[id]
+            )`),
+            'studentsCount'
+          ]
+        ]
+      },
       include: [
         {
           model: Chapter,
           as: 'chapters',
-          include: [{ model: Lesson, as: 'lessons' }]
+          include: [
+            { 
+              model: Lesson, 
+              as: 'lessons',
+              include: [{ model: Quiz, as: 'quiz', attributes: ['id'] }]
+            }
+          ]
         }
       ],
       order: [
@@ -583,7 +599,9 @@ router.delete('/lessons/:id', protect, instructor, async (req, res) => {
     if (course.published === 2) {
       await notifyAdmins(
         'Xóa bài học',
-        `Giảng viên ${req.user.name} vừa xóa một bài học trong khóa học: "${course.title}"`
+        `Giảng viên ${req.user.name} vừa xóa một bài học trong khóa học: "${course.title}"`,
+        course.id,
+        'course_content_update'
       );
     }
 
@@ -604,7 +622,11 @@ router.post('/:id/enroll', protect, async (req, res) => {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
 
-    const { Enrollment } = require('../models');
+    // Chỉ cho phép đăng ký nếu khóa học đang ở trạng thái 2 (Đã xuất bản)
+    if (Number(course.published) !== 2) {
+      return res.status(403).json({ message: 'Khóa học này hiện không chấp nhận đăng ký mới' });
+    }
+
     const existingEnrollment = await Enrollment.findOne({
       where: { userId: req.user.id, courseId: course.id }
     });
@@ -634,7 +656,6 @@ router.post('/:id/edit-request', protect, instructor, async (req, res) => {
     if (course.published !== 2) return res.status(400).json({ message: 'Chỉ có thể yêu cầu sửa khóa học đã xuất bản' });
 
     const { reason, contentSummary } = req.body;
-    const { CourseEditRequest } = require('../models');
 
     // Check if there's already a pending request
     const existingRequest = await CourseEditRequest.findOne({
@@ -652,7 +673,9 @@ router.post('/:id/edit-request', protect, instructor, async (req, res) => {
 
     await notifyAdmins(
       'Yêu cầu chỉnh sửa khóa học đã xuất bản',
-      `Giảng viên ${req.user.name} muốn chỉnh sửa khóa học: "${course.title}" (ID: ${course.id})`
+      `Giảng viên ${req.user.name} muốn chỉnh sửa khóa học: "${course.title}" (ID: ${course.id})`,
+      course.id,
+      'course_edit_request'
     );
 
     res.status(201).json(editRequest);
@@ -664,7 +687,6 @@ router.post('/:id/edit-request', protect, instructor, async (req, res) => {
 // ── POST /api/courses/edit-requests/:id/reactivate — Instructor: request to reactivate an expired draft ──
 router.post('/edit-requests/:id/reactivate', protect, instructor, async (req, res) => {
   try {
-    const { CourseEditRequest } = require('../models');
     const editRequest = await CourseEditRequest.findByPk(req.params.id);
 
     if (!editRequest) return res.status(404).json({ message: 'Yêu cầu không tồn tại' });
@@ -677,7 +699,9 @@ router.post('/edit-requests/:id/reactivate', protect, instructor, async (req, re
 
     await notifyAdmins(
       'Yêu cầu gia hạn chỉnh sửa khóa học',
-      `Giảng viên ${req.user.name} yêu cầu mở lại quyền chỉnh sửa cho khóa học ID: ${editRequest.courseId}`
+      `Giảng viên ${req.user.name} yêu cầu mở lại quyền chỉnh sửa cho khóa học ID: ${editRequest.courseId}`,
+      editRequest.courseId,
+      'course_reactivate_request'
     );
 
     res.json({ message: 'Đã gửi yêu cầu gia hạn nội dung' });
@@ -711,10 +735,35 @@ router.patch('/:id/submit', protect, instructor, async (req, res) => {
     // Notify admins of new submission
     await notifyAdmins(
       'Yêu cầu phê duyệt khóa học mới',
-      `Giảng viên ${req.user.name} vừa gửi yêu cầu phê duyệt cho khóa học: "${course.title}" (ID: ${course.id})`
+      `Giảng viên ${req.user.name} vừa gửi yêu cầu phê duyệt cho khóa học: "${course.title}" (ID: ${course.id})`,
+      course.id,
+      'course_submission'
     );
 
     res.status(200).json({ message: 'Gửi yêu cầu phê duyệt thành công', published: course.published });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── PATCH /api/courses/:id/withdraw — Instructor: withdraw submission ──
+router.patch('/:id/withdraw', protect, instructor, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
+
+    if (course.instructorId !== req.user.id) {
+       return res.status(403).json({ message: 'Bạn không có quyền thực hiện thao tác này' });
+    }
+
+    if (course.published !== 1) {
+      return res.status(400).json({ message: 'Chỉ có thể thu hồi các khóa học đang chờ duyệt' });
+    }
+
+    course.published = 0; // Back to draft
+    await course.save();
+
+    res.status(200).json({ message: 'Đã thu hồi yêu cầu phê duyệt', published: course.published });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -733,9 +782,9 @@ router.delete('/:id', protect, instructor, async (req, res) => {
       return res.status(403).json({ message: 'Bạn không có quyền thực hiện thao tác này' });
     }
 
-    // Restriction: Cannot delete published courses
-    if (course.published === 2) {
-      return res.status(400).json({ message: 'Không thể xóa khóa học đã được xuất bản' });
+    // Restriction: Cannot delete verified courses
+    if (course.isVerified) {
+      return res.status(400).json({ message: 'Không thể xóa khóa học đã được phê duyệt' });
     }
 
     await course.destroy();

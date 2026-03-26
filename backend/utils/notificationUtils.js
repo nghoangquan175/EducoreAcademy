@@ -5,7 +5,7 @@ const { Notification, User } = require('../models');
  * @param {string} title - Notification title
  * @param {string} message - Notification message
  */
-const notifyAdmins = async (title, message) => {
+const notifyAdmins = async (title, message, relatedId = null, type = null) => {
   try {
     const admins = await User.findAll({ where: { role: 'admin' } });
     
@@ -14,6 +14,8 @@ const notifyAdmins = async (title, message) => {
         userId: admin.id,
         title,
         message,
+        relatedId: relatedId ? relatedId.toString() : null,
+        type,
         isRead: false
       }));
       

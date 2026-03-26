@@ -9,6 +9,11 @@ exports.createOrder = async (req, res) => {
     const { courseId, amount } = req.body;
     const userId = req.user.id;
 
+    const course = await Course.findByPk(courseId);
+    if (!course || Number(course.published) !== 2) {
+      return res.status(403).json({ message: 'Khóa học này hiện không chấp nhận đăng ký mới' });
+    }
+
     const order = await PaymentOrder.create({
       userId,
       courseId,

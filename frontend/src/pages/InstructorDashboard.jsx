@@ -11,19 +11,24 @@ import {
   Send,
   LogOut,
   ChevronRight,
+  ChevronDown,
   Menu,
   X,
   CreditCard,
   Users,
-  Eye
+  Eye,
+  Bell,
+  ShieldX
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { RefreshCw, ShieldAlert, History } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import CourseEditor from './CourseEditor';
 import CurriculumEditor from './CurriculumEditor';
+import CourseDetailView from '../components/CourseDetailView';
 import ArticleEditor from './ArticleEditor';
 import { 
   fetchMyArticlesAPI, 
@@ -46,6 +51,9 @@ const InstructorDashboard = () => {
   const [courseView, setCourseView] = useState('list'); // 'list', 'editor', or 'curriculum'
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [viewCourseData, setViewCourseData] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [courseSubTab, setCourseSubTab] = useState('published'); // 'published' or 'management'
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Articles State
@@ -54,6 +62,7 @@ const InstructorDashboard = () => {
   const [editingArticleId, setEditingArticleId] = useState(null);
   const [editingArticleData, setEditingArticleData] = useState(null);
   const [articleSearch, setArticleSearch] = useState('');
+  const [articleSearchInput, setArticleSearchInput] = useState('');
   const [articlePage, setArticlePage] = useState(1);
   const [articleTotalPages, setArticleTotalPages] = useState(1);
   const [trashArticles, setTrashArticles] = useState([]);
@@ -63,12 +72,18 @@ const InstructorDashboard = () => {
   const [isEditRequestModalOpen, setIsEditRequestModalOpen] = useState(false);
   const [editRequestData, setEditRequestData] = useState({ reason: '', contentSummary: '' });
   const [selectedCourseForRequest, setSelectedCourseForRequest] = useState(null);
+  const [isCoursesMenuOpen, setIsCoursesMenuOpen] = useState(true);
+
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
 
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({
     totalEarnings: 0,
     totalStudents: 0,
+    totalArticles: 0,
     averageRating: 4.8
   });
   const [loading, setLoading] = useState(true);
@@ -85,27 +100,118 @@ const InstructorDashboard = () => {
 
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
-    { id: 'courses', label: 'Khóa học', icon: <BookOpen size={20} /> },
+    { 
+      id: 'courses', 
+      label: 'Khóa học', 
+      icon: <BookOpen size={20} />,
+      hasSubmenu: true,
+      subItems: [
+        { id: 'published', label: 'Khóa học đã đăng', icon: <Eye size={18} /> },
+        { id: 'management', label: 'Quản lý soạn thảo', icon: <List size={18} /> }
+      ]
+    },
     { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
+    { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} />, badge: unreadCount },
   ];
 
   useEffect(() => {
-    fetchMyCourses();
+    const initData = async () => {
+      setLoading(true);
+      await Promise.all([    fetchMyCourses(),
+    fetchMyArticles(),
+    fetchNotifications()]);
+      setLoading(false);
+    };
+    initData();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await axios.get('http://localhost:5000/api/notifications', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setNotifications(data);
+      setUnreadCount(data.filter(n => !n.isRead).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      await markAsRead(notif.id);
+    }
+    
+    if (notif.relatedId && notif.type === 'course_status') {
+       setSelectedCourseId(Number(notif.relatedId));
+       fetchFullCourseData(Number(notif.relatedId));
+       setCourseView('curriculum');
+       setActiveTab('courses');
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.put('http://localhost:5000/api/notifications/read-all', {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchMyArticles();
   }, [articlePage, articleSearch]);
+
+  // Debounce Search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setArticleSearch(articleSearchInput);
+      setArticlePage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [articleSearchInput]);
+
+  const fetchFullCourseData = async (id) => {
+    try {
+      setViewLoading(true);
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/courses/instructor/${id}/full-curriculum`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setViewCourseData(data);
+    } catch (error) {
+      console.error('Lỗi khi tải thông tin khóa học:', error);
+    } finally {
+      setViewLoading(false);
+    }
+  };
 
   const fetchMyArticles = async () => {
     try {
       const { data } = await fetchMyArticlesAPI(articlePage, 10, articleSearch);
       setArticles(data.articles);
       setArticleTotalPages(data.totalPages);
+      setStats(prev => ({ ...prev, totalArticles: data.totalItems || 0 }));
     } catch (error) {
       console.error('Lỗi khi tải bài viết:', error);
     }
   };
 
   const fetchMyCourses = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const { data } = await axios.get('http://localhost:5000/api/courses/instructor/my-courses', {
@@ -121,7 +227,28 @@ const InstructorDashboard = () => {
       console.error('Lỗi khi tải khóa học:', error);
     } finally {
       setLoading(false);
+      setConfirmDialog({ ...confirmDialog, isOpen: false });
     }
+  };
+
+  const handleWithdrawApproval = (id) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận thu hồi',
+      message: 'Bạn có chắc chắn muốn thu hồi yêu cầu phê duyệt cho khóa học này?',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await axios.patch(`http://localhost:5000/api/courses/${id}/withdraw`, {}, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          toast.success('Đã thu hồi yêu cầu phê duyệt');
+          fetchMyCourses();
+        } catch (error) {
+          toast.error(error.response?.data?.message || 'Lỗi khi thu hồi yêu cầu');
+        }
+      }
+    });
   };
 
   const handleDeleteCourse = (courseId) => {
@@ -329,6 +456,11 @@ const InstructorDashboard = () => {
     });
   };
 
+  const handleEditCourse = (courseId) => {
+    setCourseView('editor');
+    setEditingCourseId(courseId);
+  };
+
 
   const handleLogout = () => {
     logout();
@@ -374,6 +506,16 @@ const InstructorDashboard = () => {
                     <span className="inst-stat-label">Đang theo học các khóa của bạn</span>
                 </div>
               </div>
+              <div className="inst-stat-card">
+                <div className="inst-stat-icon-wrapper" style={{ background: '#fef3c7', color: '#d97706' }}>
+                    <FileText size={24} />
+                </div>
+                <div className="inst-stat-info">
+                    <h3>Bài viết</h3>
+                    <p className="inst-stat-value">{stats.totalArticles}</p>
+                    <span className="inst-stat-label">Tổng số bài viết đã đăng</span>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -391,6 +533,21 @@ const InstructorDashboard = () => {
             );
         }
         if (courseView === 'curriculum') {
+            const course = courses.find(c => c.id === selectedCourseId);
+            // Nếu có viewCourseData (đã fetch full) HOẶC là các trạng thái 1, 2, 4 thì hiện CourseDetailView
+            if (viewCourseData || Number(course?.published) === 1 || Number(course?.published) === 2 || Number(course?.published) === 4) {
+                if (viewLoading) return <div className="inst-placeholder-content"><div className="inst-spinner"></div><p>Đang tải nội dung khóa học...</p></div>;
+                return (
+                    <CourseDetailView 
+                        courseData={viewCourseData} 
+                        onBack={() => {
+                            setViewCourseData(null);
+                            setCourseView('list');
+                        }} 
+                        isReviewMode={false}
+                    />
+                );
+            }
             return (
                 <CurriculumEditor 
                     courseId={selectedCourseId}
@@ -398,22 +555,35 @@ const InstructorDashboard = () => {
                 />
             );
         }
+        const filteredCourses = courseTrashView 
+            ? trashCourses 
+            : courses.filter(course => {
+                if (courseSubTab === 'published') return Number(course.published) === 2 || Number(course.published) === 4;
+                return Number(course.published) !== 2 && Number(course.published) !== 4;
+            });
+
         return (
           <div className="inst-content-fade-in">
             <div className="inst-section-header">
-                <h2 className="inst-content-title">{courseTrashView ? 'Thùng rác Khóa học' : 'Quản lý Khóa học'}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <h2 className="inst-content-title">
+                        {courseTrashView ? 'Thùng rác Khóa học' : (courseSubTab === 'published' ? 'Khóa học đã xuất bản' : 'Quản lý Khóa học')}
+                    </h2>
+                </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                        className="inst-add-btn"
-                        style={{ background: '#f1f5f9', color: '#475569' }}
-                        onClick={() => {
-                            setCourseTrashView(!courseTrashView);
-                            if (!courseTrashView) fetchTrashCourses();
-                        }}
-                    >
-                        {courseTrashView ? 'Quay lại' : <><Trash2 size={18} /> Thùng rác</>}
-                    </button>
-                    {!courseTrashView && (
+                    {courseSubTab === 'management' && (
+                        <button 
+                            className="inst-add-btn"
+                            style={{ background: '#f1f5f9', color: '#475569' }}
+                            onClick={() => {
+                                setCourseTrashView(!courseTrashView);
+                                if (!courseTrashView) fetchTrashCourses();
+                            }}
+                        >
+                            {courseTrashView ? 'Quay lại' : <><Trash2 size={18} /> Thùng rác</>}
+                        </button>
+                    )}
+                    {courseSubTab === 'management' && !courseTrashView && (
                         <button 
                             className="inst-add-btn primary"
                             onClick={() => {
@@ -427,7 +597,11 @@ const InstructorDashboard = () => {
                 </div>
             </div>
             <p className="inst-section-desc">
-                {courseTrashView ? 'Danh sách các khóa học đã xóa tạm thời.' : 'Danh sách tất cả các khóa học do bạn biên soạn và quản lý.'}
+                {courseTrashView 
+                    ? 'Danh sách các khóa học đã xóa tạm thời.' 
+                    : (courseSubTab === 'published' 
+                        ? 'Danh sách các khóa học đang được hiển thị trên hệ thống.' 
+                        : 'Quản lý các bản nháp, khóa học chờ duyệt hoặc bị từ chối.')}
             </p>
             
             <div className="inst-table-container">
@@ -437,121 +611,181 @@ const InstructorDashboard = () => {
                             <th>Khóa học</th>
                             <th>Phiên bản</th>
                             <th>Danh mục</th>
-                            {courseTrashView ? <th>Ngày xóa</th> : <><th>Giá</th><th>Học viên</th></>}
+                            {courseTrashView ? (
+                                <th>Ngày xóa</th>
+                            ) : (
+                                courseSubTab === 'published' && (
+                                    <>
+                                        <th>Giá</th>
+                                        <th>Học viên</th>
+                                    </>
+                                )
+                            )}
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {courseTrashView ? (
-                            trashCourses.length > 0 ? trashCourses.map(course => (
-                                <tr key={course.id}>
-                                    <td>
-                                        <div className="inst-course-cell">
-                                            <img src={course.thumbnail || 'https://via.placeholder.com/80x45'} alt="" className="inst-table-thumb" />
-                                            <span>{course.title}</span>
-                                        </div>
-                                    </td>
-                                    <td>{course.category}</td>
-                                    <td>{new Date(course.deletedAt).toLocaleDateString('vi-VN')}</td>
-                                    <td><span className="inst-status-badge rejected">Đã xóa</span></td>
-                                    <td>
-                                        <div className="inst-actions">
-                                            <button className="inst-btn approve" onClick={() => handleRestoreCourse(course.id)} title="Phục hồi">
-                                                Phục hồi
-                                            </button>
-                                            <button className="inst-btn reject" onClick={() => handleForceDeleteCourse(course.id)} title="Xóa vĩnh viễn">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr><td colSpan="5" className="empty-table-cell">Thùng rác trống</td></tr>
-                            )
-                        ) : (
-                            courses.length > 0 ? courses.map(course => (
-                                <tr key={course.id}>
-                                    <td>
-                                        <div className="inst-course-cell">
-                                            <img src={course.thumbnail || 'https://via.placeholder.com/80x45'} alt="" className="inst-table-thumb" />
-                                            <span>{course.title}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="inst-version-badge">v{course.version}</div>
-                                    </td>
-                                    <td>{course.category}</td>
-                                    <td>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(course.price)}</td>
-                                    <td>{course.studentsCount}</td>
-                                    <td>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <span className={`inst-status-badge ${Number(course.published) === 2 ? 'published' : Number(course.published) === 1 ? 'pending' : Number(course.published) === 3 ? 'rejected' : 'draft'}`}>
-                                                {Number(course.published) === 2 && 'Đã xuất bản'}
-                                                {Number(course.published) === 0 && 'Bản nháp'}
-                                                {Number(course.published) === 1 && 'Đang chờ duyệt'}
-                                                {Number(course.published) === 3 && 'Bị từ chối'}
-                                            </span>
-                                            {course.editRequests?.[0]?.status === 'pending' && <span className="inst-request-badge pending">Chờ duyệt sửa</span>}
-                                            {course.editRequests?.[0]?.status === 'expired' && <span className="inst-request-badge expired">Đã hết hạn</span>}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="inst-actions">
-                                            {(course.published === 0 || course.published === 3) && (
-                                                <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
-                                                    <Send size={16} />
+                        {filteredCourses.length > 0 ? filteredCourses.map(course => (
+                            <tr key={course.id}>
+                                <td>
+                                    <div className="inst-course-cell">
+                                        <img src={course.thumbnail || 'https://via.placeholder.com/80x45'} alt="" className="inst-table-thumb" />
+                                        <span>{course.title}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div className="inst-version-badge">v{course.version}</div>
+                                </td>
+                                <td>{course.category}</td>
+                                {courseTrashView ? (
+                                    <>
+                                        <td>{new Date(course.deletedAt).toLocaleDateString('vi-VN')}</td>
+                                        <td><span className="inst-status-badge rejected">Đã xóa</span></td>
+                                    </>
+                                ) : (
+                                    <>
+                                        {courseSubTab === 'published' && (
+                                            <>
+                                                <td>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(course.price)}</td>
+                                                <td>{course.studentsCount}</td>
+                                            </>
+                                        )}
+                                        <td>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <span className={`inst-status-badge ${Number(course.published) === 2 ? 'published' : Number(course.published) === 1 ? 'pending' : Number(course.published) === 3 ? 'rejected' : Number(course.published) === 4 ? 'rejected' : 'draft'}`} style={Number(course.published) === 4 ? { background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' } : {}}>
+                                                    {Number(course.published) === 2 && 'Đã xuất bản'}
+                                                    {Number(course.published) === 0 && 'Bản nháp'}
+                                                    {Number(course.published) === 1 && 'Đang chờ duyệt'}
+                                                    {Number(course.published) === 3 && 'Bị từ chối'}
+                                                    {Number(course.published) === 4 && 'Tạm gỡ xuống'}
+                                                </span>
+                                                {course.editRequests?.[0]?.status === 'pending' && <span className="inst-request-badge pending">Chờ duyệt sửa</span>}
+                                                {course.editRequests?.[0]?.status === 'expired' && <span className="inst-request-badge expired">Đã hết hạn</span>}
+                                            </div>
+                                        </td>
+                                    </>
+                                )}
+                                <td>
+                                    <div className="inst-actions">
+                                        {courseTrashView ? (
+                                            <>
+                                                <button className="inst-btn approve" onClick={() => handleRestoreCourse(course.id)} title="Phục hồi">
+                                                    Phục hồi
                                                 </button>
-                                            )}
-                                            {course.published === 2 && !course.editRequests?.some(r => r.status === 'pending') && (
-                                                <button className="inst-btn approve" onClick={() => handleRequestEdit(course)} title="Yêu cầu sửa">
-                                                    <Edit size={16} />
-                                                </button>
-                                            )}
-                                            {course.editRequests?.[0]?.status === 'expired' && (
-                                                <button className="inst-btn approve" onClick={() => handleReactivate(course)} title="Mở lại bản nháp">
-                                                    <RefreshCw size={16} />
-                                                </button>
-                                            )}
-                                            <button 
-                                                className="inst-btn view" 
-                                                onClick={() => {
-                                                    setCourseView('editor');
-                                                    setEditingCourseId(course.id);
-                                                }} 
-                                                title="Sửa"
-                                                disabled={course.published === 2}
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button 
-                                                className="inst-btn view" 
-                                                onClick={() => {
-                                                    setCourseView('curriculum');
-                                                    setSelectedCourseId(course.id);
-                                                }} 
-                                                title="Bài giảng"
-                                                disabled={course.editRequests?.[0]?.status === 'expired'}
-                                            >
-                                                <BookOpen size={16} />
-                                            </button>
-                                            {![1, 2].includes(course.published) && (
-                                                <button 
-                                                    className="inst-btn reject" 
-                                                    title="Xóa"
-                                                    onClick={() => handleDeleteCourse(course.id)}
-                                                >
+                                                <button className="inst-btn reject" onClick={() => handleForceDeleteCourse(course.id)} title="Xóa vĩnh viễn">
                                                     <Trash2 size={16} />
                                                 </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="6" className="empty-table-cell">Bạn chưa có khóa học nào</td>
-                                </tr>
-                            )
+                                            </>
+                                        ) : (
+                                            <>
+                                                {course.published === 1 ? (
+                                                    <>
+                                                        <button 
+                                                            className="inst-btn reject" 
+                                                            onClick={() => handleWithdrawApproval(course.id)} 
+                                                            title="Thu hồi phê duyệt"
+                                                        >
+                                                            <ShieldX size={16} />
+                                                        </button>
+                                                        <button 
+                                                            className="inst-btn view" 
+                                                            onClick={() => {
+                                                                setSelectedCourseId(course.id);
+                                                                fetchFullCourseData(course.id);
+                                                                setCourseView('curriculum');
+                                                            }} 
+                                                            title="Xem chi tiết"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {(course.published === 0 || course.published === 3) && (
+                                                            <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
+                                                                <Send size={16} />
+                                                            </button>
+                                                        )}
+                                                        
+                                                        {(Number(course.published) === 2 || Number(course.published) === 4) ? (
+                                                            (!course.editRequests?.some(r => r.status === 'pending')) && (
+                                                                <button className="inst-btn approve" onClick={() => handleRequestEdit(course)} title="Yêu cầu sửa">
+                                                                    <ShieldAlert size={16} />
+                                                                </button>
+                                                            )
+                                                        ) : (
+                                                            <button 
+                                                                className="inst-btn view" 
+                                                                onClick={() => {
+                                                                    setCourseView('editor');
+                                                                    setEditingCourseId(course.id);
+                                                                }} 
+                                                                title="Sửa"
+                                                                disabled={course.published === 1}
+                                                            >
+                                                                <Edit size={16} />
+                                                            </button>
+                                                        )}
+
+                                                        {course.editRequests?.[0]?.status === 'expired' && (
+                                                            <button className="inst-btn approve" onClick={() => handleReactivate(course)} title="Mở lại bản nháp">
+                                                                <RefreshCw size={16} />
+                                                            </button>
+                                                        )}
+
+                                                        <button 
+                                                            className="inst-btn view" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedCourseId(course.id);
+                                                                fetchFullCourseData(course.id);
+                                                                setCourseView('curriculum');
+                                                            }} 
+                                                            title="Xem chi tiết"
+                                                            disabled={course.editRequests?.[0]?.status === 'expired'}
+                                                        >
+                                                            <Eye size={16} />
+                                                        </button>
+
+                                                        {![2, 4].includes(Number(course.published)) && (
+                                                            <button 
+                                                                className="inst-btn view" 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedCourseId(course.id);
+                                                                    setCourseView('curriculum');
+                                                                    setViewCourseData(null); // Đảm bảo vào editor
+                                                                }} 
+                                                                title="Soạn bài giảng"
+                                                                disabled={course.editRequests?.[0]?.status === 'expired'}
+                                                            >
+                                                                <BookOpen size={16} />
+                                                            </button>
+                                                        )}
+
+                                                        {![1, 2, 4].includes(Number(course.published)) && !course.isVerified && (
+                                                            <button 
+                                                                className="inst-btn reject" 
+                                                                title="Xóa"
+                                                                onClick={() => handleDeleteCourse(course.id)}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        )) : (
+                            <tr>
+                                <td colSpan="6" className="empty-table-cell">
+                                    {courseTrashView ? 'Thùng rác trống' : (courseSubTab === 'published' ? 'Bạn chưa có khóa học nào được xuất bản' : 'Danh sách của bạn đang trống')}
+                                </td>
+                            </tr>
                         )}
                     </tbody>
 
@@ -610,9 +844,8 @@ const InstructorDashboard = () => {
                   type="text" 
                   className="inst-search-input" 
                   placeholder="Tìm kiếm bài viết..." 
-                  value={articleSearch}
-                  onChange={(e) => setArticleSearch(e.target.value)}
-                  style={{ width: '100%', padding: '10px 15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                  value={articleSearchInput}
+                  onChange={(e) => setArticleSearchInput(e.target.value)}
                 />
               </div>
             </div>
@@ -734,6 +967,49 @@ const InstructorDashboard = () => {
             )}
           </div>
         );
+      case 'notifications':
+        return (
+          <div className="inst-content-fade-in">
+            <div className="inst-section-header">
+              <h2 className="inst-content-title">Thông báo</h2>
+              {unreadCount > 0 && (
+                <button className="inst-add-btn primary" style={{ background: '#4b5563' }} onClick={markAllAsRead}>
+                  Đánh dấu tất cả là đã đọc
+                </button>
+              )}
+            </div>
+            <div className="inst-notifications-list">
+              {notifications.length > 0 ? (
+                notifications.map(notif => (
+                  <div 
+                    key={notif.id} 
+                    className={`inst-notification-card ${notif.isRead ? 'read' : 'unread'}`}
+                    onClick={() => handleNotificationClick(notif)}
+                  >
+                    <div className="notif-icon-wrapper">
+                      <Bell size={20} />
+                    </div>
+                    <div className="notif-content">
+                      <div className="notif-header">
+                        <h4>{notif.title}</h4>
+                        <span className="notif-time">
+                          {new Date(notif.createdAt).toLocaleString('vi-VN')}
+                        </span>
+                      </div>
+                      <p>{notif.message}</p>
+                    </div>
+                    {!notif.isRead && <div className="unread-dot"></div>}
+                  </div>
+                ))
+              ) : (
+                <div className="inst-placeholder-content">
+                  <Bell size={48} style={{ opacity: 0.2 }} />
+                  <p>Bạn chưa có thông báo nào.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -754,20 +1030,57 @@ const InstructorDashboard = () => {
         </div>
 
         <nav className="inst-sidebar-nav">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              className={`inst-nav-item ${activeTab === item.id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab(item.id);
-                if (window.innerWidth < 1024) setIsSidebarOpen(false);
-              }}
-            >
-              <span className="inst-item-icon">{item.icon}</span>
-              <span className="inst-item-label">{item.label}</span>
-              {activeTab === item.id && <ChevronRight size={16} className="inst-active-arrow" />}
-            </button>
-          ))}
+          {menuItems.map((item) => {
+            const isCoursesItem = item.id === 'courses';
+            const isTabActive = activeTab === item.id && (!item.hasSubmenu || !isCoursesMenuOpen);
+            
+            return (
+              <div key={item.id} className="inst-nav-group">
+                <button
+                  className={`inst-nav-item ${isTabActive ? 'active' : ''}`}
+                  onClick={() => {
+                    if (item.hasSubmenu) {
+                      if (isCoursesItem) {
+                        setIsCoursesMenuOpen(!isCoursesMenuOpen);
+                      }
+                    } else {
+                      setActiveTab(item.id);
+                      if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                    }
+                  }}
+                >
+                  <span className="inst-item-icon">{item.icon}</span>
+                  <span className="inst-item-label">{item.label}</span>
+                  {item.badge > 0 && <span className="inst-badge">{item.badge}</span>}
+                  {item.hasSubmenu ? (
+                    <ChevronDown size={16} className={`inst-arrow-icon ${isCoursesMenuOpen ? 'rotated' : ''}`} />
+                  ) : (
+                    activeTab === item.id && <ChevronRight size={16} className="inst-active-arrow" />
+                  )}
+                </button>
+                
+                {item.hasSubmenu && isCoursesMenuOpen && (
+                  <div className="inst-submenu">
+                    {item.subItems.map(subItem => (
+                      <button
+                        key={subItem.id}
+                        className={`inst-submenu-item ${activeTab === 'courses' && courseSubTab === subItem.id ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveTab('courses');
+                          setCourseSubTab(subItem.id);
+                          setCourseTrashView(false);
+                          if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                        }}
+                      >
+                        <span className="inst-sub-icon">{subItem.icon}</span>
+                        <span className="inst-sub-label">{subItem.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="inst-sidebar-footer">

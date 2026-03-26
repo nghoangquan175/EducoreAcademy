@@ -22,6 +22,14 @@ const Notification = sequelize.define('Notification', {
   isRead: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
+  },
+  relatedId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  type: {
+    type: DataTypes.STRING, // 'course_status', 'course_submission', etc.
+    allowNull: true,
   }
 }, {
   timestamps: true,

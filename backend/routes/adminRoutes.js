@@ -103,7 +103,7 @@ router.get('/courses', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.patch('/courses/:id/status', protect, admin, async (req, res) => {
   try {
-    const { status, message } = req.body; // status: 2 (Approve), 3 (Reject)
+    const { status } = req.body; // status: 2 (Approve), 3 (Reject)
     
     if (![2, 3].includes(Number(status))) {
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
@@ -114,7 +114,13 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
 
-    course.published = status;
+    if (Number(status) === 2) {
+      course.published = 2;
+      course.isVerified = true;
+    } else if (Number(status) === 3) {
+      // Nếu đã verified rồi thì gỡ xuống (4), ngược lại là từ chối (3)
+      course.published = course.isVerified ? 4 : 3;
+    }
     
     // If approving a new version, update isLatest
     if (status === 2 && course.rootCourseId) {
@@ -136,8 +142,39 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
     
     await course.save();
 
+    // Create notification for instructor
+    try {
+      let notifTitle = '';
+      let notifMessage = '';
+      
+      if (Number(status) === 2) {
+        notifTitle = 'Khóa học của bạn đã được phê duyệt';
+        notifMessage = `Chúc mừng! Khóa học "${course.title}" đã được phê duyệt và xuất bản.`;
+      } else {
+        if (course.published === 4) {
+          notifTitle = 'Khóa học của bạn đã bị tạm gỡ';
+          notifMessage = `Quản trị viên đã tạm gỡ khóa học "${course.title}" xuống.`;
+        } else {
+          notifTitle = 'Khóa học của bạn đã bị từ chối';
+          notifMessage = `Rất tiếc, yêu cầu phê duyệt cho khóa học "${course.title}" đã bị từ chối.`;
+        }
+      }
+      
+      await Notification.create({
+        userId: course.instructorId,
+        title: notifTitle,
+        message: notifMessage,
+        relatedId: course.id.toString(),
+        type: 'course_status'
+      });
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+      // Don't fail the whole request if notification fails
+    }
+
     res.json({ 
-        message: status === 2 ? 'Khoá học đã được phê duyệt' : 'Khoá học đã bị từ chối',
+        message: status === 2 ? 'Khoá học đã được phê duyệt' : 
+                (course.published === 4 ? 'Khoá học đã bị tạm gỡ' : 'Khoá học đã bị từ chối'),
         course 
     });
   } catch (error) {
@@ -335,7 +372,9 @@ router.patch('/courses/edit-requests/:id/status', protect, admin, async (req, re
       await Notification.create({
         userId: editRequest.instructorId,
         title: 'Yêu cầu chỉnh sửa được duyệt',
-        message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã được duyệt. Bạn có thể bắt đầu chỉnh sửa bản nháp mới (v${newVersion.version}).`
+        message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã được duyệt. Bạn có thể bắt đầu chỉnh sửa bản nháp mới (v${newVersion.version}).`,
+        relatedId: newVersion.id.toString(),
+        type: 'course_status'
       });
 
       res.json({ message: 'Đã duyệt yêu cầu và tạo bản sao mới', newCourseId: newVersion.id });
@@ -344,7 +383,9 @@ router.patch('/courses/edit-requests/:id/status', protect, admin, async (req, re
       await Notification.create({
         userId: editRequest.instructorId,
         title: 'Yêu cầu chỉnh sửa bị từ chối',
-        message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã bị từ chối. Lý do: ${message || 'Không có'}`
+        message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã bị từ chối. Lý do: ${message || 'Không có'}`,
+        relatedId: editRequest.courseId.toString(),
+        type: 'course_status'
       });
       res.json({ message: 'Đã từ chối yêu cầu chỉnh sửa' });
     }

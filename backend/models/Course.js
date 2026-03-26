@@ -57,7 +57,11 @@ const Course = sequelize.define('Course', {
   },
   published: {
     type: DataTypes.INTEGER,
-    defaultValue: 0, // 0 = Draft, 1 = Pending, 2 = Published, 3 = Rejected
+    defaultValue: 0, // 0 = Draft, 1 = Pending, 2 = Published, 3 = Rejected, 4 = Tạm gỡ
+  },
+  isVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
   },
   isPro: {
     type: DataTypes.BOOLEAN,

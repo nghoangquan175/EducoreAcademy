@@ -364,7 +364,7 @@ exports.deleteArticle = async (req, res) => {
     if (article.articleStatus === 2) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Bài viết đã xuất bản không thể xóa. Vui lòng gỡ xuống bản nháp (Draft) trước.' 
+        message: 'Bài viết đã xuất bản không thể xóa. Vui lòng gỡ xuống bản nháp (Draft) trước.'
       });
     }
 
@@ -402,6 +402,15 @@ exports.submitArticleForReview = async (req, res) => {
     }
 
     article = await article.update({ articleStatus: 1 }); // Pending
+
+    // Notify admins of new article submission
+    const { notifyAdmins } = require('../utils/notificationUtils');
+    await notifyAdmins(
+      'Yêu cầu duyệt bài viết mới',
+      `Giảng viên ${req.user.name} vừa gửi bài viết: "${article.title}"`,
+      article.id,
+      'article_submission'
+    );
 
     res.json({ success: true, data: article });
   } catch (error) {
@@ -464,12 +473,16 @@ exports.adminUpdateArticleStatus = async (req, res) => {
       notifyMessage = `Bài viết "${article.title}" của bạn đã bị gỡ xuống bản nháp bởi Quản trị viên.`;
     }
 
-    await Notification.create({
-      userId: article.authorId,
-      title: notifyTitle,
-      message: notifyMessage,
-      isRead: false
-    });
+    if (notifyTitle) {
+      await Notification.create({
+        userId: article.authorId,
+        title: notifyTitle,
+        message: notifyMessage,
+        relatedId: article.id.toString(),
+        type: 'article_status',
+        isRead: false
+      });
+    }
 
     res.json({ 
       success: true,
