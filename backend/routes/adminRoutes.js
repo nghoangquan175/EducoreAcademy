@@ -103,9 +103,10 @@ router.get('/courses', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.patch('/courses/:id/status', protect, admin, async (req, res) => {
   try {
-    const { status } = req.body; // status: 2 (Approve), 3 (Reject)
+    const { status } = req.body; 
     
-    if (![2, 3].includes(Number(status))) {
+    // Valid statuses for this endpoint: 2 (CONTENT_APPROVED), 3 (REJECTED), 5 (PUBLISHED), 6 (UNPUBLISHED)
+    if (![2, 3, 5, 6].includes(Number(status))) {
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
     }
 
@@ -114,25 +115,17 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
 
-    if (Number(status) === 2) {
-      course.published = 2;
-      course.isVerified = true;
-    } else if (Number(status) === 3) {
-      // Nếu đã verified rồi thì gỡ xuống (4), ngược lại là từ chối (3)
-      course.published = course.isVerified ? 4 : 3;
-    }
+    const oldStatus = course.published;
+    course.published = Number(status);
     
     // If approving a new version, update isLatest
     if (status === 2 && course.rootCourseId) {
-      // Set all other versions of the same root to isLatest = false
+      // Logic for versioning (existing)
       await Course.update(
         { isLatest: false },
         { 
           where: { 
-            [Op.or]: [
-              { id: course.rootCourseId },
-              { rootCourseId: course.rootCourseId }
-            ],
+            [Op.or]: [{ id: course.rootCourseId }, { rootCourseId: course.rootCourseId }],
             id: { [Op.ne]: course.id }
           } 
         }
@@ -142,41 +135,28 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
     
     await course.save();
 
-    // Create notification for instructor
+    // Notify instructor
     try {
-      let notifTitle = '';
-      let notifMessage = '';
-      
-      if (Number(status) === 2) {
-        notifTitle = 'Khóa học của bạn đã được phê duyệt';
-        notifMessage = `Chúc mừng! Khóa học "${course.title}" đã được phê duyệt và xuất bản.`;
-      } else {
-        if (course.published === 4) {
-          notifTitle = 'Khóa học của bạn đã bị tạm gỡ';
-          notifMessage = `Quản trị viên đã tạm gỡ khóa học "${course.title}" xuống.`;
-        } else {
-          notifTitle = 'Khóa học của bạn đã bị từ chối';
-          notifMessage = `Rất tiếc, yêu cầu phê duyệt cho khóa học "${course.title}" đã bị từ chối.`;
-        }
-      }
-      
+      const { Notification } = require('../models');
+      const actionLabels = {
+        2: 'đã được phê duyệt nội dung 🎉. Vui lòng kiểm tra Chính sách Doanh thu.',
+        3: 'đã bị từ chối ❌. Vui lòng kiểm tra lại nội dung.',
+        5: 'đã được xuất bản 🚀!',
+        6: 'đã tạm gỡ ⏸️.'
+      };
+
       await Notification.create({
         userId: course.instructorId,
-        title: notifTitle,
-        message: notifMessage,
+        title: `Cập nhật trạng thái khóa học`,
+        message: `Khóa học "${course.title}" ${actionLabels[status]}`,
         relatedId: course.id.toString(),
         type: 'course_status'
       });
-    } catch (notifError) {
-      console.error('Failed to create notification:', notifError);
-      // Don't fail the whole request if notification fails
+    } catch (notifErr) {
+      console.error('Failed to notify instructor:', notifErr);
     }
 
-    res.json({ 
-        message: status === 2 ? 'Khoá học đã được phê duyệt' : 
-                (course.published === 4 ? 'Khoá học đã bị tạm gỡ' : 'Khoá học đã bị từ chối'),
-        course 
-    });
+    res.json({ message: 'Status updated', course });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

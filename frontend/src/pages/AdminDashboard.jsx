@@ -32,7 +32,8 @@ import {
   Calendar,
   Clock,
   HelpCircle,
-  Play
+  Play,
+  DollarSign
 } from 'lucide-react';
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -42,6 +43,7 @@ import toast from 'react-hot-toast';
 import CategoryManager from '../components/CategoryManager';
 import InstructorApplications from '../components/InstructorApplications';
 import CourseDetailView from '../components/CourseDetailView';
+import RevenuePolicyDetail from '../components/RevenuePolicyDetail';
 import {
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -117,6 +119,25 @@ const AdminDashboard = () => {
   const [trashCourses, setTrashCourses] = useState([]);
   const [courseTrashView, setCourseTrashView] = useState(false);
   const [articleTrashView, setArticleTrashView] = useState(false);
+  const [isCourseDetailViewOpen, setIsCourseDetailViewOpen] = useState(false);
+  const [selectedCourseForDetail, setSelectedCourseForDetail] = useState(null);
+
+  // Revenue Policy State
+  const [revenuePolicies, setRevenuePolicies] = useState([]);
+  const [revenueSearch, setRevenueSearch] = useState('');
+  const [debouncedRevenueSearch, setDebouncedRevenueSearch] = useState('');
+  const [showRevenueModal, setShowRevenueModal] = useState(false);
+  const [selectedRevenuePolicy, setSelectedRevenuePolicy] = useState(null);
+  const [showRevenuePolicyDetail, setShowRevenuePolicyDetail] = useState(false);
+  const [editingRevenuePolicyId, setEditingRevenuePolicyId] = useState(null);
+  const [revenueData, setRevenueData] = useState({
+    courseId: '',
+    type: 'PERCENT',
+    instructorPercent: 70,
+    fixedAmount: 0,
+    upfrontAmount: 0
+  });
+
   const prevTab = useRef(activeTab);
   const prevSubTab = useRef(articleSubTab);
 
@@ -167,6 +188,7 @@ const AdminDashboard = () => {
     },
     { id: 'categories', label: 'Danh mục', icon: <Layers size={20} /> },
     { id: 'banners', label: 'Banners', icon: <ImageIcon size={20} /> },
+    { id: 'revenue-policy', label: 'Chính sách Doanh thu', icon: <DollarSign size={20} /> },
     { 
       id: 'articles', 
       label: 'Bài viết', 
@@ -196,11 +218,18 @@ const AdminDashboard = () => {
   }, [articleSearch]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRevenueSearch(revenueSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [revenueSearch]);
+
+  useEffect(() => {
     const isSilent = (activeTab === prevTab.current && articleSubTab === prevSubTab.current);
     fetchData(isSilent);
     prevTab.current = activeTab;
     prevSubTab.current = articleSubTab;
-  }, [activeTab, articleSubTab, articlePage, debouncedArticleSearch, debouncedCourseSearch]);
+  }, [activeTab, articleSubTab, articlePage, debouncedArticleSearch, debouncedCourseSearch, debouncedRevenueSearch]);
 
   const fetchData = async (isSilent = false) => {
     if (!isSilent) {
@@ -218,8 +247,8 @@ const AdminDashboard = () => {
         setPendingCourses(data);
       } else if (activeTab === 'manage-courses') {
         const { data } = await axios.get(`http://localhost:5000/api/admin/courses?search=${debouncedCourseSearch}`, { headers });
-        // Lọc khóa học đã xuất bản (2) và tạm gỡ (4)
-        setPendingCourses(data.filter(c => Number(c.published) === 2 || Number(c.published) === 4));
+        // Lọc khóa học Ready (4), Published (5), Unpublish (6), Content Approved (2)
+        setPendingCourses(data.filter(c => [2, 4, 5, 6].includes(Number(c.published))));
       } else if (activeTab === 'students' || activeTab === 'instructors') {
         const { data } = await axios.get('http://localhost:5000/api/admin/users', { headers });
         setUsersList(data);
@@ -239,6 +268,9 @@ const AdminDashboard = () => {
       } else if (activeTab === 'edit-requests') {
         const { data } = await axios.get('http://localhost:5000/api/admin/courses/edit-requests', { headers });
         setEditRequests(data);
+      } else if (activeTab === 'revenue-policy') {
+        const { data } = await axios.get(`http://localhost:5000/api/revenue-policies?search=${debouncedRevenueSearch}`, { headers });
+        setRevenuePolicies(data.policies || []);
       }
       
       // Always fetch notifications to update unread count
@@ -301,6 +333,125 @@ const AdminDashboard = () => {
     });
   };
 
+  const handleRevenueSubmit = async (e, sendImmediately = false) => {
+    if (e) e.preventDefault();
+    
+    // Validation
+    if (!revenueData.courseId) {
+      toast.error('Vui lòng chọn khóa học');
+      return;
+    }
+    
+    if (revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') {
+      if (revenueData.instructorPercent <= 0 || revenueData.instructorPercent > 100) {
+        toast.error('Phần trăm giảng viên phải từ 1 đến 100');
+        return;
+      }
+    }
+    
+    if (revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') {
+      if (revenueData.fixedAmount <= 0) {
+        toast.error('Số tiền cố định phải lớn hơn 0');
+        return;
+      }
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (editingRevenuePolicyId) {
+        await axios.put(`http://localhost:5000/api/revenue-policies/${editingRevenuePolicyId}`, revenueData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Đã cập nhật chính sách!');
+      } else {
+        await axios.post('http://localhost:5000/api/revenue-policies', { ...revenueData, sendImmediately }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success(sendImmediately ? 'Đã tạo và gửi chính sách cho giảng viên!' : 'Đã lưu chính sách vào bản nháp!');
+      }
+      setShowRevenueModal(false);
+      setEditingRevenuePolicyId(null);
+      setRevenueData({
+        courseId: '',
+        type: 'PERCENT',
+        instructorPercent: 70,
+        fixedAmount: 0,
+        upfrontAmount: 0
+      });
+      fetchData();
+    } catch (error) {
+      toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleRevenuePolicyAction = async (id, action) => {
+    if (action === 'edit') {
+      const policy = revenuePolicies.find(p => p.id === id);
+      if (policy) {
+        setRevenueData({
+          courseId: policy.courseId,
+          type: policy.type,
+          instructorPercent: policy.instructorPercent || 0,
+          fixedAmount: policy.fixedAmount || 0,
+          upfrontAmount: policy.upfrontAmount || 0
+        });
+        setEditingRevenuePolicyId(id);
+        setShowRevenuePolicyDetail(false);
+        fetchBannerLinkData();
+        setShowRevenueModal(true);
+      }
+      return;
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 
+        action === 'send' ? 'Gửi chính sách doanh thu' : 
+        action === 'accept' ? 'Chấp nhận chính sách' : 
+        action === 'reject' ? 'Từ chối chính sách' : 
+        action === 'revoke' ? 'Thu hồi chính sách' :
+        'Xóa chính sách',
+      message: 
+        action === 'send' ? 'Bạn có chắc chắn muốn gửi chính sách này cho giảng viên để xác nhận?' :
+        action === 'accept' ? 'Bạn có chắc chắn muốn chấp nhận chính sách này? Nó sẽ có hiệu lực ngay lập tức.' :
+        action === 'reject' ? 'Bạn có chắc chắn muốn từ chối chính sách này?' :
+        action === 'revoke' ? 'Bạn có muốn thu hồi chính sách này về bản nháp? Giảng viên sẽ không thấy nó nữa.' :
+        'Bạn có chắc chắn muốn xóa chính sách này? Hành động này không thể hoàn tác.',
+      type: action === 'reject' || action === 'delete' || action === 'revoke' ? 'danger' : 'info',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          let status = action;
+          if (action === 'send') status = 'waiting_confirm';
+          if (action === 'accept') status = 'accepted';
+          if (action === 'reject') status = 'rejected';
+          if (action === 'revoke') status = 'draft';
+  
+          if (action === 'delete') {
+            await axios.delete(`http://localhost:5000/api/revenue-policies/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success('Đã xóa chính sách doanh thu!');
+          } else {
+            await axios.patch(`http://localhost:5000/api/revenue-policies/${id}/status`, { status }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(
+              action === 'send' ? 'Đã gửi chính sách cho giảng viên' : 
+              action === 'revoke' ? 'Đã thu hồi chính sách về bản nháp' :
+              'Đã cập nhật trạng thái'
+            );
+          }
+          
+          setShowRevenuePolicyDetail(false);
+          fetchData(); // Refresh list
+        } catch (error) {
+          toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+        }
+      }
+    });
+  };
+
   const fetchDiffData = async (courseId) => {
     try {
       const token = localStorage.getItem('token');
@@ -315,27 +466,39 @@ const AdminDashboard = () => {
   };
 
   const handleStatusUpdate = (courseId, status) => {
-    const isApprove = status === 2;
-    const isManagement = activeTab === 'manage-courses';
+    let title = '';
+    let message = '';
+    let type = 'info';
 
-    let title = isApprove ? 'Phê duyệt khóa học' : 'Từ chối khóa học';
-    let message = isApprove 
-      ? 'Bạn có chắc chắn muốn phê duyệt khóa học này? Khóa học sẽ được hiển thị cho tất cả học viên.' 
-      : 'Bạn có chắc chắn muốn từ chối khóa học này?';
-    
-    // Nếu là ở tab quản lý thì dùng từ "Gỡ xuống" thay vì "Từ chối"
-    if (isManagement) {
-      title = isApprove ? 'Đăng lên khóa học' : 'Gỡ xuống khóa học';
-      message = isApprove 
-        ? 'Bạn có chắc chắn muốn tái bản khóa học này?' 
-        : 'Tạm gỡ khóa học này? Học viên sẽ không thể đăng ký mới, nội dung sẽ được ẩn khỏi trang chủ.';
+    switch (status) {
+      case 2:
+        title = 'Phê duyệt nội dung';
+        message = 'Bạn có chắc chắn muốn phê duyệt nội dung khóa học này? Giảng viên có thể xem và chờ bước tiếp theo.';
+        break;
+      case 3:
+        title = 'Từ chối khóa học';
+        message = 'Bạn có chắc chắn muốn từ chối khóa học này?';
+        type = 'danger';
+        break;
+      case 5:
+        title = 'Xuất bản khóa học';
+        message = 'Bạn có chắc chắn muốn xuất bản khóa học này lên hệ thống? Học viên có thể đăng ký học ngay lập tức.';
+        break;
+      case 6:
+        title = 'Gỡ xuống khóa học';
+        message = 'Tạm gỡ khóa học này? Học viên sẽ không thể đăng ký mới, nội dung sẽ được ẩn khỏi trang chủ.';
+        type = 'danger';
+        break;
+      default:
+        title = 'Cập nhật trạng thái';
+        message = 'Bạn có chắc chắn muốn cập nhật trạng thái này?';
     }
 
     setConfirmDialog({
       isOpen: true,
       title,
       message,
-      type: isApprove ? 'info' : 'danger',
+      type,
       onConfirm: async () => {
         try {
           const token = localStorage.getItem('token');
@@ -343,7 +506,7 @@ const AdminDashboard = () => {
             { status }, 
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          toast.success(isApprove ? 'Đã phê duyệt thành công!' : (isManagement ? 'Đã gỡ khóa học xuống thành công!' : 'Đã từ chối khóa học.'));
+          toast.success('Đã cập nhật trạng thái thành công!');
           fetchData();
         } catch (error) {
           console.error('Lỗi khi cập nhật trạng thái:', error);
@@ -508,7 +671,7 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('token');
       const res = await axios.post('http://localhost:5000/api/upload/image', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-type',
           Authorization: `Bearer ${token}`
         }
       });
@@ -1016,14 +1179,18 @@ const AdminDashboard = () => {
                                             <button className="admin-btn view" onClick={() => handleReviewCourse(course.id)} title="Xem chi tiết">
                                                 <Eye size={18} />
                                             </button>
-                                            {course.rootCourseId && (
-                                                <button className="admin-btn approve" style={{ background: '#f59e0b' }} onClick={() => fetchDiffData(course.id)} title="So sánh bản cũ">
-                                                    <Layers size={18} />
-                                                </button>
-                                            )}
+                                            <div className="inst-status-badge" style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', 
+                                                background: course.published === 5 ? '#dcfce7' : course.published === 4 ? '#fef9c3' : course.published === 6 ? '#fee2e2' : '#f1f5f9',
+                                                color: course.published === 5 ? '#166534' : course.published === 4 ? '#854d0e' : course.published === 6 ? '#991b1b' : '#475569'
+                                            }}>
+                                                {course.published === 2 && 'Đã duyệt nội dung'}
+                                                {course.published === 4 && 'Chờ xuất bản'}
+                                                {course.published === 5 && 'Đã đăng'}
+                                                {course.published === 6 && 'Đã gỡ'}
+                                            </div>
                                             {activeTab === 'approvals' ? (
                                                 <>
-                                                    <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Phê duyệt">
+                                                    <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Duyệt nội dung">
                                                         <CheckCircle size={18} />
                                                     </button>
                                                     <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Từ chối">
@@ -1031,15 +1198,18 @@ const AdminDashboard = () => {
                                                     </button>
                                                 </>
                                             ) : (
-                                                Number(course.published) === 4 ? (
-                                                    <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Đăng lên">
-                                                        <ArrowUpCircle size={18} />
-                                                    </button>
-                                                ) : (
-                                                    <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Gỡ xuống">
-                                                        <ArrowDownCircle size={18} />
-                                                    </button>
-                                                )
+                                                <>
+                                                    {[4, 6].includes(Number(course.published)) && (
+                                                        <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
+                                                            <ArrowUpCircle size={18} />
+                                                        </button>
+                                                    )}
+                                                    {course.published === 5 && (
+                                                        <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 6)} title="Gỡ xuống">
+                                                            <ArrowDownCircle size={18} />
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </td>
@@ -1066,12 +1236,15 @@ const AdminDashboard = () => {
           <>
             {reviewCourseData.published === 1 && (
               <div className="admin-actions" style={{ display: 'flex', gap: '10px' }}>
-                <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt</button>
+                <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt nội dung</button>
                 <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
               </div>
             )}
-            {reviewCourseData.published === 2 && (
-              <button className="admin-btn reject" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Gỡ xuống</button>
+            {[4, 6].includes(Number(reviewCourseData.published)) && (
+              <button className="admin-btn approve" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 5)}>Xuất bản khóa học</button>
+            )}
+            {reviewCourseData.published === 5 && (
+              <button className="admin-btn reject" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 6)}>Gỡ xuống khóa học</button>
             )}
           </>
         );
@@ -1680,6 +1853,133 @@ const AdminDashboard = () => {
             ) : null}
           </div>
         );
+
+      case 'revenue-policy':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+                <h2 className="content-title">Chính sách Doanh thu</h2>
+                <button className="add-btn primary" onClick={() => {
+                  setRevenueData({
+                    courseId: '',
+                    type: 'PERCENT',
+                    instructorPercent: 70,
+                    fixedAmount: 0,
+                    upfrontAmount: 0
+                  });
+                  setEditingRevenuePolicyId(null);
+                  fetchBannerLinkData(); // Reuse this to get courses
+                  setShowRevenueModal(true);
+                }}>
+                    <Plus size={18} /> Tạo chính sách mới
+                </button>
+            </div>
+            <p className="section-desc">Quản lý cách phân chia doanh thu giữa hệ thống và giảng viên.</p>
+            
+            <div className="filters-bar" style={{ marginBottom: '20px' }}>
+                <div className="search-wrapper" style={{ position: 'relative', maxWidth: '400px' }}>
+                    <Search size={18} className="search-icon" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input 
+                        type="text" 
+                        className="search-input" 
+                        placeholder="Tìm theo tên khóa học..." 
+                        style={{ paddingLeft: '40px', width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', height: '42px' }}
+                        value={revenueSearch}
+                        onChange={(e) => setRevenueSearch(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Khóa học</th>
+                    <th>Loại</th>
+                    <th>Người tạo</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {revenuePolicies.length > 0 ? revenuePolicies.map(policy => (
+                    <tr key={policy.id}>
+                      <td>
+                        <div style={{ fontWeight: '600' }}>{policy.course?.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>GV: {policy.instructor?.name || 'N/A'}</div>
+                      </td>
+                      <td>
+                        <span className="status-badge" style={{ background: '#f1f5f9', color: '#475569' }}>
+                          {policy.type === 'PERCENT' ? 'Phần trăm' : policy.type === 'FIXED' ? 'Cố định' : 'Hỗn hợp'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: '0.9rem' }}>
+                          {policy.creator?.name || 'Admin'}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${policy.status === 'accepted' ? 'active' : policy.status === 'rejected' ? 'rejected' : policy.status === 'draft' ? 'draft' : 'pending'}`}>
+                          {policy.status === 'draft' && 'Bản nháp'}
+                          {policy.status === 'waiting_confirm' && 'Chờ xác nhận'}
+                          {policy.status === 'accepted' && 'Đã chấp nhận'}
+                          {policy.status === 'rejected' && 'Đã từ chối'}
+                        </span>
+                      </td>
+                      <td>{new Date(policy.createdAt).toLocaleDateString('vi-VN')}</td>
+                      <td>
+                        <div className="admin-actions">
+                          <button 
+                            className="admin-btn view" 
+                            title="Xem chi tiết"
+                            onClick={() => {
+                              setSelectedRevenuePolicy(policy);
+                              setShowRevenuePolicyDetail(true);
+                            }}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          
+                          {policy.status === 'draft' && (
+                            <>
+                              <button 
+                                className="admin-btn edit" 
+                                title="Sửa bản nháp"
+                                onClick={() => handleRevenuePolicyAction(policy.id, 'edit')}
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button 
+                                className="admin-btn approve" 
+                                title="Gửi cho giảng viên"
+                                onClick={() => handleRevenuePolicyAction(policy.id, 'send')}
+                              >
+                                <Send size={16} />
+                              </button>
+                            </>
+                          )}
+
+                          {policy.status === 'waiting_confirm' && (
+                            <button 
+                              className="admin-btn reject" 
+                              title="Thu hồi chính sách"
+                              onClick={() => handleRevenuePolicyAction(policy.id, 'revoke')}
+                            >
+                              <ArrowLeft size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="6" className="empty-table-cell">Không có chính sách nào được tìm thấy</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
       case 'edit-requests':
         return (
           <div className="admin-content-fade-in">
@@ -2153,10 +2453,116 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+        {/* Revenue Policy Modal */}
+        {showRevenueModal && (
+          <div className="admin-modal-overlay">
+            <div className="admin-modal-content" style={{ maxWidth: '700px' }}>
+              <div className="modal-header">
+                <h3>Tạo Chính sách Doanh thu</h3>
+                <button onClick={() => setShowRevenueModal(false)}><X size={20} /></button>
+              </div>
+              <form onSubmit={handleRevenueSubmit}>
+                <div className="modal-body" style={{ padding: '20px' }}>
+                  <div className="form-group" style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Chọn Khóa học</label>
+                    <select 
+                      required 
+                      className="modal-input"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                      value={revenueData.courseId}
+                      onChange={(e) => setRevenueData({ ...revenueData, courseId: e.target.value })}
+                    >
+                      <option value="">-- Chọn khóa học --</option>
+                      {bannerLinkCourses
+                        .filter(c => Number(c.published) === 2)
+                        .map(course => (
+                        <option key={course.id} value={course.id}>{course.title} (ID: {course.id})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Loại chính sách</label>
+                    <select 
+                      className="modal-input"
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                      value={revenueData.type}
+                      onChange={(e) => setRevenueData({ ...revenueData, type: e.target.value })}
+                    >
+                      <option value="PERCENT">Phần trăm (%)</option>
+                      <option value="FIXED">Số tiền cố định (đ)</option>
+                      <option value="HYBRID">Hỗn hợp (Phần trăm + Cố định)</option>
+                    </select>
+                  </div>
+
+                  {(revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') && (
+                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Phần trăm Giảng viên (%)</label>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0"
+                        max="100"
+                        className="modal-input" 
+                        value={revenueData.instructorPercent}
+                        onChange={(e) => setRevenueData({ ...revenueData, instructorPercent: e.target.value })}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        placeholder="Nhập phần trăm (vd: 70)"
+                      />
+                    </div>
+                  )}
+
+                  {(revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') && (
+                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Số tiền cố định cho giảng viên (đ)</label>
+                      <input 
+                        type="number" 
+                        required 
+                        min="0"
+                        className="modal-input" 
+                        value={revenueData.fixedAmount}
+                        onChange={(e) => setRevenueData({ ...revenueData, fixedAmount: e.target.value })}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        placeholder="Nhập số tiền (vd: 50000)"
+                      />
+                    </div>
+                  )}
+
+                  {revenueData.type === 'HYBRID' && (
+                    <div className="form-group" style={{ marginBottom: '15px' }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Số tiền hỗ trợ trả trước (nếu có)</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="modal-input" 
+                        value={revenueData.upfrontAmount}
+                        onChange={(e) => setRevenueData({ ...revenueData, upfrontAmount: e.target.value })}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        placeholder="Nhập số tiền trả trước"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer" style={{ gap: '10px', backgroundColor: 'white', margin: '0' }}>
+                  <button type="button" className="btn-cancel" onClick={() => setShowRevenueModal(false)}>Hủy</button>
+                  <button type="button" className="btn-submit draft-submit" onClick={(e) => handleRevenueSubmit(e, false)}>Lưu</button>
+                  <button type="button" className="btn-submit send-submit" onClick={(e) => handleRevenueSubmit(e, true)}>Gửi ngay</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
       <ConfirmDialog 
         {...confirmDialog} 
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
+      />
+
+      <RevenuePolicyDetail 
+        isOpen={showRevenuePolicyDetail}
+        onClose={() => setShowRevenuePolicyDetail(false)}
+        policy={selectedRevenuePolicy}
+        userRole="admin"
+        onAction={handleRevenuePolicyAction}
       />
     </div>
   );

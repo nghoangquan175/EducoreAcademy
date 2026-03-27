@@ -23,13 +23,14 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { RefreshCw, ShieldAlert, History } from 'lucide-react';
+import { RefreshCw, ShieldAlert, History, Clock } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
 import CourseEditor from './CourseEditor';
 import CurriculumEditor from './CurriculumEditor';
 import CourseDetailView from '../components/CourseDetailView';
 import ArticleEditor from './ArticleEditor';
+import RevenuePolicyDetail from '../components/RevenuePolicyDetail';
 import { 
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -78,6 +79,12 @@ const InstructorDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Revenue Policy State
+  const [revenuePolicies, setRevenuePolicies] = useState([]);
+  const [revenueSearch, setRevenueSearch] = useState('');
+  const [debouncedRevenueSearch, setDebouncedRevenueSearch] = useState('');
+  const [selectedRevenuePolicy, setSelectedRevenuePolicy] = useState(null);
+  const [showRevenuePolicyDetail, setShowRevenuePolicyDetail] = useState(false);
 
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({
@@ -107,7 +114,9 @@ const InstructorDashboard = () => {
       hasSubmenu: true,
       subItems: [
         { id: 'published', label: 'Khóa học đã đăng', icon: <Eye size={18} /> },
-        { id: 'management', label: 'Quản lý soạn thảo', icon: <List size={18} /> }
+        { id: 'pending', label: 'Khóa học đang xử lý', icon: <Clock size={18} /> },
+        { id: 'management', label: 'Quản lý soạn thảo', icon: <List size={18} /> },
+        { id: 'revenue-policy', label: 'Chính sách doanh thu', icon: <CreditCard size={18} /> }
       ]
     },
     { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
@@ -117,13 +126,56 @@ const InstructorDashboard = () => {
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
-      await Promise.all([    fetchMyCourses(),
-    fetchMyArticles(),
-    fetchNotifications()]);
+      await Promise.all([    
+        fetchMyCourses(),
+        fetchMyArticles(),
+        fetchNotifications(),
+        fetchRevenuePolicies()
+      ]);
       setLoading(false);
     };
     initData();
-  }, []);
+  }, [activeTab, debouncedRevenueSearch]);
+
+  const fetchRevenuePolicies = async () => {
+    try {
+      const { data } = await axios.get(`http://localhost:5000/api/revenue-policies?search=${debouncedRevenueSearch}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setRevenuePolicies(data.policies || []);
+    } catch (error) {
+      console.error('Error fetching revenue policies:', error);
+    }
+  };
+
+  const handleUpdatePolicyStatus = async (id, status) => {
+    const isAccepted = status === 'accepted';
+    setConfirmDialog({
+      isOpen: true,
+      title: isAccepted ? 'Chấp nhận chính sách' : 'Từ chối chính sách',
+      message: `Bạn có chắc chắn muốn ${isAccepted ? 'chấp nhận' : 'từ chối'} chính sách doanh thu này?`,
+      type: isAccepted ? 'info' : 'danger',
+      onConfirm: async () => {
+        try {
+          await axios.patch(`http://localhost:5000/api/revenue-policies/${id}/status`, { status }, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          toast.success(`Đã ${isAccepted ? 'chấp nhận' : 'từ chối'} chính sách`);
+          setShowRevenuePolicyDetail(false);
+          fetchRevenuePolicies();
+        } catch (error) {
+          toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+        }
+      }
+    });
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRevenueSearch(revenueSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [revenueSearch]);
 
   const fetchNotifications = async () => {
     try {
@@ -467,6 +519,90 @@ const InstructorDashboard = () => {
     navigate('/staff/login');
   };
 
+  const renderRevenuePolicyContent = () => (
+    <div className="inst-content-fade-in">
+      <div className="inst-section-header">
+          <h2 className="inst-content-title">Chính sách Doanh thu</h2>
+      </div>
+      <p className="inst-section-desc">Theo dõi và xác nhận các chính sách phân chia doanh thu từ hệ thống.</p>
+      
+      <div className="inst-filters-bar" style={{ marginBottom: '20px' }}>
+          <div className="inst-search-wrapper" style={{ position: 'relative', maxWidth: '400px' }}>
+              <input 
+                  type="text" 
+                  className="inst-search-input" 
+                  placeholder="Tìm theo tên khóa học..." 
+                  value={revenueSearch}
+                  onChange={(e) => setRevenueSearch(e.target.value)}
+              />
+          </div>
+      </div>
+
+      <div className="inst-table-container">
+          <table className="inst-table">
+            <thead>
+              <tr>
+                <th>Khóa học</th>
+                <th>Loại chính sách</th>
+                <th>Chi tiết</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenuePolicies.length > 0 ? revenuePolicies.map(policy => (
+                <tr key={policy.id}>
+                  <td>{policy.course?.title}</td>
+                  <td>
+                    <span className="inst-status-badge" style={{ background: '#f1f5f9', color: '#475569' }}>
+                      {policy.type === 'PERCENT' ? 'Phần trăm' : policy.type === 'FIXED' ? 'Cố định' : 'Hỗn hợp'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ fontSize: '0.9rem' }}>
+                      {policy.type === 'PERCENT' && `${policy.instructorPercent}% cho bạn`}
+                      {policy.type === 'FIXED' && `${policy.fixedAmount?.toLocaleString()}đ / lượt`}
+                      {policy.type === 'HYBRID' && `${policy.instructorPercent}% + ${policy.fixedAmount?.toLocaleString()}đ`}
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`inst-status-badge ${policy.status === 'accepted' ? 'published' : policy.status === 'rejected' ? 'rejected' : 'pending'}`}>
+                      {policy.status === 'waiting_confirm' && 'Chờ bạn xác nhận'}
+                      {policy.status === 'accepted' && 'Đã chấp nhận'}
+                      {policy.status === 'rejected' && 'Đã từ chối'}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="inst-actions">
+                      <button 
+                        className="inst-btn view" 
+                        title="Xem chi tiết"
+                        onClick={() => {
+                          setSelectedRevenuePolicy(policy);
+                          setShowRevenuePolicyDetail(true);
+                        }}
+                        style={{ background: '#eff6ff', color: '#3b82f6', width: '32px', height: '32px', borderRadius: '8px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      {policy.status === 'waiting_confirm' && (
+                        <>
+                          <button className="inst-btn approve" onClick={() => handleUpdatePolicyStatus(policy.id, 'accepted')}>Chấp nhận</button>
+                          <button className="inst-btn reject" onClick={() => handleUpdatePolicyStatus(policy.id, 'rejected')}>Từ chối</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr><td colSpan="5" className="empty-table-cell">Không có chính sách nào</td></tr>
+              )}
+            </tbody>
+          </table>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     if (loading) return <div className="loading-container">Đang tải dữ liệu...</div>;
 
@@ -520,6 +656,9 @@ const InstructorDashboard = () => {
           </div>
         );
       case 'courses':
+        if (courseSubTab === 'revenue-policy') {
+            return renderRevenuePolicyContent();
+        }
         if (courseView === 'editor') {
             return (
                 <CourseEditor 
@@ -558,8 +697,10 @@ const InstructorDashboard = () => {
         const filteredCourses = courseTrashView 
             ? trashCourses 
             : courses.filter(course => {
-                if (courseSubTab === 'published') return Number(course.published) === 2 || Number(course.published) === 4;
-                return Number(course.published) !== 2 && Number(course.published) !== 4;
+                const s = Number(course.published);
+                if (courseSubTab === 'published') return s === 5;
+                if (courseSubTab === 'pending') return s === 1 || s === 2 || s === 4;
+                return s === 0 || s === 3 || s === 6;
             });
 
         return (
@@ -653,12 +794,21 @@ const InstructorDashboard = () => {
                                         )}
                                         <td>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <span className={`inst-status-badge ${Number(course.published) === 2 ? 'published' : Number(course.published) === 1 ? 'pending' : Number(course.published) === 3 ? 'rejected' : Number(course.published) === 4 ? 'rejected' : 'draft'}`} style={Number(course.published) === 4 ? { background: '#fff7ed', color: '#c2410c', border: '1px solid #ffedd5' } : {}}>
-                                                    {Number(course.published) === 2 && 'Đã xuất bản'}
-                                                    {Number(course.published) === 0 && 'Bản nháp'}
-                                                    {Number(course.published) === 1 && 'Đang chờ duyệt'}
-                                                    {Number(course.published) === 3 && 'Bị từ chối'}
-                                                    {Number(course.published) === 4 && 'Tạm gỡ xuống'}
+                                                <span className={`inst-status-badge ${
+                                                    course.published === 5 ? 'published' : 
+                                                    course.published === 1 ? 'pending' : 
+                                                    course.published === 3 ? 'rejected' : 
+                                                    course.published === 2 ? 'pending' :
+                                                    course.published === 4 ? 'pending' :
+                                                    course.published === 6 ? 'rejected' :
+                                                    'draft'}`}>
+                                                    {course.published === 0 && 'Bản nháp'}
+                                                    {course.published === 1 && 'Chờ duyệt'}
+                                                    {course.published === 2 && 'Đã duyệt nội dung'}
+                                                    {course.published === 3 && 'Bị từ chối'}
+                                                    {course.published === 4 && 'Sẵn sàng đăng'}
+                                                    {course.published === 5 && 'Đã xuất bản'}
+                                                    {course.published === 6 && 'Đã tạm gỡ'}
                                                 </span>
                                                 {course.editRequests?.[0]?.status === 'pending' && <span className="inst-request-badge pending">Chờ duyệt sửa</span>}
                                                 {course.editRequests?.[0]?.status === 'expired' && <span className="inst-request-badge expired">Đã hết hạn</span>}
@@ -679,101 +829,75 @@ const InstructorDashboard = () => {
                                             </>
                                         ) : (
                                             <>
-                                                {course.published === 1 ? (
-                                                    <>
-                                                        <button 
-                                                            className="inst-btn reject" 
-                                                            onClick={() => handleWithdrawApproval(course.id)} 
-                                                            title="Thu hồi phê duyệt"
-                                                        >
-                                                            <ShieldX size={16} />
+                                                {(course.published === 0 || course.published === 3) && (
+                                                    <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
+                                                        <Send size={16} />
+                                                    </button>
+                                                )}
+
+                                                {course.published === 1 && (
+                                                    <button className="inst-btn reject" onClick={() => handleWithdraw(course.id)} title="Thu hồi yêu cầu">
+                                                        <RefreshCw size={16} />
+                                                    </button>
+                                                )}
+                                                
+                                                {(course.published === 5) ? (
+                                                    (!course.editRequests?.some(r => r.status === 'pending')) && (
+                                                        <button className="inst-btn approve" onClick={() => handleRequestEdit(course)} title="Yêu cầu sửa">
+                                                            <ShieldAlert size={16} />
                                                         </button>
-                                                        <button 
-                                                            className="inst-btn view" 
-                                                            onClick={() => {
-                                                                setSelectedCourseId(course.id);
-                                                                fetchFullCourseData(course.id);
-                                                                setCourseView('curriculum');
-                                                            }} 
-                                                            title="Xem chi tiết"
-                                                        >
-                                                            <Eye size={16} />
-                                                        </button>
-                                                    </>
+                                                    )
                                                 ) : (
-                                                    <>
-                                                        {(course.published === 0 || course.published === 3) && (
-                                                            <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
-                                                                <Send size={16} />
-                                                            </button>
-                                                        )}
-                                                        
-                                                        {(Number(course.published) === 2 || Number(course.published) === 4) ? (
-                                                            (!course.editRequests?.some(r => r.status === 'pending')) && (
-                                                                <button className="inst-btn approve" onClick={() => handleRequestEdit(course)} title="Yêu cầu sửa">
-                                                                    <ShieldAlert size={16} />
-                                                                </button>
-                                                            )
-                                                        ) : (
-                                                            <button 
-                                                                className="inst-btn view" 
-                                                                onClick={() => {
-                                                                    setCourseView('editor');
-                                                                    setEditingCourseId(course.id);
-                                                                }} 
-                                                                title="Sửa"
-                                                                disabled={course.published === 1}
-                                                            >
-                                                                <Edit size={16} />
-                                                            </button>
-                                                        )}
+                                                    <button 
+                                                        className="inst-btn view" 
+                                                        onClick={() => {
+                                                            setCourseView('editor');
+                                                            setEditingCourseId(course.id);
+                                                        }} 
+                                                        title="Sửa"
+                                                        disabled={course.published === 1 || course.published === 2 || course.published === 4}
+                                                    >
+                                                        <Edit size={16} />
+                                                    </button>
+                                                )}
 
-                                                        {course.editRequests?.[0]?.status === 'expired' && (
-                                                            <button className="inst-btn approve" onClick={() => handleReactivate(course)} title="Mở lại bản nháp">
-                                                                <RefreshCw size={16} />
-                                                            </button>
-                                                        )}
+                                                <button 
+                                                    className="inst-btn view" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedCourseId(course.id);
+                                                        fetchFullCourseData(course.id);
+                                                        setCourseView('curriculum');
+                                                    }} 
+                                                    title="Xem chi tiết"
+                                                    disabled={course.editRequests?.[0]?.status === 'expired'}
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
 
-                                                        <button 
-                                                            className="inst-btn view" 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedCourseId(course.id);
-                                                                fetchFullCourseData(course.id);
-                                                                setCourseView('curriculum');
-                                                            }} 
-                                                            title="Xem chi tiết"
-                                                            disabled={course.editRequests?.[0]?.status === 'expired'}
-                                                        >
-                                                            <Eye size={16} />
-                                                        </button>
+                                                {[0, 3].includes(Number(course.published)) && (
+                                                    <button 
+                                                        className="inst-btn view" 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedCourseId(course.id);
+                                                            setCourseView('curriculum');
+                                                            setViewCourseData(null); // Đảm bảo vào editor
+                                                        }} 
+                                                        title="Soạn bài giảng"
+                                                    >
+                                                        <BookOpen size={16} />
+                                                    </button>
+                                                )}
 
-                                                        {![2, 4].includes(Number(course.published)) && (
-                                                            <button 
-                                                                className="inst-btn view" 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSelectedCourseId(course.id);
-                                                                    setCourseView('curriculum');
-                                                                    setViewCourseData(null); // Đảm bảo vào editor
-                                                                }} 
-                                                                title="Soạn bài giảng"
-                                                                disabled={course.editRequests?.[0]?.status === 'expired'}
-                                                            >
-                                                                <BookOpen size={16} />
-                                                            </button>
-                                                        )}
-
-                                                        {![1, 2, 4].includes(Number(course.published)) && !course.isVerified && (
-                                                            <button 
-                                                                className="inst-btn reject" 
-                                                                title="Xóa"
-                                                                onClick={() => handleDeleteCourse(course.id)}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        )}
-                                                    </>
+                                                {[0, 3, 6].includes(Number(course.published)) && (
+                                                    <button 
+                                                        className="inst-btn reject" 
+                                                        title="Xóa"
+                                                        onClick={() => handleDeleteCourse(course.id)}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 )}
                                             </>
                                         )}
@@ -1010,6 +1134,7 @@ const InstructorDashboard = () => {
             </div>
           </div>
         );
+
       default:
         return null;
     }
@@ -1161,6 +1286,18 @@ const InstructorDashboard = () => {
             </div>
         </div>
       )}
+        <ConfirmDialog 
+          {...confirmDialog} 
+          onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
+        />
+
+        <RevenuePolicyDetail 
+          isOpen={showRevenuePolicyDetail}
+          onClose={() => setShowRevenuePolicyDetail(false)}
+          policy={selectedRevenuePolicy}
+          userRole="instructor"
+          onAction={handleUpdatePolicyStatus}
+        />
     </div>
   );
 };

@@ -196,7 +196,50 @@ router.post('/', protect, instructor, async (req, res) => {
       title, description, price, category, thumbnail, previewVideoUrl, level, duration, isPro,
       instructorId: req.user.id,
     });
-    res.status(201).json(course);
+    res.status(200).json(course);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── Instructor: Submit course for review ──
+router.post('/:id/submit', protect, instructor, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
+    
+    // Only DRAFT (0) or REJECTED (3) can be submitted
+    if (![0, 3].includes(course.published)) {
+      return res.status(400).json({ message: 'Only Draft or Rejected courses can be submitted' });
+    }
+
+    course.published = 1; // PENDING_REVIEW
+    await course.save();
+
+    await notifyAdmins('Yêu cầu phê duyệt khóa học', `Giảng viên ${req.user.name} đã gửi khóa học "${course.title}" để phê duyệt.`);
+
+    res.json({ message: 'Submitted for review', course });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── Instructor: Withdraw course from review ──
+router.post('/:id/withdraw', protect, instructor, async (req, res) => {
+  try {
+    const course = await Course.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
+    
+    if (course.published !== 1) {
+      return res.status(400).json({ message: 'Only Pending courses can be withdrawn' });
+    }
+
+    course.published = 0; // DRAFT
+    await course.save();
+
+    res.json({ message: 'Withdrawn to Draft', course });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -782,8 +825,8 @@ router.delete('/:id', protect, instructor, async (req, res) => {
       return res.status(403).json({ message: 'Bạn không có quyền thực hiện thao tác này' });
     }
 
-    // Restriction: Cannot delete verified courses
-    if (course.isVerified) {
+    // Restriction: Cannot delete published courses
+    if (Number(course.published) === 2 || Number(course.published) === 4) {
       return res.status(400).json({ message: 'Không thể xóa khóa học đã được phê duyệt' });
     }
 

@@ -21,6 +21,7 @@ const ArticleLike = require('./ArticleLike');
 const Conversation = require('./Conversation');
 const Message = require('./Message');
 const CourseEditRequest = require('./CourseEditRequest');
+const RevenuePolicy = require('./RevenuePolicy');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -122,6 +123,12 @@ CourseEditRequest.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 User.hasMany(CourseEditRequest, { foreignKey: 'instructorId', as: 'editRequests' });
 CourseEditRequest.belongsTo(User, { foreignKey: 'instructorId', as: 'instructor' });
 
+// Revenue Policy
+Course.hasMany(RevenuePolicy, { foreignKey: 'courseId', as: 'revenuePolicies' });
+RevenuePolicy.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+RevenuePolicy.belongsTo(User, { foreignKey: 'createdByAdminId', as: 'admin' });
+RevenuePolicy.belongsTo(User, { foreignKey: 'confirmedByInstructorId', as: 'instructor' });
+
 module.exports = {
   User,
   Course,
@@ -145,5 +152,6 @@ module.exports = {
   ArticleLike,
   Conversation,
   Message,
-  CourseEditRequest
+  CourseEditRequest,
+  RevenuePolicy
 };
