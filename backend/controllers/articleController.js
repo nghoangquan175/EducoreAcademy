@@ -409,7 +409,7 @@ exports.submitArticleForReview = async (req, res) => {
       'Yêu cầu duyệt bài viết mới',
       `Giảng viên ${req.user.name} vừa gửi bài viết: "${article.title}"`,
       article.id,
-      'article_submission'
+      'article_submission:1'
     );
 
     res.json({ success: true, data: article });
@@ -479,7 +479,7 @@ exports.adminUpdateArticleStatus = async (req, res) => {
         title: notifyTitle,
         message: notifyMessage,
         relatedId: article.id.toString(),
-        type: 'article_status',
+        type: `article_status:${status}`,
         isRead: false
       });
     }

@@ -29,6 +29,7 @@ const RevenuePolicyDetail = ({
       case 'waiting_confirm': return <span className="status-badge pending">Chờ xác nhận</span>;
       case 'accepted': return <span className="status-badge active">Đã chấp nhận</span>;
       case 'rejected': return <span className="status-badge rejected">Đã từ chối</span>;
+      case 'waiting_delete': return <span className="status-badge pending pulse">Chờ xác nhận xóa</span>;
       default: return null;
     }
   };
@@ -149,6 +150,23 @@ const RevenuePolicyDetail = ({
                 onClick={() => onAction(policy.id, 'accepted')}
               >
                 <CheckCircle size={18} /> Chấp nhận
+              </button>
+            </>
+          )}
+
+          {userRole === 'instructor' && policy.status === 'waiting_delete' && (
+            <>
+              <button 
+                className="btn-danger" 
+                onClick={() => onAction(policy.id, 'deleted')}
+              >
+                <CheckCircle size={18} /> Xác nhận xóa
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => onAction(policy.id, 'accepted')}
+              >
+                <XCircle size={18} /> Từ chối xóa
               </button>
             </>
           )}

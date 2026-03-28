@@ -133,9 +133,8 @@ const AdminDashboard = () => {
   const [revenueData, setRevenueData] = useState({
     courseId: '',
     type: 'PERCENT',
-    instructorPercent: 70,
+    instructorPercent: 0,
     fixedAmount: 0,
-    upfrontAmount: 0
   });
 
   const prevTab = useRef(activeTab);
@@ -360,10 +359,10 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       if (editingRevenuePolicyId) {
-        await axios.put(`http://localhost:5000/api/revenue-policies/${editingRevenuePolicyId}`, revenueData, {
+        await axios.put(`http://localhost:5000/api/revenue-policies/${editingRevenuePolicyId}`, { ...revenueData, sendImmediately }, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        toast.success('Đã cập nhật chính sách!');
+        toast.success(sendImmediately ? 'Đã cập nhật và gửi chính sách cho giảng viên!' : 'Đã cập nhật chính sách!');
       } else {
         await axios.post('http://localhost:5000/api/revenue-policies', { ...revenueData, sendImmediately }, {
           headers: { Authorization: `Bearer ${token}` }
@@ -375,9 +374,8 @@ const AdminDashboard = () => {
       setRevenueData({
         courseId: '',
         type: 'PERCENT',
-        instructorPercent: 70,
+        instructorPercent: 0,
         fixedAmount: 0,
-        upfrontAmount: 0
       });
       fetchData();
     } catch (error) {
@@ -394,7 +392,6 @@ const AdminDashboard = () => {
           type: policy.type,
           instructorPercent: policy.instructorPercent || 0,
           fixedAmount: policy.fixedAmount || 0,
-          upfrontAmount: policy.upfrontAmount || 0
         });
         setEditingRevenuePolicyId(id);
         setShowRevenuePolicyDetail(false);
@@ -411,12 +408,14 @@ const AdminDashboard = () => {
         action === 'accept' ? 'Chấp nhận chính sách' : 
         action === 'reject' ? 'Từ chối chính sách' : 
         action === 'revoke' ? 'Thu hồi chính sách' :
+        action === 'request_delete' ? 'Yêu cầu xóa chính sách' :
         'Xóa chính sách',
       message: 
         action === 'send' ? 'Bạn có chắc chắn muốn gửi chính sách này cho giảng viên để xác nhận?' :
         action === 'accept' ? 'Bạn có chắc chắn muốn chấp nhận chính sách này? Nó sẽ có hiệu lực ngay lập tức.' :
         action === 'reject' ? 'Bạn có chắc chắn muốn từ chối chính sách này?' :
         action === 'revoke' ? 'Bạn có muốn thu hồi chính sách này về bản nháp? Giảng viên sẽ không thấy nó nữa.' :
+        action === 'request_delete' ? 'Gửi yêu cầu xóa chính sách này tới giảng viên? Chính sách vẫn có hiệu lực cho đến khi giảng viên xác nhận xóa.' :
         'Bạn có chắc chắn muốn xóa chính sách này? Hành động này không thể hoàn tác.',
       type: action === 'reject' || action === 'delete' || action === 'revoke' ? 'danger' : 'info',
       onConfirm: async () => {
@@ -427,6 +426,7 @@ const AdminDashboard = () => {
           if (action === 'accept') status = 'accepted';
           if (action === 'reject') status = 'rejected';
           if (action === 'revoke') status = 'draft';
+          if (action === 'request_delete') status = 'waiting_delete';
   
           if (action === 'delete') {
             await axios.delete(`http://localhost:5000/api/revenue-policies/${id}`, {
@@ -451,6 +451,20 @@ const AdminDashboard = () => {
         }
       }
     });
+  };
+
+  const fetchRevenuePolicyDetail = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/revenue-policies/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedRevenuePolicy(data);
+      setShowRevenuePolicyDetail(true);
+      setActiveTab('revenue-policy');
+    } catch (error) {
+      toast.error('Không thể tải chi tiết chính sách');
+    }
   };
 
   const fetchDiffData = async (courseId) => {
@@ -509,6 +523,9 @@ const AdminDashboard = () => {
           );
           toast.success('Đã cập nhật trạng thái thành công!');
           fetchData();
+          if (activeTab === 'course-review' && Number(courseId) === Number(reviewCourseId)) {
+            fetchReviewCourse(courseId);
+          }
         } catch (error) {
           console.error('Lỗi khi cập nhật trạng thái:', error);
           toast.error('Có lỗi xảy ra khi thực hiện thao tác.');
@@ -798,15 +815,35 @@ const AdminDashboard = () => {
     }
     
     if (notif.relatedId) {
-       if (notif.type === 'course_submission') {
+       if (notif.type?.startsWith('course_submission')) {
           handleReviewCourse(notif.relatedId);
-       } else if (notif.type === 'edit_request') {
+       } else if (notif.type?.startsWith('edit_request')) {
           setActiveTab('edit-requests');
-       } else if (notif.type === 'article_submission') {
+       } else if (notif.type?.startsWith('article_submission')) {
           setActiveTab('review-articles');
           setArticleSubTab('review-articles');
+       } else if (notif.type?.startsWith('revenue_policy_update')) {
+          fetchRevenuePolicyDetail(notif.relatedId);
        }
     }
+  };
+
+  const getNotifStyle = (notif) => {
+    const typeParts = notif.type?.split(':');
+    if (!typeParts || typeParts.length < 2) return {};
+
+    const status = parseInt(typeParts[1]);
+    const colors = {
+      0: 'rgba(107, 114, 128, 0.15)', // DRAFT - Gray
+      1: 'rgba(245, 158, 11, 0.15)',  // PENDING_REVIEW - Amber
+      2: 'rgba(59, 130, 246, 0.15)',  // CONTENT_APPROVED - Blue
+      3: 'rgba(239, 68, 68, 0.15)',   // REJECTED - Red
+      4: 'rgba(139, 92, 246, 0.15)',  // READY_TO_PUBLISH - Violet
+      5: 'rgba(16, 185, 129, 0.15)',  // PUBLISHED - Emerald
+      6: 'rgba(249, 115, 22, 0.15)',  // UNPUBLISHED - Orange
+    };
+
+    return { backgroundColor: colors[status] || 'transparent' };
   };
 
   const handleArticleStatusUpdate = (id, status) => {
@@ -1882,9 +1919,8 @@ const AdminDashboard = () => {
                   setRevenueData({
                     courseId: '',
                     type: 'PERCENT',
-                    instructorPercent: 70,
+                    instructorPercent: 0,
                     fixedAmount: 0,
-                    upfrontAmount: 0
                   });
                   setEditingRevenuePolicyId(null);
                   fetchBannerLinkData(); // Reuse this to get courses
@@ -1944,6 +1980,7 @@ const AdminDashboard = () => {
                           {policy.status === 'waiting_confirm' && 'Chờ xác nhận'}
                           {policy.status === 'accepted' && 'Đã chấp nhận'}
                           {policy.status === 'rejected' && 'Đã từ chối'}
+                          {policy.status === 'waiting_delete' && 'Chờ xác nhận xóa'}
                         </span>
                       </td>
                       <td>{new Date(policy.createdAt).toLocaleDateString('vi-VN')}</td>
@@ -1960,11 +1997,11 @@ const AdminDashboard = () => {
                             <Eye size={16} />
                           </button>
                           
-                          {policy.status === 'draft' && (
+                          {(policy.status === 'draft' || policy.status === 'rejected') && (
                             <>
                               <button 
                                 className="admin-btn edit" 
-                                title="Sửa bản nháp"
+                                title="Sửa chính sách"
                                 onClick={() => handleRevenuePolicyAction(policy.id, 'edit')}
                               >
                                 <Pencil size={16} />
@@ -1987,6 +2024,26 @@ const AdminDashboard = () => {
                             >
                               <ArrowLeft size={16} />
                             </button>
+                          )}
+
+                          {policy.status === 'accepted' && (
+                            <button 
+                              className="admin-btn reject" 
+                              title="Yêu cầu xóa"
+                              onClick={() => handleRevenuePolicyAction(policy.id, 'request_delete')}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+
+                          {policy.status === 'waiting_delete' && (
+                             <button 
+                                className="admin-btn approve" 
+                                title="Hủy yêu cầu xóa"
+                                onClick={() => handleRevenuePolicyAction(policy.id, 'accept')}
+                             >
+                                <ArrowLeft size={16} />
+                             </button>
                           )}
                         </div>
                       </td>
@@ -2074,7 +2131,7 @@ const AdminDashboard = () => {
                         key={notif.id} 
                         className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}
                         onClick={() => handleNotificationClick(notif)}
-                        style={{ cursor: 'pointer' }}
+                        style={{ ...getNotifStyle(notif), cursor: 'pointer' }}
                     >
                         <div className="notif-content">
                             <div className="notif-header">
@@ -2495,7 +2552,7 @@ const AdminDashboard = () => {
                       {bannerLinkCourses
                         .filter(c => Number(c.published) === 2)
                         .map(course => (
-                        <option key={course.id} value={course.id}>{course.title} (ID: {course.id})</option>
+                        <option key={course.id} value={course.id}>{course.title}</option>
                       ))}
                     </select>
                   </div>
@@ -2515,7 +2572,7 @@ const AdminDashboard = () => {
 
                   {(revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') && (
                     <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Phần trăm Giảng viên (%)</label>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Phần trăm doanh thu (%)</label>
                       <input 
                         type="number" 
                         required 
@@ -2525,14 +2582,14 @@ const AdminDashboard = () => {
                         value={revenueData.instructorPercent}
                         onChange={(e) => setRevenueData({ ...revenueData, instructorPercent: e.target.value })}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Nhập phần trăm (vd: 70)"
+                        placeholder="%"
                       />
                     </div>
                   )}
 
                   {(revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') && (
                     <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Số tiền cố định cho giảng viên (đ)</label>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Số tiền cố định (VNĐ)</label>
                       <input 
                         type="number" 
                         required 
@@ -2541,22 +2598,7 @@ const AdminDashboard = () => {
                         value={revenueData.fixedAmount}
                         onChange={(e) => setRevenueData({ ...revenueData, fixedAmount: e.target.value })}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Nhập số tiền (vd: 50000)"
-                      />
-                    </div>
-                  )}
-
-                  {revenueData.type === 'HYBRID' && (
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Số tiền hỗ trợ trả trước (nếu có)</label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        className="modal-input" 
-                        value={revenueData.upfrontAmount}
-                        onChange={(e) => setRevenueData({ ...revenueData, upfrontAmount: e.target.value })}
-                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Nhập số tiền trả trước"
+                        placeholder="Nhập số tiền (vd: 5000000)"
                       />
                     </div>
                   )}

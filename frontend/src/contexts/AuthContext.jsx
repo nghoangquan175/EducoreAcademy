@@ -18,6 +18,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // Update document title based on user role
+  useEffect(() => {
+    if (!user || user.role === 'student') {
+      document.title = "EDUCORE ACADEMY";
+    } else if (user.role === 'instructor') {
+      document.title = "EDUCORE INSTRUCTOR";
+    } else if (user.role === 'admin') {
+      document.title = "EDUCORE ADMIN";
+    }
+  }, [user]);
+
   const login = (userData) => {
     const { token: tkn, ...rest } = userData;
     setUser(rest);

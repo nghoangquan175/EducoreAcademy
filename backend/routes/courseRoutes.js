@@ -217,7 +217,7 @@ router.post('/:id/submit', protect, instructor, async (req, res) => {
     course.published = 1; // PENDING_REVIEW
     await course.save();
 
-    await notifyAdmins('Yêu cầu phê duyệt khóa học', `Giảng viên ${req.user.name} đã gửi khóa học "${course.title}" để phê duyệt.`);
+    await notifyAdmins('Yêu cầu phê duyệt khóa học', `Giảng viên ${req.user.name} đã gửi khóa học "${course.title}" để phê duyệt.`, course.id, 'course_submission:1');
 
     res.json({ message: 'Submitted for review', course });
   } catch (error) {
@@ -294,7 +294,9 @@ router.patch('/:id', protect, instructor, async (req, res) => {
     if (course.published === 2) {
       await notifyAdmins(
         'Cập nhật khóa học đã xuất bản',
-        `Giảng viên ${req.user.name} vừa cập nhật nội dung cho khóa học: "${course.title}" (ID: ${course.id})`
+        `Giảng viên ${req.user.name} vừa cập nhật nội dung cho khóa học: "${course.title}"`,
+        course.id,
+        'course_content_update:5'
       );
     }
 
@@ -485,7 +487,9 @@ router.post('/:id/chapters', protect, instructor, async (req, res) => {
     if (course.published === 2) {
       await notifyAdmins(
         'Thêm chương mới',
-        `Giảng viên ${req.user.name} vừa thêm chương "${title}" vào khóa học: "${course.title}"`
+        `Giảng viên ${req.user.name} vừa thêm chương "${title}" vào khóa học: "${course.title}"`,
+        course.id,
+        'chapter_add:5'
       );
     }
 
@@ -514,7 +518,9 @@ router.patch('/chapters/:id', protect, instructor, async (req, res) => {
     if (course.published === 2) {
       await notifyAdmins(
         'Cập nhật nội dung chương',
-        `Giảng viên ${req.user.name} vừa cập nhật chương "${chapter.title}" trong khóa học: "${course.title}"`
+        `Giảng viên ${req.user.name} vừa cập nhật chương "${chapter.title}" trong khóa học: "${course.title}"`,
+        course.id,
+        'chapter_update:5'
       );
     }
 
@@ -548,7 +554,9 @@ router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res
     if (course.published === 2) {
       await notifyAdmins(
         'Thêm bài học mới',
-        `Giảng viên ${req.user.name} vừa thêm bài học "${title}" vào khóa học: "${course.title}"`
+        `Giảng viên ${req.user.name} vừa thêm bài học "${title}" vào khóa học: "${course.title}"`,
+        course.id,
+        'lesson_add:5'
       );
     }
 
@@ -576,7 +584,9 @@ router.delete('/chapters/:id', protect, instructor, async (req, res) => {
     if (course.published === 2) {
       await notifyAdmins(
         'Xóa chương học',
-        `Giảng viên ${req.user.name} vừa xóa một chương trong khóa học: "${course.title}"`
+        `Giảng viên ${req.user.name} vừa xóa một chương trong khóa học: "${course.title}"`,
+        course.id,
+        'chapter_delete:5'
       );
     }
 
@@ -613,7 +623,9 @@ router.patch('/lessons/:id', protect, instructor, async (req, res) => {
     if (course.published === 2) {
       await notifyAdmins(
         'Cập nhật nội dung bài học',
-        `Giảng viên ${req.user.name} vừa cập nhật bài học "${lesson.title}" trong khóa học: "${course.title}"`
+        `Giảng viên ${req.user.name} vừa cập nhật bài học "${lesson.title}" trong khóa học: "${course.title}"`,
+        course.id,
+        'lesson_update:5'
       );
     }
 
@@ -644,7 +656,7 @@ router.delete('/lessons/:id', protect, instructor, async (req, res) => {
         'Xóa bài học',
         `Giảng viên ${req.user.name} vừa xóa một bài học trong khóa học: "${course.title}"`,
         course.id,
-        'course_content_update'
+        'lesson_delete:5'
       );
     }
 
@@ -716,9 +728,9 @@ router.post('/:id/edit-request', protect, instructor, async (req, res) => {
 
     await notifyAdmins(
       'Yêu cầu chỉnh sửa khóa học đã xuất bản',
-      `Giảng viên ${req.user.name} muốn chỉnh sửa khóa học: "${course.title}" (ID: ${course.id})`,
+      `Giảng viên ${req.user.name} muốn chỉnh sửa khóa học: "${course.title}"`,
       course.id,
-      'course_edit_request'
+      'course_edit_request:2'
     );
 
     res.status(201).json(editRequest);
@@ -730,7 +742,9 @@ router.post('/:id/edit-request', protect, instructor, async (req, res) => {
 // ── POST /api/courses/edit-requests/:id/reactivate — Instructor: request to reactivate an expired draft ──
 router.post('/edit-requests/:id/reactivate', protect, instructor, async (req, res) => {
   try {
-    const editRequest = await CourseEditRequest.findByPk(req.params.id);
+    const editRequest = await CourseEditRequest.findByPk(req.params.id, {
+      include: [{ model: Course, as: 'course', attributes: ['title'] }]
+    });
 
     if (!editRequest) return res.status(404).json({ message: 'Yêu cầu không tồn tại' });
     if (editRequest.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
@@ -742,9 +756,9 @@ router.post('/edit-requests/:id/reactivate', protect, instructor, async (req, re
 
     await notifyAdmins(
       'Yêu cầu gia hạn chỉnh sửa khóa học',
-      `Giảng viên ${req.user.name} yêu cầu mở lại quyền chỉnh sửa cho khóa học ID: ${editRequest.courseId}`,
+      `Giảng viên ${req.user.name} yêu cầu mở lại quyền chỉnh sửa cho khóa học: "${editRequest.course?.title || editRequest.courseId}"`,
       editRequest.courseId,
-      'course_reactivate_request'
+      'course_reactivate_request:1'
     );
 
     res.json({ message: 'Đã gửi yêu cầu gia hạn nội dung' });
@@ -778,9 +792,9 @@ router.patch('/:id/submit', protect, instructor, async (req, res) => {
     // Notify admins of new submission
     await notifyAdmins(
       'Yêu cầu phê duyệt khóa học mới',
-      `Giảng viên ${req.user.name} vừa gửi yêu cầu phê duyệt cho khóa học: "${course.title}" (ID: ${course.id})`,
+      `Giảng viên ${req.user.name} vừa gửi yêu cầu phê duyệt cho khóa học: "${course.title}"`,
       course.id,
-      'course_submission'
+      'course_submission:1'
     );
 
     res.status(200).json({ message: 'Gửi yêu cầu phê duyệt thành công', published: course.published });
@@ -805,6 +819,13 @@ router.patch('/:id/withdraw', protect, instructor, async (req, res) => {
 
     course.published = 0; // Back to draft
     await course.save();
+
+    await notifyAdmins(
+      'Yêu cầu phê duyệt đã được thu hồi',
+      `Giảng viên ${req.user.name} đã thu hồi yêu cầu phê duyệt cho khóa học: "${course.title}"`,
+      course.id,
+      'course_withdraw:0'
+    );
 
     res.status(200).json({ message: 'Đã thu hồi yêu cầu phê duyệt', published: course.published });
   } catch (error) {

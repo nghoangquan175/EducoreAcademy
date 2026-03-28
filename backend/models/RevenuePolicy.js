@@ -32,7 +32,7 @@ const RevenuePolicy = sequelize.define('RevenuePolicy', {
     allowNull: true,
   },
   status: {
-    type: DataTypes.ENUM('draft', 'waiting_confirm', 'accepted', 'rejected'),
+    type: DataTypes.ENUM('draft', 'waiting_confirm', 'accepted', 'rejected', 'waiting_delete'),
     defaultValue: 'draft',
   },
   createdByAdminId: {

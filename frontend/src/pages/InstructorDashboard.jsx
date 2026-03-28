@@ -165,21 +165,45 @@ const InstructorDashboard = () => {
     }
   };
 
+  const fetchRevenuePolicyDetail = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/revenue-policies/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedRevenuePolicy(data);
+      setShowRevenuePolicyDetail(true);
+      setActiveTab('courses');
+      setCourseSubTab('revenue-policy');
+      setIsCoursesMenuOpen(true);
+    } catch (error) {
+      toast.error('Không thể tải chi tiết chính sách');
+    }
+  };
+
   const handleUpdatePolicyStatus = async (id, status) => {
     const isAccepted = status === 'accepted';
+    const isDeleted = status === 'deleted';
+    const isReversed = status === 'accepted' && selectedRevenuePolicy?.status === 'waiting_delete';
+
     setConfirmDialog({
       isOpen: true,
-      title: isAccepted ? 'Chấp nhận chính sách' : 'Từ chối chính sách',
-      message: `Bạn có chắc chắn muốn ${isAccepted ? 'chấp nhận' : 'từ chối'} chính sách doanh thu này?`,
-      type: isAccepted ? 'info' : 'danger',
+      title: isDeleted ? 'Xác nhận xóa chính sách' : isReversed ? 'Từ chối xóa chính sách' : isAccepted ? 'Chấp nhận chính sách' : 'Từ chối chính sách',
+      message: isDeleted 
+        ? 'Bạn có chắc chắn muốn xóa chính sách này? Khóa học liên quan sẽ quay về trạng thái "Chờ xử lý" cho đến khi có chính sách mới.' 
+        : isReversed
+        ? 'Bạn có chắc chắn muốn từ chối yêu cầu xóa chính sách này?'
+        : `Bạn có chắc chắn muốn ${isAccepted ? 'chấp nhận' : 'từ chối'} chính sách doanh thu này?`,
+      type: (isAccepted && !isReversed) ? 'info' : 'danger',
       onConfirm: async () => {
         try {
           await axios.patch(`http://localhost:5000/api/revenue-policies/${id}/status`, { status }, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           });
-          toast.success(`Đã ${isAccepted ? 'chấp nhận' : 'từ chối'} chính sách`);
+          toast.success(isDeleted ? 'Đã xóa chính sách thành công' : 'Đã cập nhật trạng thái chính sách');
           setShowRevenuePolicyDetail(false);
           fetchRevenuePolicies();
+          fetchNotifications();
         } catch (error) {
           toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
         }
@@ -222,11 +246,13 @@ const InstructorDashboard = () => {
       await markAsRead(notif.id);
     }
     
-    if (notif.relatedId && notif.type === 'course_status') {
-       setSelectedCourseId(Number(notif.relatedId));
-       fetchFullCourseData(Number(notif.relatedId));
-       setCourseView('curriculum');
-       setActiveTab('courses');
+    if (notif.relatedId && notif.type?.startsWith('course_status')) {
+        setSelectedCourseId(Number(notif.relatedId));
+        fetchFullCourseData(Number(notif.relatedId));
+        setCourseView('curriculum');
+        setActiveTab('courses');
+    } else if (notif.type?.startsWith('revenue_policy')) {
+        fetchRevenuePolicyDetail(notif.relatedId);
     }
   };
 
@@ -239,6 +265,31 @@ const InstructorDashboard = () => {
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
+  };
+
+  const getNotifStyle = (notif) => {
+    const typeParts = notif.type?.split(':');
+    if (!typeParts || typeParts.length < 2) return {};
+
+    const status = parseInt(typeParts[1]);
+    const categories = notif.type?.split(':')[0];
+    
+    // Custom colors for specific events
+    if (categories === 'revenue_policy_delete_request') return { backgroundColor: 'rgba(245, 158, 11, 0.15)' }; // Amber
+    if (categories === 'revenue_policy_deleted') return { backgroundColor: 'rgba(16, 185, 129, 0.15)' }; // Emerald/Green
+    if (categories === 'revenue_policy_revoked') return { backgroundColor: 'rgba(239, 68, 68, 0.15)' }; // Red
+
+    const colors = {
+      0: 'rgba(107, 114, 128, 0.15)', // DRAFT - Gray
+      1: 'rgba(245, 158, 11, 0.15)',  // PENDING_REVIEW - Amber
+      2: 'rgba(59, 130, 246, 0.15)',  // CONTENT_APPROVED - Blue
+      3: 'rgba(239, 68, 68, 0.15)',   // REJECTED - Red
+      4: 'rgba(139, 92, 246, 0.15)',  // READY_TO_PUBLISH - Violet
+      5: 'rgba(16, 185, 129, 0.15)',  // PUBLISHED - Emerald
+      6: 'rgba(249, 115, 22, 0.15)',  // UNPUBLISHED - Orange
+    };
+
+    return { backgroundColor: colors[status] || 'transparent' };
   };
 
   useEffect(() => {
@@ -340,10 +391,10 @@ const InstructorDashboard = () => {
           await axios.delete(`http://localhost:5000/api/courses/${courseId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          alert('Đã xóa khóa học thành công!');
+          toast.success('Đã xóa khóa học thành công!');
           fetchMyCourses();
         } catch (error) {
-          alert(error.response?.data?.message || 'Có lỗi xảy ra khi xóa khóa học');
+          toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa khóa học');
         }
       }
     });
@@ -361,10 +412,10 @@ const InstructorDashboard = () => {
           await axios.patch(`http://localhost:5000/api/courses/${courseId}/submit`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          alert('Đã gửi yêu cầu phê duyệt thành công!');
+          toast.success('Đã gửi yêu cầu phê duyệt thành công!');
           fetchMyCourses();
         } catch (error) {
-          alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu phê duyệt');
+          toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu phê duyệt');
         }
       }
     });
@@ -381,12 +432,12 @@ const InstructorDashboard = () => {
       await axios.post(`http://localhost:5000/api/courses/${selectedCourseForRequest.id}/edit-request`, editRequestData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Đã gửi yêu cầu chỉnh sửa thành công! Vui lòng chờ Admin phê duyệt.');
+      toast.success('Đã gửi yêu cầu chỉnh sửa thành công! Vui lòng chờ Admin phê duyệt.');
       setIsEditRequestModalOpen(false);
       setEditRequestData({ reason: '', contentSummary: '' });
       fetchMyCourses();
     } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu');
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu');
     }
   };
 
@@ -398,10 +449,10 @@ const InstructorDashboard = () => {
       await axios.post(`http://localhost:5000/api/courses/edit-requests/${editReq.id}/reactivate`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Đã gửi yêu cầu mở lại nội dung. Vui lòng chờ Admin phê duyệt.');
+      toast.success('Đã gửi yêu cầu mở lại nội dung. Vui lòng chờ Admin phê duyệt.');
       fetchMyCourses();
     } catch (error) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu');
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu');
     }
   };
 
@@ -414,10 +465,10 @@ const InstructorDashboard = () => {
       onConfirm: async () => {
         try {
           await deleteArticleAPI(id);
-          alert('Đã xóa bài viết thành công');
+          toast.success('Đã xóa bài viết thành công');
           fetchMyArticles();
         } catch (error) {
-          alert(error.response?.data?.message || 'Lỗi khi xóa bài viết');
+          toast.error(error.response?.data?.message || 'Lỗi khi xóa bài viết');
         }
       }
     });
@@ -432,10 +483,10 @@ const InstructorDashboard = () => {
       onConfirm: async () => {
         try {
           await submitArticleForReviewAPI(id);
-          alert('Đã gửi bài viết thành công');
+          toast.success('Đã gửi bài viết thành công');
           fetchMyArticles();
         } catch (error) {
-          alert(error.response?.data?.message || 'Lỗi khi gửi bài viết');
+          toast.error(error.response?.data?.message || 'Lỗi khi gửi bài viết');
         }
       }
     });
@@ -468,11 +519,11 @@ const InstructorDashboard = () => {
       onConfirm: async () => {
         try {
           await restoreCourseAPI(id);
-          alert('Đã khôi phục khóa học');
+          toast.success('Đã khôi phục khóa học');
           fetchTrashCourses();
           fetchMyCourses();
         } catch (error) {
-          alert('Lỗi khi khôi phục khóa học');
+          toast.error('Lỗi khi khôi phục khóa học');
         }
       }
     });
@@ -487,10 +538,10 @@ const InstructorDashboard = () => {
       onConfirm: async () => {
         try {
           await forceDeleteCourseAPI(id);
-          alert('Đã xóa vĩnh viễn khóa học');
+          toast.success('Đã xóa vĩnh viễn khóa học');
           fetchTrashCourses();
         } catch (error) {
-          alert('Lỗi khi xóa vĩnh viễn');
+          toast.error('Lỗi khi xóa vĩnh viễn');
         }
       }
     });
@@ -505,11 +556,11 @@ const InstructorDashboard = () => {
       onConfirm: async () => {
         try {
           await restoreArticleAPI(id);
-          alert('Đã khôi phục bài viết');
+          toast.success('Đã khôi phục bài viết');
           fetchTrashArticles();
           fetchMyArticles();
         } catch (error) {
-          alert('Lỗi khi khôi phục bài viết');
+          toast.error('Lỗi khi khôi phục bài viết');
         }
       }
     });
@@ -524,10 +575,10 @@ const InstructorDashboard = () => {
       onConfirm: async () => {
         try {
           await forceDeleteArticleAPI(id);
-          alert('Đã xóa vĩnh viễn bài viết');
+          toast.success('Đã xóa vĩnh viễn bài viết');
           fetchTrashArticles();
         } catch (error) {
-          alert('Lỗi khi xóa vĩnh viễn');
+          toast.error('Lỗi khi xóa vĩnh viễn');
         }
       }
     });
@@ -591,10 +642,11 @@ const InstructorDashboard = () => {
                     </div>
                   </td>
                   <td>
-                    <span className={`inst-status-badge ${policy.status === 'accepted' ? 'published' : policy.status === 'rejected' ? 'rejected' : 'pending'}`}>
+                    <span className={`inst-status-badge ${policy.status === 'accepted' ? 'published' : policy.status === 'rejected' ? 'rejected' : policy.status === 'waiting_delete' ? 'pending' : 'pending'}`}>
                       {policy.status === 'waiting_confirm' && 'Chờ bạn xác nhận'}
                       {policy.status === 'accepted' && 'Đã chấp nhận'}
                       {policy.status === 'rejected' && 'Đã từ chối'}
+                      {policy.status === 'waiting_delete' && 'Yêu cầu xóa từ Admin'}
                     </span>
                   </td>
                   <td>
@@ -616,6 +668,30 @@ const InstructorDashboard = () => {
                             <Check size={16} />
                           </button>
                           <button className="inst-btn reject" onClick={() => handleUpdatePolicyStatus(policy.id, 'rejected')} title="Từ chối">
+                            <X size={16} />
+                          </button>
+                        </>
+                      )}
+                      {policy.status === 'waiting_delete' && (
+                        <>
+                          <button 
+                            className="inst-btn reject" 
+                            onClick={() => {
+                                setSelectedRevenuePolicy(policy);
+                                handleUpdatePolicyStatus(policy.id, 'deleted');
+                            }} 
+                            title="Xác nhận xóa"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <button 
+                            className="inst-btn approve" 
+                            onClick={() => {
+                                setSelectedRevenuePolicy(policy);
+                                handleUpdatePolicyStatus(policy.id, 'accepted');
+                            }} 
+                            title="Từ chối xóa"
+                          >
                             <X size={16} />
                           </button>
                         </>
@@ -908,7 +984,7 @@ const InstructorDashboard = () => {
                                                 )}
 
                                                 {Number(course.published) === 1 && (
-                                                    <button className="inst-btn reject" onClick={() => handleWithdraw(course.id)} title="Thu hồi yêu cầu">
+                                                    <button className="inst-btn reject" onClick={() => handleWithdrawApproval(course.id)} title="Thu hồi yêu cầu">
                                                         <RefreshCw size={16} />
                                                     </button>
                                                 )}
@@ -1182,6 +1258,7 @@ const InstructorDashboard = () => {
                     key={notif.id} 
                     className={`inst-notification-card ${notif.isRead ? 'read' : 'unread'}`}
                     onClick={() => handleNotificationClick(notif)}
+                    style={getNotifStyle(notif)}
                   >
                     <div className="notif-icon-wrapper">
                       <Bell size={20} />

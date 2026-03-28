@@ -150,7 +150,7 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
         title: `Cập nhật trạng thái khóa học`,
         message: `Khóa học "${course.title}" ${actionLabels[status]}`,
         relatedId: course.id.toString(),
-        type: 'course_status'
+        type: `course_status:${status}`
       });
     } catch (notifErr) {
       console.error('Failed to notify instructor:', notifErr);
@@ -354,7 +354,7 @@ router.patch('/courses/edit-requests/:id/status', protect, admin, async (req, re
         title: 'Yêu cầu chỉnh sửa được duyệt',
         message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã được duyệt. Bạn có thể bắt đầu chỉnh sửa bản nháp mới (v${newVersion.version}).`,
         relatedId: newVersion.id.toString(),
-        type: 'course_status'
+        type: 'course_status:0'
       });
 
       res.json({ message: 'Đã duyệt yêu cầu và tạo bản sao mới', newCourseId: newVersion.id });
@@ -365,7 +365,7 @@ router.patch('/courses/edit-requests/:id/status', protect, admin, async (req, re
         title: 'Yêu cầu chỉnh sửa bị từ chối',
         message: `Yêu cầu chỉnh sửa khóa học "${editRequest.course.title}" đã bị từ chối. Lý do: ${message || 'Không có'}`,
         relatedId: editRequest.courseId.toString(),
-        type: 'course_status'
+        type: 'course_status:3'
       });
       res.json({ message: 'Đã từ chối yêu cầu chỉnh sửa' });
     }
