@@ -18,7 +18,8 @@ import {
   Users,
   Eye,
   Bell,
-  ShieldX
+  ShieldX,
+  Check
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -75,6 +76,12 @@ const InstructorDashboard = () => {
   const [selectedCourseForRequest, setSelectedCourseForRequest] = useState(null);
   const [isCoursesMenuOpen, setIsCoursesMenuOpen] = useState(true);
 
+  // Course Search & Filter State
+  const [courseSearchInput, setCourseSearchInput] = useState('');
+  const [courseSearch, setCourseSearch] = useState('');
+  const [courseCategoryFilter, setCourseCategoryFilter] = useState('');
+  const [categories, setCategories] = useState([]);
+
   // Notifications State
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -130,12 +137,22 @@ const InstructorDashboard = () => {
         fetchMyCourses(),
         fetchMyArticles(),
         fetchNotifications(),
-        fetchRevenuePolicies()
+        fetchRevenuePolicies(),
+        fetchCategories()
       ]);
       setLoading(false);
     };
     initData();
   }, [activeTab, debouncedRevenueSearch]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await axios.get('http://localhost:5000/api/courses/categories');
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchRevenuePolicies = async () => {
     try {
@@ -228,7 +245,7 @@ const InstructorDashboard = () => {
     fetchMyArticles();
   }, [articlePage, articleSearch]);
 
-  // Debounce Search
+  // Debounce Search - Articles
   useEffect(() => {
     const handler = setTimeout(() => {
       setArticleSearch(articleSearchInput);
@@ -236,6 +253,14 @@ const InstructorDashboard = () => {
     }, 500);
     return () => clearTimeout(handler);
   }, [articleSearchInput]);
+
+  // Debounce Search - Courses
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCourseSearch(courseSearchInput);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [courseSearchInput]);
 
   const fetchFullCourseData = async (id) => {
     try {
@@ -561,7 +586,7 @@ const InstructorDashboard = () => {
                   <td>
                     <div style={{ fontSize: '0.9rem' }}>
                       {policy.type === 'PERCENT' && `${policy.instructorPercent}% cho bạn`}
-                      {policy.type === 'FIXED' && `${policy.fixedAmount?.toLocaleString()}đ / lượt`}
+                      {policy.type === 'FIXED' && `${policy.fixedAmount?.toLocaleString()}đ`}
                       {policy.type === 'HYBRID' && `${policy.instructorPercent}% + ${policy.fixedAmount?.toLocaleString()}đ`}
                     </div>
                   </td>
@@ -587,8 +612,12 @@ const InstructorDashboard = () => {
                       </button>
                       {policy.status === 'waiting_confirm' && (
                         <>
-                          <button className="inst-btn approve" onClick={() => handleUpdatePolicyStatus(policy.id, 'accepted')}>Chấp nhận</button>
-                          <button className="inst-btn reject" onClick={() => handleUpdatePolicyStatus(policy.id, 'rejected')}>Từ chối</button>
+                          <button className="inst-btn approve" onClick={() => handleUpdatePolicyStatus(policy.id, 'accepted')} title="Chấp nhận">
+                            <Check size={16} />
+                          </button>
+                          <button className="inst-btn reject" onClick={() => handleUpdatePolicyStatus(policy.id, 'rejected')} title="Từ chối">
+                            <X size={16} />
+                          </button>
                         </>
                       )}
                     </div>
@@ -698,9 +727,25 @@ const InstructorDashboard = () => {
             ? trashCourses 
             : courses.filter(course => {
                 const s = Number(course.published);
-                if (courseSubTab === 'published') return s === 5;
-                if (courseSubTab === 'pending') return s === 1 || s === 2 || s === 4;
-                return s === 0 || s === 3 || s === 6;
+                // Lọc theo sub-tab
+                let matchTab = false;
+                if (courseSubTab === 'published') matchTab = s === 5;
+                else if (courseSubTab === 'pending') matchTab = s === 1 || s === 2 || s === 4;
+                else matchTab = s === 0 || s === 3 || s === 6;
+                
+                if (!matchTab) return false;
+                
+                // Lọc theo search (tên khóa học)
+                if (courseSearch && !course.title.toLowerCase().includes(courseSearch.toLowerCase())) {
+                  return false;
+                }
+                
+                // Lọc theo danh mục
+                if (courseCategoryFilter && courseCategoryFilter !== 'Tất cả' && course.category !== courseCategoryFilter) {
+                  return false;
+                }
+                
+                return true;
             });
 
         return (
@@ -745,13 +790,44 @@ const InstructorDashboard = () => {
                         : 'Quản lý các bản nháp, khóa học chờ duyệt hoặc bị từ chối.')}
             </p>
             
+            {!courseTrashView && (
+              <div className="inst-filters-bar" style={{ marginBottom: '20px' }}>
+                <div className="inst-search-wrapper" style={{ position: 'relative', maxWidth: '400px' }}>
+                  <input 
+                    type="text" 
+                    className="inst-search-input" 
+                    placeholder="Tìm kiếm khóa học..." 
+                    value={courseSearchInput}
+                    onChange={(e) => setCourseSearchInput(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="inst-table-container">
                 <table className="inst-table">
                     <thead>
                         <tr>
                             <th>Khóa học</th>
                             <th>Phiên bản</th>
-                            <th>Danh mục</th>
+                            <th style={{ minWidth: '150px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <span>DANH MỤC</span>
+                                <select
+                                  className="inst-header-category-select"
+                                  value={courseCategoryFilter}
+                                  onChange={(e) => setCourseCategoryFilter(e.target.value)}
+                                >
+                                  <option value="">Tất cả</option>
+                                  {categories
+                                    .filter(c => c !== 'Tất cả')
+                                    .map(cat => (
+                                      <option key={cat} value={cat}>{cat}</option>
+                                    ))
+                                  }
+                                </select>
+                              </div>
+                            </th>
                             {courseTrashView ? (
                                 <th>Ngày xóa</th>
                             ) : (
@@ -794,21 +870,17 @@ const InstructorDashboard = () => {
                                         )}
                                         <td>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <span className={`inst-status-badge ${
-                                                    course.published === 5 ? 'published' : 
-                                                    course.published === 1 ? 'pending' : 
-                                                    course.published === 3 ? 'rejected' : 
-                                                    course.published === 2 ? 'pending' :
-                                                    course.published === 4 ? 'pending' :
-                                                    course.published === 6 ? 'rejected' :
-                                                    'draft'}`}>
-                                                    {course.published === 0 && 'Bản nháp'}
-                                                    {course.published === 1 && 'Chờ duyệt'}
-                                                    {course.published === 2 && 'Đã duyệt nội dung'}
-                                                    {course.published === 3 && 'Bị từ chối'}
-                                                    {course.published === 4 && 'Sẵn sàng đăng'}
-                                                    {course.published === 5 && 'Đã xuất bản'}
-                                                    {course.published === 6 && 'Đã tạm gỡ'}
+                                                <span className="inst-status-badge" style={{
+                                                    background: Number(course.published) === 0 ? '#f3f4f6' : Number(course.published) === 1 ? '#fef3c7' : Number(course.published) === 2 ? '#dbeafe' : Number(course.published) === 3 ? '#fee2e2' : Number(course.published) === 4 ? '#ede9fe' : Number(course.published) === 5 ? '#d1fae5' : '#ffedd5',
+                                                    color: Number(course.published) === 0 ? '#6b7280' : Number(course.published) === 1 ? '#f59e0b' : Number(course.published) === 2 ? '#3b82f6' : Number(course.published) === 3 ? '#ef4444' : Number(course.published) === 4 ? '#8b5cf6' : Number(course.published) === 5 ? '#10b981' : '#f97316'
+                                                }}>
+                                                    {Number(course.published) === 0 && 'Nháp'}
+                                                    {Number(course.published) === 1 && 'Chờ duyệt'}
+                                                    {Number(course.published) === 2 && 'Đã duyệt nội dung'}
+                                                    {Number(course.published) === 3 && 'Từ chối'}
+                                                    {Number(course.published) === 4 && 'Chờ xuất bản'}
+                                                    {Number(course.published) === 5 && 'Đã xuất bản'}
+                                                    {Number(course.published) === 6 && 'Đã tạm gỡ'}
                                                 </span>
                                                 {course.editRequests?.[0]?.status === 'pending' && <span className="inst-request-badge pending">Chờ duyệt sửa</span>}
                                                 {course.editRequests?.[0]?.status === 'expired' && <span className="inst-request-badge expired">Đã hết hạn</span>}
@@ -829,36 +901,37 @@ const InstructorDashboard = () => {
                                             </>
                                         ) : (
                                             <>
-                                                {(course.published === 0 || course.published === 3) && (
+                                                {[0, 3].includes(Number(course.published)) && (
                                                     <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
                                                         <Send size={16} />
                                                     </button>
                                                 )}
 
-                                                {course.published === 1 && (
+                                                {Number(course.published) === 1 && (
                                                     <button className="inst-btn reject" onClick={() => handleWithdraw(course.id)} title="Thu hồi yêu cầu">
                                                         <RefreshCw size={16} />
                                                     </button>
                                                 )}
                                                 
-                                                {(course.published === 5) ? (
-                                                    (!course.editRequests?.some(r => r.status === 'pending')) && (
+                                                {Number(course.published) === 5 ? (
+                                                    !course.editRequests?.some(r => r.status === 'pending') && (
                                                         <button className="inst-btn approve" onClick={() => handleRequestEdit(course)} title="Yêu cầu sửa">
                                                             <ShieldAlert size={16} />
                                                         </button>
                                                     )
                                                 ) : (
-                                                    <button 
-                                                        className="inst-btn view" 
-                                                        onClick={() => {
-                                                            setCourseView('editor');
-                                                            setEditingCourseId(course.id);
-                                                        }} 
-                                                        title="Sửa"
-                                                        disabled={course.published === 1 || course.published === 2 || course.published === 4}
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
+                                                    ![1, 2, 4].includes(Number(course.published)) && (
+                                                        <button 
+                                                            className="inst-btn view" 
+                                                            onClick={() => {
+                                                                setCourseView('editor');
+                                                                setEditingCourseId(course.id);
+                                                            }} 
+                                                            title="Sửa"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    )
                                                 )}
 
                                                 <button 
@@ -1194,6 +1267,9 @@ const InstructorDashboard = () => {
                           setActiveTab('courses');
                           setCourseSubTab(subItem.id);
                           setCourseTrashView(false);
+                          setCourseSearchInput('');
+                          setCourseSearch('');
+                          setCourseCategoryFilter('');
                           if (window.innerWidth < 1024) setIsSidebarOpen(false);
                         }}
                       >

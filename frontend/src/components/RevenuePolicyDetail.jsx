@@ -83,7 +83,7 @@ const RevenuePolicyDetail = ({
               {(policy.type === 'FIXED' || policy.type === 'HYBRID') && (
                 <div className="detail-item">
                   <label><CreditCard size={16} /> Mức phí cố định</label>
-                  <div className="detail-value">{policy.fixedAmount?.toLocaleString('vi-VN')}đ / lượt mua</div>
+                  <div className="detail-value">{policy.fixedAmount?.toLocaleString('vi-VN')}đ</div>
                 </div>
               )}
 

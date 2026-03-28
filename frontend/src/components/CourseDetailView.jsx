@@ -5,6 +5,19 @@ import './CourseDetailView.css';
 const CourseDetailView = ({ courseData, onBack, actions, isReviewMode = false }) => {
   if (!courseData) return null;
 
+  const getStatusLabel = (status) => {
+    switch (Number(status)) {
+      case 0: return 'Nháp';
+      case 1: return 'Chờ duyệt';
+      case 2: return 'Đã duyệt ND';
+      case 3: return 'Bị từ chối';
+      case 4: return 'Sẵn sàng đăng';
+      case 5: return 'Đã xuất bản';
+      case 6: return 'Tạm gỡ';
+      default: return 'Không xác định';
+    }
+  };
+
   const totalLessons = courseData.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0) || 0;
   const revenue = (courseData.studentsCount || 0) * (courseData.price || 0);
 
@@ -21,10 +34,7 @@ const CourseDetailView = ({ courseData, onBack, actions, isReviewMode = false })
             {isReviewMode ? 'Review' : 'Chi tiết'} Khóa học: {courseData.title}
           </h2>
           <span className={`status-badge status-${courseData.published} header-status-badge`}>
-            {Number(courseData.published) === 0 ? 'Nháp' : 
-             Number(courseData.published) === 1 ? 'Chờ duyệt' : 
-             Number(courseData.published) === 2 ? 'Đã xuất bản' : 
-             Number(courseData.published) === 3 ? 'Bị từ chối' : 'Tạm gỡ'}
+            {getStatusLabel(courseData.published)}
           </span>
         </div>
       </div>
@@ -102,14 +112,11 @@ const CourseDetailView = ({ courseData, onBack, actions, isReviewMode = false })
             <div className="stat-row">
               <span style={{ color: '#64748b' }}>Trạng thái:</span>
               <span className={`status-badge status-${courseData.published}`}>
-                {Number(courseData.published) === 0 ? 'Nháp' : 
-                 Number(courseData.published) === 1 ? 'Chờ duyệt' : 
-                 Number(courseData.published) === 2 ? 'Đã xuất bản' : 
-                 Number(courseData.published) === 3 ? 'Bị từ chối' : 'Tạm gỡ'}
+                {getStatusLabel(courseData.published)}
               </span>
             </div>
             
-            {!isReviewMode && (Number(courseData.published) === 2 || Number(courseData.published) === 4) && courseData.isPro && (
+            {!isReviewMode && (Number(courseData.published) === 5 || Number(courseData.published) === 6) && courseData.isPro && (
               <div className="stat-row" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', marginTop: '10px' }}>
                 <span style={{ color: '#64748b' }}>Doanh thu:</span>
                 <strong style={{ color: '#10b981', fontSize: '1.1rem' }}>

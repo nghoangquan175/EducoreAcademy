@@ -7,8 +7,8 @@ const { Op } = require('sequelize');
 const { CourseEditRequest } = require('../models');
 const { cloneCourse } = require('../utils/courseCloner');
 const { notifyUser } = require('../utils/notificationUtils');
-const { 
-  adminGetPendingArticles, 
+const {
+  adminGetPendingArticles,
   adminUpdateArticleStatus,
   adminGetAllArticles
 } = require('../controllers/articleController');
@@ -25,11 +25,11 @@ router.get('/stats', protect, admin, async (req, res) => {
     const enrollmentCount = await Enrollment.count();
     const publishedArticles = await Article.count({ where: { articleStatus: 2 } });
     const pendingArticles = await Article.count({ where: { articleStatus: 1 } });
-    
+
     // Revenue (simplistic: sum of prices of enrolled courses, this might need a Payment model later)
     // For now, let's just return some mock or basic data
     const totalRevenue = await Enrollment.findAll({
-        include: [{ model: Course, attributes: ['price'] }]
+      include: [{ model: Course, attributes: ['price'] }]
     }).then(enrollments => enrollments.reduce((acc, curr) => acc + (curr.Course?.price || 0), 0));
 
     res.json({
@@ -54,7 +54,7 @@ router.get('/courses/pending', protect, admin, async (req, res) => {
   try {
     const search = req.query.search || '';
     const pendingCourses = await Course.findAll({
-      where: { 
+      where: {
         published: 1,
         title: { [Op.like]: `%${search}%` }
       },
@@ -103,8 +103,8 @@ router.get('/courses', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.patch('/courses/:id/status', protect, admin, async (req, res) => {
   try {
-    const { status } = req.body; 
-    
+    const { status } = req.body;
+
     // Valid statuses for this endpoint: 2 (CONTENT_APPROVED), 3 (REJECTED), 5 (PUBLISHED), 6 (UNPUBLISHED)
     if (![2, 3, 5, 6].includes(Number(status))) {
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
@@ -117,29 +117,29 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
 
     const oldStatus = course.published;
     course.published = Number(status);
-    
+
     // If approving a new version, update isLatest
     if (status === 2 && course.rootCourseId) {
       // Logic for versioning (existing)
       await Course.update(
         { isLatest: false },
-        { 
-          where: { 
+        {
+          where: {
             [Op.or]: [{ id: course.rootCourseId }, { rootCourseId: course.rootCourseId }],
             id: { [Op.ne]: course.id }
-          } 
+          }
         }
       );
       course.isLatest = true;
     }
-    
+
     await course.save();
 
     // Notify instructor
     try {
       const { Notification } = require('../models');
       const actionLabels = {
-        2: 'đã được phê duyệt nội dung 🎉. Vui lòng kiểm tra Chính sách Doanh thu.',
+        2: 'đã được phê duyệt nội dung 🎉. Chính sách doanh thu sẽ được gửi sau!!!.',
         3: 'đã bị từ chối ❌. Vui lòng kiểm tra lại nội dung.',
         5: 'đã được xuất bản 🚀!',
         6: 'đã tạm gỡ ⏸️.'
@@ -202,7 +202,7 @@ router.get('/users/:id', protect, admin, async (req, res) => {
         {
           model: PaymentOrder,
           include: [
-            { model: Course, attributes: ['id', 'title', 'price'] }, 
+            { model: Course, attributes: ['id', 'title', 'price'] },
             { model: Payment }
           ]
         }
@@ -267,9 +267,9 @@ router.post('/notifications/bulk', protect, admin, async (req, res) => {
 
     await Notification.bulkCreate(notifications);
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: `Đã gửi thông báo thành công cho ${users.length} người dùng!`,
-      count: users.length 
+      count: users.length
     });
   } catch (error) {
     console.error('Lỗi khi gửi thông báo hàng loạt:', error);
@@ -347,7 +347,7 @@ router.patch('/courses/edit-requests/:id/status', protect, admin, async (req, re
     if (status === 'approved') {
       // Clone course to create V2
       const newVersion = await cloneCourse(editRequest.courseId);
-      
+
       // Notify instructor
       await Notification.create({
         userId: editRequest.instructorId,

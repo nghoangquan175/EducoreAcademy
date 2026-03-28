@@ -13,7 +13,7 @@ router.get('/', optionalProtect, async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 8;
     const offset = (page - 1) * limit;
 
-    const where = { published: 2, isLatest: true };
+    const where = { published: 5, isLatest: true };
     
     // Logic mới: Lọc bỏ các khóa học đã đăng ký nếu được yêu cầu
     if (req.query.excludeEnrolled === 'true' && req.user) {
@@ -179,7 +179,7 @@ router.get('/:id', async (req, res) => {
     const course = await Course.findByPk(req.params.id, {
       include: [{ model: User, as: 'instructor', attributes: ['name', 'avatar'] }],
     });
-    if (!course || course.published !== 2) {
+    if (!course || course.published !== 5) {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
     res.json(course);

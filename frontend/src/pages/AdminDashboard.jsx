@@ -169,8 +169,8 @@ const AdminDashboard = () => {
       icon: <BookOpen size={20} />,
       hasSubmenu: true,
       subItems: [
-        { id: 'manage-courses', label: 'Quản lý', icon: <Layers size={18} /> },
-        { id: 'approvals', label: 'Phê duyệt', icon: <CheckSquare size={18} /> },
+        { id: 'manage-courses', label: 'Khóa học đã xuất bản', icon: <Layers size={18} /> },
+        { id: 'approvals', label: 'Quản lý', icon: <CheckSquare size={18} /> },
         { id: 'edit-requests', label: 'Yêu cầu sửa', icon: <Pencil size={18} /> },
       ]
     },
@@ -243,12 +243,13 @@ const AdminDashboard = () => {
         const { data } = await axios.get('http://localhost:5000/api/admin/stats', { headers });
         setStats(data);
       } else if (activeTab === 'approvals') {
-        const { data } = await axios.get(`http://localhost:5000/api/admin/courses/pending?search=${debouncedCourseSearch}`, { headers });
-        setPendingCourses(data);
+        const { data } = await axios.get(`http://localhost:5000/api/admin/courses?search=${debouncedCourseSearch}`, { headers });
+        // Quản lý: hiển thị trạng thái 1 (Chờ duyệt), 2 (Đã duyệt ND), 3 (Từ chối), 4 (Sẵn sàng đăng)
+        setPendingCourses(data.filter(c => [1, 2, 3, 4].includes(Number(c.published))));
       } else if (activeTab === 'manage-courses') {
         const { data } = await axios.get(`http://localhost:5000/api/admin/courses?search=${debouncedCourseSearch}`, { headers });
-        // Lọc khóa học Ready (4), Published (5), Unpublish (6), Content Approved (2)
-        setPendingCourses(data.filter(c => [2, 4, 5, 6].includes(Number(c.published))));
+        // Khóa học đã xuất bản: hiển thị trạng thái 5 (Đã xuất bản), 6 (Đã gỡ)
+        setPendingCourses(data.filter(c => [5, 6].includes(Number(c.published))));
       } else if (activeTab === 'students' || activeTab === 'instructors') {
         const { data } = await axios.get('http://localhost:5000/api/admin/users', { headers });
         setUsersList(data);
@@ -798,8 +799,7 @@ const AdminDashboard = () => {
     
     if (notif.relatedId) {
        if (notif.type === 'course_submission') {
-          setActiveTab('approvals');
-          setCourseSearch(notif.relatedId);
+          handleReviewCourse(notif.relatedId);
        } else if (notif.type === 'edit_request') {
           setActiveTab('edit-requests');
        } else if (notif.type === 'article_submission') {
@@ -1131,6 +1131,7 @@ const AdminDashboard = () => {
                             </th>
                             <th>{courseTrashView ? 'Ngày xóa' : (activeTab === 'approvals' ? 'Ngày gửi' : 'Ngày xuất bản')}</th>
                             {!courseTrashView && activeTab === 'manage-courses' && <th>Học viên</th>}
+                            {!courseTrashView && <th>Trạng thái</th>}
                             <th>Thao tác</th>
                         </tr>
                     </thead>
@@ -1175,31 +1176,45 @@ const AdminDashboard = () => {
                                     <td>{new Date(course.updatedAt).toLocaleDateString('vi-VN')}</td>
                                     {activeTab === 'manage-courses' && <td>{course.studentsCount || 0}</td>}
                                     <td>
+                                        <div className="inst-status-badge" style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center', display: 'inline-block', whiteSpace: 'nowrap',
+                                            background: Number(course.published) === 0 ? '#f3f4f6' : Number(course.published) === 1 ? '#fef3c7' : Number(course.published) === 2 ? '#dbeafe' : Number(course.published) === 3 ? '#fee2e2' : Number(course.published) === 4 ? '#ede9fe' : Number(course.published) === 5 ? '#d1fae5' : '#ffedd5',
+                                            color: Number(course.published) === 0 ? '#6b7280' : Number(course.published) === 1 ? '#f59e0b' : Number(course.published) === 2 ? '#3b82f6' : Number(course.published) === 3 ? '#ef4444' : Number(course.published) === 4 ? '#8b5cf6' : Number(course.published) === 5 ? '#10b981' : '#f97316'
+                                        }}>
+                                            {Number(course.published) === 0 && 'Nháp'}
+                                            {Number(course.published) === 1 && 'Chờ duyệt'}
+                                            {Number(course.published) === 2 && 'Đã duyệt nội dung'}
+                                            {Number(course.published) === 3 && 'Từ chối'}
+                                            {Number(course.published) === 4 && 'Chờ xuất bản'}
+                                            {Number(course.published) === 5 && 'Đã đăng'}
+                                            {Number(course.published) === 6 && 'Đã gỡ'}
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div className="admin-actions">
                                             <button className="admin-btn view" onClick={() => handleReviewCourse(course.id)} title="Xem chi tiết">
                                                 <Eye size={18} />
                                             </button>
-                                            <div className="inst-status-badge" style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', 
-                                                background: course.published === 5 ? '#dcfce7' : course.published === 4 ? '#fef9c3' : course.published === 6 ? '#fee2e2' : '#f1f5f9',
-                                                color: course.published === 5 ? '#166534' : course.published === 4 ? '#854d0e' : course.published === 6 ? '#991b1b' : '#475569'
-                                            }}>
-                                                {course.published === 2 && 'Đã duyệt nội dung'}
-                                                {course.published === 4 && 'Chờ xuất bản'}
-                                                {course.published === 5 && 'Đã đăng'}
-                                                {course.published === 6 && 'Đã gỡ'}
-                                            </div>
                                             {activeTab === 'approvals' ? (
                                                 <>
-                                                    <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Duyệt nội dung">
-                                                        <CheckCircle size={18} />
-                                                    </button>
-                                                    <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Từ chối">
-                                                        <XCircle size={18} />
-                                                    </button>
+                                                    {[1, 3].includes(Number(course.published)) && (
+                                                        <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 2)} title="Duyệt nội dung">
+                                                            <CheckCircle size={18} />
+                                                        </button>
+                                                    )}
+                                                    {[1, 2].includes(Number(course.published)) && (
+                                                        <button className="admin-btn reject" onClick={() => handleStatusUpdate(course.id, 3)} title="Từ chối">
+                                                            <XCircle size={18} />
+                                                        </button>
+                                                    )}
+                                                    {Number(course.published) === 4 && (
+                                                        <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
+                                                            <ArrowUpCircle size={18} />
+                                                        </button>
+                                                    )}
                                                 </>
                                             ) : (
                                                 <>
-                                                    {[4, 6].includes(Number(course.published)) && (
+                                                    {Number(course.published) === 6 && (
                                                         <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
                                                             <ArrowUpCircle size={18} />
                                                         </button>
@@ -1234,10 +1249,14 @@ const AdminDashboard = () => {
 
         const adminActions = (
           <>
-            {reviewCourseData.published === 1 && (
+            {[1, 2, 3].includes(Number(reviewCourseData.published)) && (
               <div className="admin-actions" style={{ display: 'flex', gap: '10px' }}>
-                <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt nội dung</button>
-                <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
+                {[1, 3].includes(Number(reviewCourseData.published)) && (
+                  <button className="admin-btn approve" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 2)}>Phê duyệt nội dung</button>
+                )}
+                {[1, 2].includes(Number(reviewCourseData.published)) && (
+                  <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
+                )}
               </div>
             )}
             {[4, 6].includes(Number(reviewCourseData.published)) && (
