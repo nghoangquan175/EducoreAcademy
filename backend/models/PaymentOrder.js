@@ -19,6 +19,18 @@ const PaymentOrder = sequelize.define('PaymentOrder', {
     type: DataTypes.DECIMAL(18, 2),
     allowNull: false
   },
+  adminAmount: {
+    type: DataTypes.DECIMAL(18, 2),
+    allowNull: true
+  },
+  instructorAmount: {
+    type: DataTypes.DECIMAL(18, 2),
+    allowNull: true
+  },
+  revenuePolicyId: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
   status: {
     type: DataTypes.STRING,
     defaultValue: 'pending',

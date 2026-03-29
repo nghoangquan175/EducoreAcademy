@@ -6,8 +6,9 @@ const { Op } = require('sequelize');
 // @access  Private
 exports.getRevenuePolicies = async (req, res) => {
   try {
-    const { search, status } = req.query;
+    const { search, status, courseId } = req.query;
     let where = {};
+    if (courseId) where.courseId = courseId;
 
     if (req.user.role === 'instructor') {
       // Instructors only see policies related to their courses and not draft

@@ -1,4 +1,4 @@
-const { PaymentOrder, Payment, Enrollment, Course } = require('../models');
+const { PaymentOrder, Payment, Enrollment, Course, RevenuePolicy } = require('../models');
 const vnpayConfig = require('../config/vnpay');
 const crypto = require('crypto');
 const querystring = require('qs');
@@ -192,8 +192,40 @@ async function fulfillOrder(orderId, transactionNo, rawParams) {
     const order = await PaymentOrder.findByPk(orderId);
     if (!order || order.status !== 'pending') return;
 
-    // Update order status
+    // Calculate Revenue Split
+    const revenuePolicy = await RevenuePolicy.findOne({
+      where: { courseId: order.courseId, status: 'accepted' },
+      order: [['createdAt', 'DESC']]
+    });
+
+    let adminAmount = 0;
+    let instructorAmount = 0;
+    let revenuePolicyId = null;
+    const orderAmount = parseFloat(order.amount);
+
+    if (revenuePolicy) {
+      revenuePolicyId = revenuePolicy.id;
+      if (revenuePolicy.type === 'PERCENT') {
+        instructorAmount = orderAmount * (revenuePolicy.instructorPercent / 100);
+        adminAmount = orderAmount - instructorAmount;
+      } else if (revenuePolicy.type === 'FIXED') {
+        // Mua đứt: Học viện nhận 100% doanh thu mỗi khóa bán ra, Giảng viên nhận 0đ
+        adminAmount = orderAmount;
+        instructorAmount = 0;
+      } else if (revenuePolicy.type === 'HYBRID') {
+        // Trả trước 1 phần + vẫn chia % trên mỗi đơn
+        instructorAmount = orderAmount * (revenuePolicy.instructorPercent / 100);
+        adminAmount = orderAmount - instructorAmount;
+      }
+    } else {
+      adminAmount = orderAmount;
+    }
+
+    // Update order status and revenue
     order.status = 'paid';
+    order.adminAmount = adminAmount;
+    order.instructorAmount = instructorAmount;
+    order.revenuePolicyId = revenuePolicyId;
     await order.save();
 
     // Update existing pending payment to success

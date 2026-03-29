@@ -1,0 +1,387 @@
+const { PaymentOrder, Course, User, RevenuePolicy } = require('../models');
+const { Op, Sequelize } = require('sequelize');
+
+const getDateFilters = (query) => {
+  const { startDate, endDate } = query;
+  const dateFilters = {};
+  if (startDate) {
+    dateFilters[Op.gte] = new Date(startDate);
+  }
+  if (endDate) {
+    dateFilters[Op.lte] = new Date(endDate);
+  }
+  return Object.keys(dateFilters).length > 0 ? dateFilters : null;
+};
+
+exports.getAdminOverview = async (req, res) => {
+  try {
+    const dates = getDateFilters(req.query);
+    const whereClause = { status: 'paid' };
+    if (dates) whereClause.createdAt = dates;
+
+    const orders = await PaymentOrder.findAll({ where: whereClause });
+
+    let totalGrossRevenue = 0;
+    let totalAdminNetRevenue = 0;
+    let totalInstructorRevenue = 0;
+
+    orders.forEach(o => {
+      totalGrossRevenue += parseFloat(o.amount || 0);
+      totalAdminNetRevenue += parseFloat(o.adminAmount || o.amount || 0);
+      totalInstructorRevenue += parseFloat(o.instructorAmount || 0);
+    });
+
+    // Tính chi phí Fixed/Hybrid đã trả cho Giảng viên (Chỉ tính cho khóa đã đăng - Published)
+    const activePolicies = await RevenuePolicy.findAll({
+      where: dates ? { status: 'accepted', updatedAt: dates } : { status: 'accepted' },
+      include: [{ model: Course, as: 'course', where: { published: 5 }, attributes: [] }]
+    });
+
+    let totalFixedCosts = 0;
+    activePolicies.forEach(p => {
+      totalFixedCosts += parseFloat(p.fixedAmount || 0);
+    });
+
+    res.json({
+      totalGrossRevenue,
+      totalAdminNetRevenue: totalAdminNetRevenue - totalFixedCosts, // Lợi nhuận = Thu từ đơn - Chi phí mua đứt
+      totalInstructorRevenue: totalInstructorRevenue + totalFixedCosts,
+      totalTransactions: orders.length
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+exports.getAdminCourses = async (req, res) => {
+  try {
+    const dates = getDateFilters(req.query);
+    const orderWhere = { status: 'paid' };
+    if (dates) orderWhere.createdAt = dates;
+
+    // Use raw query or include for group by
+    // Map kết quả sang dict
+    const coursesStats = await PaymentOrder.findAll({
+      where: orderWhere,
+      attributes: [
+        'courseId',
+        [Sequelize.fn('SUM', Sequelize.col('PaymentOrder.amount')), 'totalGross'],
+        [Sequelize.fn('SUM', Sequelize.col('adminAmount')), 'totalAdminNet'],
+        [Sequelize.fn('SUM', Sequelize.col('instructorAmount')), 'totalInstructorNet'],
+        [Sequelize.fn('COUNT', Sequelize.col('PaymentOrder.id')), 'totalSales']
+      ],
+      include: [
+        { model: Course, attributes: ['title', 'price', 'thumbnail'], include: [{ model: User, as: 'instructor', attributes: ['name', 'email'] }] }
+      ],
+      group: [
+        'PaymentOrder.courseId',
+        'Course.id', 'Course.title', 'Course.price', 'Course.thumbnail',
+        'Course->instructor.id', 'Course->instructor.name', 'Course->instructor.email'
+      ],
+      order: [[Sequelize.literal('totalGross'), 'DESC']]
+    });
+
+    // Map kết quả sang dict
+    const resultDict = {};
+    coursesStats.forEach(s => {
+      const plain = s.get({ plain: true });
+      resultDict[plain.courseId] = {
+        ...plain,
+        totalGross: parseFloat(plain.totalGross || 0),
+        totalAdminNet: parseFloat(plain.totalAdminNet || 0),
+        totalInstructorNet: parseFloat(plain.totalInstructorNet || 0)
+      };
+    });
+
+    // Lấy chi phí fixed gán vào từng khóa
+    const activePolicies = await RevenuePolicy.findAll({
+      where: dates ? { status: 'accepted', updatedAt: dates } : { status: 'accepted' },
+      include: [{ 
+        model: Course, as: 'course', where: { published: 5 }, 
+        attributes: ['title', 'price', 'thumbnail'],
+        include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }] 
+      }]
+    });
+
+    activePolicies.forEach(p => {
+      const cId = p.courseId;
+      const fAmt = parseFloat(p.fixedAmount || 0);
+      if (resultDict[cId]) {
+        resultDict[cId].totalAdminNet -= fAmt;
+        resultDict[cId].totalInstructorNet += fAmt;
+      } else {
+        // Nếu khóa học có policy nhưng chưa bán được đơn nào
+        resultDict[cId] = {
+          courseId: cId,
+          Course: {
+            ...p.course.get({ plain: true }),
+            instructor: p.course.instructor?.get({ plain: true })
+          },
+          totalGross: 0,
+          totalAdminNet: -fAmt, // Là số âm nếu là FIXED
+          totalInstructorNet: fAmt,
+          totalSales: 0
+        };
+      }
+    });
+
+    res.json(Object.values(resultDict));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+exports.getAdminInstructors = async (req, res) => {
+  try {
+    // This is a simplification. Usually we aggregate orders by joining Course -> Instructor
+    const dates = getDateFilters(req.query);
+    const orderWhere = { status: 'paid' };
+    if (dates) orderWhere.createdAt = dates;
+
+    const instructorStats = await PaymentOrder.findAll({
+      where: orderWhere,
+      attributes: [
+        [Sequelize.col('Course.instructorId'), 'instructorId'],
+        [Sequelize.fn('SUM', Sequelize.col('PaymentOrder.amount')), 'totalGross'],
+        [Sequelize.fn('SUM', Sequelize.col('adminAmount')), 'totalAdminNet'],
+        [Sequelize.fn('SUM', Sequelize.col('instructorAmount')), 'totalInstructorNet'],
+        [Sequelize.fn('COUNT', Sequelize.col('PaymentOrder.id')), 'totalSales']
+      ],
+      include: [
+        { model: Course, attributes: [], required: true }
+      ],
+      group: ['Course.instructorId'],
+      order: [[Sequelize.literal('totalGross'), 'DESC']]
+    });
+
+    // We can fetch user details separately to not mess up group by
+    const resultDict = {};
+    instructorStats.forEach(s => {
+        const plain = s.get({ plain: true });
+        resultDict[plain.instructorId] = {
+            ...plain,
+            totalGross: parseFloat(plain.totalGross || 0),
+            totalAdminNet: parseFloat(plain.totalAdminNet || 0),
+            totalInstructorNet: parseFloat(plain.totalInstructorNet || 0)
+        };
+    });
+
+    // Lấy chi phí fixed gán vào từng giảng viên
+    const activePolicies = await RevenuePolicy.findAll({
+      where: dates ? { status: 'accepted', updatedAt: dates } : { status: 'accepted' },
+      include: [{ model: Course, as: 'course', where: { published: 5 }, attributes: ['instructorId'] }]
+    });
+
+    activePolicies.forEach(p => {
+        const instId = p.course?.instructorId;
+        const fAmt = parseFloat(p.fixedAmount || 0);
+        if (instId && resultDict[instId]) {
+            resultDict[instId].totalAdminNet -= fAmt;
+            resultDict[instId].totalInstructorNet += fAmt;
+        }
+    });
+
+    const instructorIds = Object.keys(resultDict);
+    const instructors = await User.findAll({ where: { id: instructorIds }, attributes: ['id', 'name', 'email'] });
+    const userDict = {};
+    instructors.forEach(i => userDict[i.id] = i);
+
+    const result = Object.values(resultDict).map(data => ({
+        ...data,
+        instructor: userDict[data.instructorId] || null
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+exports.getAdminTransactions = async (req, res) => {
+  try {
+    const dates = getDateFilters(req.query);
+    const whereClause = { status: 'paid' };
+    if (dates) whereClause.createdAt = dates;
+
+    const orders = await PaymentOrder.findAll({
+      where: whereClause,
+      include: [
+        { model: Course, attributes: ['title'] },
+        { model: User, attributes: ['name', 'email'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+// INSTRUCTOR
+exports.getInstructorOverview = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const dates = getDateFilters(req.query);
+    const orderWhere = { status: 'paid' };
+    if (dates) orderWhere.createdAt = dates;
+
+    const orders = await PaymentOrder.findAll({
+      where: orderWhere,
+      include: [{
+        model: Course,
+        where: { instructorId },
+        attributes: []
+      }]
+    });
+
+    let totalGrossRevenue = 0;
+    let totalFromTransactions = 0;
+
+    orders.forEach(o => {
+      totalGrossRevenue += parseFloat(o.amount || 0);
+      totalFromTransactions += parseFloat(o.instructorAmount || 0);
+    });
+
+    // Bổ sung: cộng tiền bán đứt
+    const policyWhere = { status: 'accepted' };
+    if (dates) policyWhere.updatedAt = dates;
+
+    const activePolicies = await RevenuePolicy.findAll({
+      where: policyWhere,
+      include: [{ model: Course, as: 'course', where: { instructorId, published: 5 }, attributes: [] }]
+    });
+
+    let totalFromFixed = 0;
+    activePolicies.forEach(p => {
+      if (p.type === 'FIXED' || p.type === 'HYBRID') {
+        totalFromFixed += parseFloat(p.fixedAmount || 0);
+      }
+    });
+
+    res.json({
+      totalGrossRevenue: totalGrossRevenue + totalFromFixed,
+      totalInstructorNetRevenue: totalFromTransactions + totalFromFixed,
+      totalFromTransactions,
+      totalFromFixed,
+      totalSales: orders.length
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+exports.getInstructorCourses = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const dates = getDateFilters(req.query);
+    const orderWhere = { status: 'paid' };
+    if (dates) orderWhere.createdAt = dates;
+
+    const coursesStats = await PaymentOrder.findAll({
+      where: orderWhere,
+      attributes: [
+        'courseId',
+        [Sequelize.fn('SUM', Sequelize.col('PaymentOrder.amount')), 'totalGross'],
+        [Sequelize.fn('SUM', Sequelize.col('instructorAmount')), 'totalInstructorNet'],
+        [Sequelize.fn('COUNT', Sequelize.col('PaymentOrder.id')), 'totalSales']
+      ],
+      include: [
+        { model: Course, where: { instructorId }, attributes: ['title', 'price', 'thumbnail'] }
+      ],
+      group: [
+        'PaymentOrder.courseId',
+        'Course.id', 'Course.title', 'Course.price', 'Course.thumbnail'
+      ]
+    });
+
+    // Map qua result
+    const resultDict = {};
+    coursesStats.forEach(s => {
+      const plain = s.get ? s.get({ plain: true }) : s;
+      resultDict[plain.courseId] = {
+        courseId: plain.courseId,
+        Course: plain.Course,
+        totalGross: parseFloat(plain.totalGross || 0),
+        totalInstructorNet: parseFloat(plain.totalInstructorNet || 0),
+        totalSales: parseInt(plain.totalSales || 0)
+      };
+    });
+
+    // Lấy tiền bán đứt
+    const policyWhere = { status: 'accepted' };
+    if (dates) policyWhere.updatedAt = dates;
+
+    const activePolicies = await RevenuePolicy.findAll({
+      where: policyWhere,
+      include: [{ model: Course, as: 'course', where: { instructorId, published: 5 }, attributes: ['title', 'price', 'thumbnail'] }]
+    });
+
+    activePolicies.forEach(p => {
+      const cId = p.courseId;
+      const fAmt = parseFloat(p.fixedAmount || 0);
+      
+      if (!resultDict[cId]) {
+        // Nếu chưa có trong thống kê đơn hàng (chưa bán được đơn nào)
+        resultDict[cId] = {
+          courseId: cId,
+          Course: p.course, // Lưu ý: 'p.course' từ include trả về alias 'course'
+          totalGross: fAmt,
+          totalInstructorNet: fAmt,
+          totalSales: 0,
+          policy: { type: p.type, instructorPercent: p.instructorPercent, fixedAmount: p.fixedAmount }
+        };
+      } else {
+        // Nếu đã có trong thống kê đơn hàng, cộng dồn tiền fixed (nếu là HYBRID) 
+        // và gán thông tin policy
+        if (p.type === 'FIXED' || p.type === 'HYBRID') {
+          resultDict[cId].totalGross += fAmt;
+          resultDict[cId].totalInstructorNet += fAmt;
+        }
+        resultDict[cId].policy = { type: p.type, instructorPercent: p.instructorPercent, fixedAmount: p.fixedAmount };
+      }
+    });
+
+    // Sort theo net revenue
+    const finalArray = Object.values(resultDict).sort((a,b) => b.totalInstructorNet - a.totalInstructorNet);
+
+    res.json(finalArray);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+exports.getInstructorTransactions = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const dates = getDateFilters(req.query);
+    const whereClause = { status: 'paid' };
+    if (dates) whereClause.createdAt = dates;
+
+    const orders = await PaymentOrder.findAll({
+      where: whereClause,
+      include: [
+        { model: Course, where: { instructorId }, attributes: ['title'] },
+        { model: User, attributes: ['name', 'email'] },
+        { 
+          model: RevenuePolicy, 
+          as: 'revenuePolicy', 
+          attributes: ['type', 'instructorPercent', 'fixedAmount'],
+          where: {
+            type: { [Op.ne]: 'FIXED' } // Chỉ hiện các đơn có chia % (PERCENT hoặc HYBRID)
+          } 
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(orders);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};

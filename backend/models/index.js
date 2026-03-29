@@ -107,6 +107,9 @@ PaymentOrder.belongsTo(User, { foreignKey: 'userId' });
 Course.hasMany(PaymentOrder, { foreignKey: 'courseId' });
 PaymentOrder.belongsTo(Course, { foreignKey: 'courseId' });
 
+PaymentOrder.belongsTo(RevenuePolicy, { foreignKey: 'revenuePolicyId', as: 'revenuePolicy' });
+RevenuePolicy.hasMany(PaymentOrder, { foreignKey: 'revenuePolicyId', as: 'orders' });
+
 // Payment
 PaymentOrder.hasMany(Payment, { foreignKey: 'orderId' });
 Payment.belongsTo(PaymentOrder, { foreignKey: 'orderId' });

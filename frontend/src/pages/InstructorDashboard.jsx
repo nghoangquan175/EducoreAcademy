@@ -19,7 +19,8 @@ import {
   Eye,
   Bell,
   ShieldX,
-  Check
+  Check,
+  DollarSign
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -32,6 +33,7 @@ import CurriculumEditor from './CurriculumEditor';
 import CourseDetailView from '../components/CourseDetailView';
 import ArticleEditor from './ArticleEditor';
 import RevenuePolicyDetail from '../components/RevenuePolicyDetail';
+import InstructorRevenue from '../components/InstructorRevenue';
 import { 
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -112,6 +114,23 @@ const InstructorDashboard = () => {
     type: 'warning' 
   });
 
+  const handleOpenPolicyByCourse = async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/revenue-policies?courseId=${courseId}&status=accepted`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (data.policies && data.policies.length > 0) {
+        setSelectedRevenuePolicy(data.policies[0]);
+        setShowRevenuePolicyDetail(true);
+      } else {
+        toast.error('Không tìm thấy chính sách nào được chấp nhận cho khóa học này');
+      }
+    } catch (error) {
+      toast.error('Lỗi khi tải thông tin chính sách');
+    }
+  };
+
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
     { 
@@ -126,6 +145,7 @@ const InstructorDashboard = () => {
         { id: 'revenue-policy', label: 'Chính sách doanh thu', icon: <CreditCard size={18} /> }
       ]
     },
+    { id: 'revenue', label: 'Doanh thu', icon: <DollarSign size={20} /> },
     { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} />, badge: unreadCount },
   ];
@@ -712,6 +732,8 @@ const InstructorDashboard = () => {
     if (loading) return <div className="loading-container">Đang tải dữ liệu...</div>;
 
     switch (activeTab) {
+      case 'revenue':
+        return <InstructorRevenue />;
       case 'overview':
         return (
           <div className="inst-content-fade-in">
@@ -986,6 +1008,17 @@ const InstructorDashboard = () => {
                                                 {Number(course.published) === 1 && (
                                                     <button className="inst-btn reject" onClick={() => handleWithdrawApproval(course.id)} title="Thu hồi yêu cầu">
                                                         <RefreshCw size={16} />
+                                                    </button>
+                                                )}
+
+                                                {Number(course.published) === 4 && (
+                                                    <button 
+                                                        className="inst-btn view" 
+                                                        onClick={() => handleOpenPolicyByCourse(course.id)} 
+                                                        title="Xem chính sách doanh thu"
+                                                        style={{ color: '#8b5cf6' }}
+                                                    >
+                                                        <DollarSign size={16} />
                                                     </button>
                                                 )}
                                                 

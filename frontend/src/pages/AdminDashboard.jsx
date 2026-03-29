@@ -44,6 +44,7 @@ import CategoryManager from '../components/CategoryManager';
 import InstructorApplications from '../components/InstructorApplications';
 import CourseDetailView from '../components/CourseDetailView';
 import RevenuePolicyDetail from '../components/RevenuePolicyDetail';
+import AdminRevenue from '../components/AdminRevenue';
 import {
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -160,6 +161,23 @@ const AdminDashboard = () => {
     type: 'warning' 
   });
 
+  const handleOpenPolicyByCourse = async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/revenue-policies?courseId=${courseId}&status=accepted`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (data.policies && data.policies.length > 0) {
+        setSelectedRevenuePolicy(data.policies[0]);
+        setShowRevenuePolicyDetail(true);
+      } else {
+        toast.error('Không tìm thấy chính sách nào cho khóa học này');
+      }
+    } catch (error) {
+      toast.error('Lỗi khi tải thông tin chính sách');
+    }
+  };
+
   const menuItems = [
     { id: 'overview', label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
     { 
@@ -187,6 +205,7 @@ const AdminDashboard = () => {
     },
     { id: 'categories', label: 'Danh mục', icon: <Layers size={20} /> },
     { id: 'banners', label: 'Banners', icon: <ImageIcon size={20} /> },
+    { id: 'revenue', label: 'Báo cáo Doanh thu', icon: <DollarSign size={20} /> },
     { id: 'revenue-policy', label: 'Chính sách Doanh thu', icon: <DollarSign size={20} /> },
     { 
       id: 'articles', 
@@ -1244,9 +1263,19 @@ const AdminDashboard = () => {
                                                         </button>
                                                     )}
                                                     {Number(course.published) === 4 && (
-                                                        <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
-                                                            <ArrowUpCircle size={18} />
-                                                        </button>
+                                                        <>
+                                                            <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
+                                                                <ArrowUpCircle size={18} />
+                                                            </button>
+                                                            <button 
+                                                                className="admin-btn view" 
+                                                                onClick={() => handleOpenPolicyByCourse(course.id)} 
+                                                                title="Xem chính sách"
+                                                                style={{ color: '#8b5cf6' }}
+                                                            >
+                                                                <DollarSign size={18} />
+                                                            </button>
+                                                        </>
                                                     )}
                                                 </>
                                             ) : (
@@ -1280,6 +1309,8 @@ const AdminDashboard = () => {
           </div>
         );
       }
+      case 'revenue':
+        return <AdminRevenue />;
       case 'course-review': {
         if (reviewLoading) return <div className="admin-loading-container"><div className="admin-spinner"></div><p>Đang tải nội dung khóa học...</p></div>;
         if (!reviewCourseData) return null;
@@ -1295,6 +1326,15 @@ const AdminDashboard = () => {
                   <button className="admin-btn reject" style={{ flex: 1, padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 3)}>Từ chối</button>
                 )}
               </div>
+            )}
+            {Number(reviewCourseData.published) === 4 && (
+              <button 
+                className="admin-btn view" 
+                style={{ width: '100%', padding: '10px', marginBottom: '10px', background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe' }} 
+                onClick={() => handleOpenPolicyByCourse(reviewCourseData.id)}
+              >
+                Xem chính sách doanh thu
+              </button>
             )}
             {[4, 6].includes(Number(reviewCourseData.published)) && (
               <button className="admin-btn approve" style={{ width: '100%', padding: '10px' }} onClick={() => handleStatusUpdate(reviewCourseData.id, 5)}>Xuất bản khóa học</button>
