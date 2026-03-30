@@ -27,6 +27,14 @@ const RevenuePolicy = sequelize.define('RevenuePolicy', {
     type: DataTypes.DECIMAL(15, 2),
     allowNull: true,
   },
+  suggestedPrice: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: true,
+  },
+  pricePerPurchase: {
+    type: DataTypes.DECIMAL(15, 2),
+    allowNull: true,
+  },
   upfrontAmount: {
     type: DataTypes.DECIMAL(15, 2),
     allowNull: true,

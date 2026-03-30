@@ -27,6 +27,7 @@ const videoStorage = new CloudinaryStorage({
     folder: 'educore/videos',
     resource_type: 'video',
     allowed_formats: ['mp4', 'mov', 'avi', 'wmv'],
+    image_metadata: true, // Try to capture metadata during initial upload
     // Note: Free cloudinary accounts have strict file size limits for video (~100MB)
   }
 });

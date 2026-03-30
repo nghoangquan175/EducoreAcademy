@@ -21,7 +21,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
     duration: '',
     isFree: false,
     videoUrl: '',
-    videoSource: 'link' // 'link' or 'upload'
+    videoSource: 'upload'
   });
   const [uploadingLessonVideo, setUploadingLessonVideo] = useState(false);
   const [tempData, setTempData] = useState({}); // For inline editing titles
@@ -44,6 +44,19 @@ const CurriculumEditor = ({ courseId, onClose }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDuration = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '--:--';
+    const totalSeconds = parseInt(seconds);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   // --- CHAPTER HANDLERS ---
@@ -131,7 +144,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
           Authorization: `Bearer ${token}`
         }
       });
-      setNewLesson({ ...newLesson, videoUrl: res.data.url });
+      setNewLesson({ ...newLesson, videoUrl: res.data.url, duration: String(res.data.duration || 0) });
     } catch (error) {
       console.error("Upload video error:", error);
       alert('Tải video thất bại');
@@ -194,8 +207,11 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                     <button className="cur-icon-cancel-btn" onClick={() => setEditingChapterId(null)}><X size={18} /></button>
                   </div>
                 ) : (
-                  <h3 onClick={() => setEditingChapterId(chapter.id)} style={{ cursor: 'pointer' }}>
+                  <h3 onClick={() => setEditingChapterId(chapter.id)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     Chương {chapter.chapterOrder}: {chapter.title}
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>
+                       {formatDuration(chapter.duration)}
+                    </span>
                   </h3>
                 )}
               </div>
@@ -218,29 +234,36 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                             defaultValue={lesson.title}
                             onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), title: e.target.value}})}
                           />
-                          <input 
-                            placeholder="Video URL (Cloudinary/YouTube)"
-                            defaultValue={lesson.videoUrl}
-                            onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), videoUrl: e.target.value}})}
-                          />
-                          <div className="cur-flex-row">
+                          <div className="cur-lesson-upload-area" style={{ marginTop: '10px' }}>
                              <input 
-                                placeholder="Thời lượng (vd: 10:20)"
-                                defaultValue={lesson.duration}
-                                onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), duration: e.target.value}})}
+                                type="file" 
+                                id={`lesson-video-edit-${lesson.id}`} 
+                                accept="video/*" 
+                                onChange={async (e) => {
+                                  const file = e.target.files[0];
+                                  if (!file) return;
+                                  const formData = new FormData();
+                                  formData.append('video', file);
+                                  setUploadingLessonVideo(true);
+                                  try {
+                                    const token = localStorage.getItem('token');
+                                    const res = await axios.post('http://localhost:5000/api/upload/video', formData, {
+                                      headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+                                    });
+                                    setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), videoUrl: res.data.url, duration: String(res.data.duration || 0)}});
+                                  } catch (err) { alert('Tải video thất bại'); }
+                                  finally { setUploadingLessonVideo(false); }
+                                }} 
+                                style={{ display: 'none' }}
                              />
-                             <label className="cur-free-preview-toggle">
-                                <input 
-                                  type="checkbox" 
-                                  defaultChecked={lesson.isFree} 
-                                  onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), isFree: e.target.checked}})}
-                                />
-                                Học thử
+                             <label htmlFor={`lesson-video-edit-${lesson.id}`} className="cur-lesson-upload-label" style={{ padding: '8px 15px', background: '#f1f5f9', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', display: 'inline-block', border: '1px solid #e2e8f0' }}>
+                                {uploadingLessonVideo ? 'Đang tải...' : (tempData[lesson.id]?.videoUrl || lesson.videoUrl) ? 'Thay đổi video' : 'Tải lên video'}
                              </label>
+                             {(tempData[lesson.id]?.videoUrl || lesson.videoUrl) && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '0.8rem' }}>✓ Đã có video</span>}
                           </div>
                         </div>
                         <div className="cur-lesson-edit-footer">
-                          <button className="cur-btn-small save" onClick={() => handleUpdateLesson(lesson.id)}>Lưu</button>
+                          <button className="cur-btn-small save" onClick={() => handleUpdateLesson(lesson.id)} disabled={uploadingLessonVideo}>Lưu</button>
                           <button className="cur-btn-small cancel" onClick={() => setEditingLessonId(null)}>Hủy</button>
                         </div>
                       </div>
@@ -248,8 +271,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                       <>
                         <PlayCircle size={16} className="cur-lesson-icon" />
                         <span className="cur-lesson-name">{lesson.title}</span>
-                        {lesson.isFree && <span className="cur-badge preview">Học thử</span>}
-                        <span className="cur-lesson-time">{lesson.duration || '--:--'}</span>
+                        <span className="cur-lesson-time">{formatDuration(tempData[lesson.id]?.duration || lesson.duration)}</span>
                       </>
                     )}
                   </div>
@@ -294,65 +316,33 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                         value={newLesson.title}
                         onChange={(e) => setNewLesson({ ...newLesson, title: e.target.value })}
                         className="title-input"
-                      />
-                      <input 
-                        placeholder="Thời lượng (vd: 12:45)"
-                        value={newLesson.duration}
-                        onChange={(e) => setNewLesson({ ...newLesson, duration: e.target.value })}
-                        className="duration-input"
+                        style={{ width: '100%' }}
                       />
                     </div>
                     
                     <div className="cur-video-source-box">
-                      <div className="cur-source-tabs">
-                        <button 
-                          className={`cur-source-tab ${newLesson.videoSource === 'link' ? 'active' : ''}`}
-                          onClick={() => setNewLesson({ ...newLesson, videoSource: 'link', videoUrl: '' })}
-                        >
-                          Dán link video
-                        </button>
-                        <button 
-                          className={`cur-source-tab ${newLesson.videoSource === 'upload' ? 'active' : ''}`}
-                          onClick={() => setNewLesson({ ...newLesson, videoSource: 'upload', videoUrl: '' })}
-                        >
-                          Tải lên video
-                        </button>
-                      </div>
-                      
-                      {newLesson.videoSource === 'link' ? (
+                      <div className="cur-lesson-upload-area">
                         <input 
-                          placeholder="Dán link video (Cloudinary/YouTube...)"
-                          value={newLesson.videoUrl}
-                          onChange={(e) => setNewLesson({ ...newLesson, videoUrl: e.target.value })}
+                          type="file" 
+                          id="lesson-video-upload" 
+                          accept="video/*" 
+                          onChange={handleLessonVideoUpload} 
+                          style={{ display: 'none' }}
                         />
-                      ) : (
-                        <div className="cur-lesson-upload-area">
-                          <input 
-                            type="file" 
-                            id="lesson-video-upload" 
-                            accept="video/*" 
-                            onChange={handleLessonVideoUpload} 
-                            style={{ display: 'none' }}
-                          />
-                          <label htmlFor="lesson-video-upload" className="cur-lesson-upload-label">
-                            {uploadingLessonVideo ? 'Đang tải lên...' : newLesson.videoUrl ? 'Đã tải xong' : 'Chọn video'}
-                          </label>
-                          {newLesson.videoUrl && <span className="cur-upload-success-check"><Check size={16} /></span>}
-                        </div>
-                      )}
+                        <label htmlFor="lesson-video-upload" className="cur-lesson-upload-label" style={{ cursor: 'pointer', display: 'block', padding: '15px', border: '2px dashed #e2e8f0', borderRadius: '10px', textAlign: 'center' }}>
+                          <Video size={24} style={{ marginBottom: '8px' }} />
+                          <br />
+                          {uploadingLessonVideo ? 'Đang tải video lên...' : newLesson.videoUrl ? 'Video đã tải lên thành công' : 'Nhấn để tải video bài học lên'}
+                        </label>
+                        {newLesson.videoUrl && <div style={{ marginTop: '5px', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                           <Check size={16} /> Link video đã sẵn sàng
+                        </div>}
+                      </div>
                     </div>
 
-                    <div className="cur-form-footer-row">
-                      <label className="cur-free-preview-toggle">
-                        <input 
-                          type="checkbox" 
-                          checked={newLesson.isFree} 
-                          onChange={(e) => setNewLesson({ ...newLesson, isFree: e.target.checked })}
-                        />
-                        Học thử
-                      </label>
+                    <div className="cur-form-footer-row" style={{ justifyContent: 'flex-end' }}>
                       <div className="add-lesson-actions">
-                        <button className="cur-btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo}>Thêm Bài Học</button>
+                        <button className="cur-btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo || !newLesson.videoUrl}>Thêm Bài Học</button>
                         <button className="cur-btn-small cancel" onClick={() => setAddingLessonToChapterId(null)}>Hủy</button>
                       </div>
                     </div>
@@ -361,7 +351,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
               ) : (
                 <button className="cur-add-lesson-btn" onClick={() => {
                   setAddingLessonToChapterId(chapter.id);
-                  setNewLesson({ title: '', duration: '', isFree: false, videoUrl: '', videoSource: 'link' });
+                  setNewLesson({ title: '', duration: '', isFree: false, videoUrl: '', videoSource: 'upload' });
                 }}>
                   <Plus size={16} /> Thêm bài học mới
                 </button>

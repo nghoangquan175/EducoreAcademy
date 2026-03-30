@@ -250,6 +250,28 @@
   color: #fff;
 }
 
+/* Discount Badge */
+.pc-discount-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  z-index: 2;
+  animation: pc-pulse 2s infinite;
+}
+
+@keyframes pc-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
 /* Body */
 .pc-card-body {
   padding: 18px 20px 20px;
@@ -332,13 +354,27 @@
   border-top: 1px solid #f1f5f9;
 }
 
+.pc-price-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .pc-price {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #f59e0b, #ef4444);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ef4444; /* Vibrant Red for Sale Price */
+}
+
+.pc-old-price {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+.fc-price {
+  color: #10b981 !important; /* Vibrant Green for Free */
 }
 
 .pc-enroll-btn {

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review, Category, CourseEditRequest } = require('../models');
+const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review, Category, CourseEditRequest, CoursePublishConfig } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
@@ -14,6 +14,7 @@ router.get('/', optionalProtect, async (req, res) => {
     const offset = (page - 1) * limit;
 
     const where = { published: 5, isLatest: true };
+    const configWhere = {};
     
     // Logic mới: Lọc bỏ các khóa học đã đăng ký nếu được yêu cầu
     if (req.query.excludeEnrolled === 'true' && req.user) {
@@ -30,11 +31,11 @@ router.get('/', optionalProtect, async (req, res) => {
     if (req.query.category && req.query.category !== 'Tất cả') {
       where.category = req.query.category;
     }
-    // Type filter: 'free' or 'pro' relies on isPro boolean now
+    // Type filter: 'free' or 'pro' relies on CoursePublishConfig.isPro now
     if (req.query.type === 'free') {
-      where.isPro = false;
+      configWhere.isPro = false;
     } else if (req.query.type === 'pro') {
-      where.isPro = true;
+      configWhere.isPro = true;
     }
 
     const { count, rows: courses } = await Course.findAndCountAll({
@@ -52,7 +53,15 @@ router.get('/', optionalProtect, async (req, res) => {
         ]
       },
       order: [[sequelize.literal('(SELECT COUNT(*) FROM [Enrollments] WHERE [Enrollments].[courseId] = [Course].[id])'), 'DESC']],
-      include: [{ model: User, as: 'instructor', attributes: ['name'] }],
+      include: [
+        { model: User, as: 'instructor', attributes: ['name'] },
+        { 
+          model: CoursePublishConfig, 
+          as: 'publishConfig',
+          where: Object.keys(configWhere).length > 0 ? configWhere : undefined,
+          required: Object.keys(configWhere).length > 0
+        }
+      ],
       limit,
       offset,
       distinct: true
@@ -177,7 +186,10 @@ router.get('/trash/all', protect, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const course = await Course.findByPk(req.params.id, {
-      include: [{ model: User, as: 'instructor', attributes: ['name', 'avatar'] }],
+      include: [
+        { model: User, as: 'instructor', attributes: ['name', 'avatar'] },
+        { model: CoursePublishConfig, as: 'publishConfig' }
+      ],
     });
     if (!course || course.published !== 5) {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
@@ -313,6 +325,7 @@ router.get('/:id/curriculum', optionalProtect, async (req, res) => {
     const course = await Course.findByPk(courseId, {
       include: [
         { model: User, as: 'instructor', attributes: ['name', 'avatar'] },
+        { model: CoursePublishConfig, as: 'publishConfig' },
         {
           model: Chapter,
           as: 'chapters',

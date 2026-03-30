@@ -11,6 +11,18 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
+const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
 import { fetchCurriculumAPI, fetchCourseReviewsAPI, addCourseReviewAPI } from '../services/courseService';
 import toast from 'react-hot-toast';
 import { FaStar, FaRegStar } from 'react-icons/fa';
@@ -96,21 +108,23 @@ const CoursePage = () => {
   };
 
   const handleEnroll = async () => {
+    const isFree = course.publishConfig ? Number(course.publishConfig.salePrice) === 0 : Number(course.price) === 0;
+
     if (!user) {
       const firstLessonLink = course.chapters?.[0]?.lessons?.[0] 
         ? `/learn/${course.id}/lesson/${course.chapters[0].lessons[0].id}`
         : '#';
       navigate('/login', { 
         state: { 
-          returnUrl: course.price === 0 ? firstLessonLink : `/checkout/${course.id}`,
-          action: course.price === 0 ? 'enroll_free' : 'checkout',
+          returnUrl: isFree ? firstLessonLink : `/checkout/${course.id}`,
+          action: isFree ? 'enroll_free' : 'checkout',
           courseId: course.id
         } 
       });
       return;
     }
 
-    if (course.price === 0) {
+    if (isFree) {
       try {
         await axios.post(`http://localhost:5000/api/courses/${course.id}/enroll`, {}, {
           headers: { Authorization: `Bearer ${token}` }
@@ -213,7 +227,7 @@ const CoursePage = () => {
                             </div>
                             <div className="lesson-meta-group">
                               {lesson.isFree && <span className="badge-preview">Học thử</span>}
-                              <span className="lesson-duration">{lesson.duration || '00:00'}</span>
+                              <span className="lesson-duration">{formatDuration(lesson.duration)}</span>
                             </div>
                           </div>
                         ))}
@@ -303,9 +317,26 @@ const CoursePage = () => {
 
           <div className="purchase-card sticky">
             <div className="price-container">
-              <h2 className="current-price">{course.price === 0 ? 'Miễn phí' : formatCurrency(course.price || 0)}</h2>
-              {course.price > 0 && <span className="original-price">{formatCurrency(course.price * 1.5)}</span>}
-              {course.price > 0 && <span className="discount-badge">Giảm giá</span>}
+              {course.publishConfig ? (
+                <>
+                  <h2 className={`current-price ${!course.publishConfig.isPro ? 'is-free' : 'is-sale'}`}>
+                    {course.publishConfig.isPro ? formatCurrency(course.publishConfig.salePrice) : 'Miễn phí'}
+                  </h2>
+                  {course.publishConfig.discountPercent > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <span className="original-price">{formatCurrency(course.publishConfig.price)}</span>
+                      <span className="discount-badge">-{course.publishConfig.discountPercent}%</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h2 className={`current-price ${course.price === 0 ? 'is-free' : 'is-sale'}`}>
+                    {course.price === 0 ? 'Miễn phí' : formatCurrency(course.price || 0)}
+                  </h2>
+                  {course.price > 0 && <span className="original-price">{formatCurrency(course.price * 1.2)}</span>}
+                </>
+              )}
             </div>
 
             <button 
@@ -313,9 +344,13 @@ const CoursePage = () => {
                className="btn-enroll primary" 
                style={{ display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
              >
-               {course.isEnrolled ? 'TIẾP TỤC HỌC' : (course.price === 0 ? 'VÀO HỌC NGAY' : 'ĐĂNG KÝ NGAY')}
+               {course.isEnrolled ? 'TIẾP TỤC HỌC' : (
+                 (course.publishConfig ? course.publishConfig.salePrice === 0 : course.price === 0) 
+                   ? 'VÀO HỌC NGAY' 
+                   : 'ĐĂNG KÝ NGAY'
+               )}
              </button>
-            {course.price > 0 && <p className="guarantee-text">Đảm bảo hoàn tiền trong 30 ngày</p>}
+            {(course.publishConfig ? course.publishConfig.salePrice > 0 : course.price > 0) && <p className="guarantee-text">Đảm bảo hoàn tiền trong 30 ngày</p>}
 
             <div className="course-features">
               <h3 className="features-title">Khóa học này bao gồm:</h3>

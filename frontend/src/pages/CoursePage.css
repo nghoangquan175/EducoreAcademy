@@ -287,8 +287,15 @@
 .current-price {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--text-primary);
   margin: 0;
+}
+
+.current-price.is-sale {
+  color: #ef4444; /* Vibrant Red for Sale */
+}
+
+.current-price.is-free {
+  color: #10b981; /* Vibrant Green for Free */
 }
 
 .original-price {

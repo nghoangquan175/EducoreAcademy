@@ -12,6 +12,10 @@ const {
   adminUpdateArticleStatus,
   adminGetAllArticles
 } = require('../controllers/articleController');
+const {
+  getPublishConfig,
+  upsertPublishConfig
+} = require('../controllers/publishConfigController');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -405,5 +409,9 @@ router.get('/courses/:id/diff', protect, admin, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ── Course Publishing Configuration ──
+router.get('/publish-config/:courseId', protect, admin, getPublishConfig);
+router.post('/publish-config/:courseId', protect, admin, upsertPublishConfig);
 
 module.exports = router;

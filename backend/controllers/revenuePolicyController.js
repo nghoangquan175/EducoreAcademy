@@ -32,6 +32,7 @@ exports.getRevenuePolicies = async (req, res) => {
           model: Course, 
           as: 'course',
           attributes: ['id', 'title', 'instructorId'],
+          include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }],
           where: search ? { title: { [Op.like]: `%${search}%` } } : {}
         },
         { model: User, as: 'admin', attributes: ['id', 'name'] },
@@ -67,6 +68,8 @@ exports.createRevenuePolicy = async (req, res) => {
       type,
       instructorPercent,
       fixedAmount,
+      suggestedPrice: (type === 'PERCENT' || type === 'HYBRID') ? req.body.suggestedPrice : null,
+      pricePerPurchase: (type === 'PERCENT' || type === 'HYBRID') ? req.body.pricePerPurchase : null,
       upfrontAmount,
       createdByAdminId: req.user.id,
       status: sendImmediately ? 'waiting_confirm' : 'draft'
@@ -292,6 +295,8 @@ exports.updateRevenuePolicy = async (req, res) => {
     policy.instructorPercent = instructorPercent;
     policy.fixedAmount = fixedAmount;
     policy.upfrontAmount = upfrontAmount;
+    policy.suggestedPrice = (type === 'PERCENT' || type === 'HYBRID') ? req.body.suggestedPrice : null;
+    policy.pricePerPurchase = (type === 'PERCENT' || type === 'HYBRID') ? req.body.pricePerPurchase : null;
     
     if (sendImmediately) {
       policy.status = 'waiting_confirm';
@@ -321,7 +326,11 @@ exports.getRevenuePolicyById = async (req, res) => {
   try {
     const policy = await RevenuePolicy.findByPk(req.params.id, {
       include: [
-        { model: Course, as: 'course' },
+        { 
+          model: Course, 
+          as: 'course',
+          include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }] 
+        },
         { model: User, as: 'admin', attributes: ['id', 'name'] },
         { model: User, as: 'instructor', attributes: ['id', 'name'] }
       ]

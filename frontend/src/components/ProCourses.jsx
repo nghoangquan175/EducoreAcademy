@@ -26,6 +26,9 @@ const CourseCard = ({ course, onClick }) => (
         onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'; }}
       />
       <span className={`pc-level pc-level--${course.level?.toLowerCase()}`}>{course.level}</span>
+      {course.publishConfig?.discountPercent > 0 && (
+        <div className="pc-discount-badge">-{course.publishConfig.discountPercent}%</div>
+      )}
     </div>
 
     {/* Body */}
@@ -49,7 +52,16 @@ const CourseCard = ({ course, onClick }) => (
 
       {/* Footer */}
       <div className="pc-card-footer">
-        <span className="pc-price">{formatPrice(course.price)}</span>
+        <div className="pc-price-group">
+          {course.publishConfig?.discountPercent > 0 && (
+            <span className="pc-old-price">{formatPrice(course.publishConfig.price)}</span>
+          )}
+          <span className="pc-price">
+            {course.publishConfig 
+              ? formatPrice(course.publishConfig.salePrice)
+              : formatPrice(course.price)}
+          </span>
+        </div>
         <button className="pc-enroll-btn">
           Xem khoá học <ChevronRight size={15} />
         </button>

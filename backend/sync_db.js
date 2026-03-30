@@ -1,33 +1,31 @@
 require('dotenv').config();
 const { sequelize } = require('./config/db');
 
-async function syncDB() {
+async function syncNewColumns() {
   try {
-    await sequelize.authenticate();
-    console.log('Connection established.');
+    console.log('--- Manually adding new columns to Chapters and Lessons ---');
     
-    // Using raw SQL to ensure it works on MSSQL
-    const queries = [
-      "ALTER TABLE PaymentOrders ADD adminAmount DECIMAL(18,2) NULL;",
-      "ALTER TABLE PaymentOrders ADD instructorAmount DECIMAL(18,2) NULL;",
-      "ALTER TABLE PaymentOrders ADD revenuePolicyId INT NULL;"
-    ];
-
-    for (let query of queries) {
-      try {
-        await sequelize.query(query);
-        console.log('Executed:', query);
-      } catch (err) {
-        // Ignored if column already exists
-        console.log('Skipped (might already exist):', err.message);
-      }
+    // Check if Chapters already has duration
+    try {
+      await sequelize.query("ALTER TABLE [Chapters] ADD [duration] NVARCHAR(20) NULL;");
+      console.log('Added [duration] to [Chapters]');
+    } catch (e) {
+      console.log('[Chapters].duration error:', e.message);
     }
-    console.log('Database altered successfully.');
-  } catch (error) {
-    console.error('Migration failed:', error);
-  } finally {
-    process.exit();
+
+    try {
+      await sequelize.query("ALTER TABLE [Lessons] ADD [duration] NVARCHAR(20) NULL;");
+      console.log('Added [duration] to [Lessons]');
+    } catch (e) {
+      console.log('[Lessons].duration error:', e.message);
+    }
+
+    console.log('--- Done ---');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during manual sync:', err);
+    process.exit(1);
   }
 }
 
-syncDB();
+syncNewColumns();

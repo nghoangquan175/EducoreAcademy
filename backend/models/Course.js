@@ -104,6 +104,29 @@ Course.updateCourseStats = async function(courseId) {
       }]
     });
 
+    // Fetch all lessons for chapters of this course
+    const chapters = await Chapter.findAll({
+      where: { courseId },
+      include: [{ model: Lesson, as: 'lessons', attributes: ['duration'] }]
+    });
+
+    let totalCourseSeconds = 0;
+    for (const chapter of chapters) {
+        const chapterSeconds = (chapter.lessons || []).reduce((acc, l) => {
+           const dur = l.duration || '0';
+           if (dur.includes(':')) {
+              const parts = dur.split(':');
+              if (parts.length === 2) return acc + (parseInt(parts[0]) * 60 + parseInt(parts[1]));
+              if (parts.length === 3) return acc + (parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]));
+           }
+           return acc + (parseInt(dur) || 0);
+        }, 0);
+        
+        // Update chapter duration
+        await Chapter.update({ duration: String(chapterSeconds) }, { where: { id: chapter.id } });
+        totalCourseSeconds += chapterSeconds;
+    }
+
     const quizCount = await Quiz.count({
       include: [{
         model: Lesson,
@@ -116,8 +139,8 @@ Course.updateCourseStats = async function(courseId) {
       }]
     });
 
-    await Course.update({ videoCount, quizCount }, { where: { id: courseId } });
-    return { videoCount, quizCount };
+    await Course.update({ videoCount, quizCount, duration: String(totalCourseSeconds) }, { where: { id: courseId } });
+    return { videoCount, quizCount, duration: totalCourseSeconds };
   } catch (error) {
     console.error('Error updating course stats:', error);
     throw error;

@@ -9,6 +9,18 @@ import QuizPlayer from './QuizPlayer';
 import ConfirmDialog from '../components/ConfirmDialog';
 import './LearningPage.css';
 
+const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
 const LearningPage = () => {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
@@ -502,7 +514,7 @@ const LearningPage = () => {
                                 </div>
                                 <div className="lesson-text-info">
                                   <span className="lesson-name">{lesson.title}</span>
-                                  <span className="lesson-length">{lesson.duration || '00:00'}</span>
+                                  <span className="lesson-length">{formatDuration(lesson.duration)}</span>
                                 </div>
                               </div>
                             );

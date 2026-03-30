@@ -71,20 +71,26 @@ const RevenuePolicyDetail = ({
 
               <div className="detail-item">
                 <label><ShieldCheck size={16} /> Loại chính sách</label>
-                <div className="detail-value">{getPolicyTypeLabel(policy.type)}</div>
+                <div className="detail-value" style={{ fontWeight: 'bold', color: '#4f46e5' }}>{getPolicyTypeLabel(policy.type)}</div>
               </div>
 
               {(policy.type === 'PERCENT' || policy.type === 'HYBRID') && (
-                <div className="detail-item">
-                  <label><Percent size={16} /> Phần trăm giảng viên</label>
-                  <div className="detail-value">{policy.instructorPercent}% doanh thu</div>
-                </div>
+                <>
+                  <div className="detail-item">
+                    <label><Percent size={16} /> Phần trăm giảng viên</label>
+                    <div className="detail-value" style={{ fontWeight: 'bold', color: '#10b981', fontSize: '1.2rem' }}>{policy.instructorPercent}% doanh thu</div>
+                  </div>
+                  <div className="detail-item">
+                    <label><DollarSign size={16} /> Giá quy ước / lượt</label>
+                    <div className="detail-value" style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '1.2rem' }}>{policy.pricePerPurchase?.toLocaleString('vi-VN')}đ</div>
+                  </div>
+                </>
               )}
 
               {(policy.type === 'FIXED' || policy.type === 'HYBRID') && (
                 <div className="detail-item">
-                  <label><CreditCard size={16} /> Mức phí cố định</label>
-                  <div className="detail-value">{policy.fixedAmount?.toLocaleString('vi-VN')}đ</div>
+                  <label><CreditCard size={16} /> {policy.type === 'FIXED' ? 'Giá mua đứt / cố định' : 'Mức phí cố định'}</label>
+                  <div className="detail-value" style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '1.2rem' }}>{policy.fixedAmount?.toLocaleString('vi-VN')}đ</div>
                 </div>
               )}
 

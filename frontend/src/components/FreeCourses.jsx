@@ -30,6 +30,11 @@ const CourseCard = ({ course, onClick }) => (
         onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop'; }}
       />
       <span className={`fc-level fc-level--${course.level?.toLowerCase()}`}>{course.level}</span>
+      {course.publishConfig?.discountPercent > 0 && (
+        <div className="pc-discount-badge" style={{ background: '#10b981' }}>
+          {course.publishConfig.discountPercent === 100 ? 'FREE' : `-${course.publishConfig.discountPercent}%`}
+        </div>
+      )}
     </div>
 
     {/* Body */}
@@ -53,7 +58,12 @@ const CourseCard = ({ course, onClick }) => (
 
       {/* Footer */}
       <div className="pc-card-footer">
-        <span className="pc-price fc-price">{formatPrice(course.price)}</span>
+        <div className="pc-price-group">
+          {course.publishConfig?.price > 0 && (
+            <span className="pc-old-price">{formatPrice(course.publishConfig.price)}</span>
+          )}
+          <span className="pc-price fc-price">Miễn phí</span>
+        </div>
         <button className="pc-enroll-btn fc-enroll-btn">
           Học ngay <ChevronRight size={15} />
         </button>

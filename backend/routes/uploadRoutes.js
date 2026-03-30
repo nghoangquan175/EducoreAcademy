@@ -11,7 +11,7 @@ router.post('/image', protect, uploadImage.single('image'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: 'No image file provided' });
     }
-    
+
     // Cloudinary returns the secure url in req.file.path
     res.status(200).json({
       message: 'Image uploaded successfully',
@@ -28,17 +28,26 @@ router.post('/image', protect, uploadImage.single('image'), (req, res) => {
 // @desc    Upload a video (e.g. lesson content)
 // @route   POST /api/upload/video
 // @access  Private (Instructor/Admin)
-router.post('/video', protect, instructor, uploadVideo.single('video'), (req, res) => {
+router.post('/video', protect, instructor, uploadVideo.single('video'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No video file provided' });
     }
 
+    const { cloudinary } = require('../config/cloudinary');
+
+    // Use Admin API resource() for more detailed metadata (like duration)
+    const result = await cloudinary.api.resource(req.file.filename, {
+      resource_type: 'video',
+      image_metadata: true
+    });
+
     res.status(200).json({
       message: 'Video uploaded successfully',
       url: req.file.path,
       format: req.file.mimetype,
-      size: req.file.size
+      size: req.file.size,
+      duration: result.duration ? Math.round(result.duration) : 0
     });
   } catch (error) {
     console.error('Video upload error:', error);

@@ -17,7 +17,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
     thumbnail: '', 
     previewVideoUrl: '', 
     level: 'Beginner', 
-    isPro: false
+    isPro: true
   });
   
   const [loading, setLoading] = useState(isEditMode);
@@ -185,8 +185,8 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
            <h2 className="inst-content-title" style={{ margin: 0 }}>
              {isEditMode ? 'Chỉnh sửa Khóa học' : 'Tạo Khóa học mới'}
            </h2>
-           <button className="inst-add-btn primary" type="submit" form="course-form">
-             <Save size={18} /> Lưu thông tin
+           <button className="inst-add-btn primary" type="submit" form="course-form" disabled={uploadingThumb || uploadingVideo}>
+             <Save size={18} /> {uploadingThumb || uploadingVideo ? 'Đang tải media...' : 'Lưu thông tin'}
            </button>
         </div>
 
@@ -194,7 +194,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
           <form id="course-form" className="basic-info-form" onSubmit={handleSubmit}>
              <div className="form-group">
                 <label>Tên khóa học</label>
-                <input type="text" name="title" value={course.title} onChange={handleChange} placeholder="VD: Khóa học React 2026..." required />
+                <input type="text" name="title" value={course.title} onChange={handleChange} placeholder="Nhập tên..." required />
              </div>
 
              <div className="form-group">
@@ -202,46 +202,20 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
                 <textarea name="description" value={course.description} onChange={handleChange} rows="4" placeholder="Nhập mô tả về khóa học..." required />
              </div>
 
-             <div className="form-row">
-               <div className="form-group half">
-                  <label>Loại khóa học</label>
-                  <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'normal' }}>
-                      <input 
-                        type="radio" 
-                        name="isPro" 
-                        checked={!course.isPro} 
-                        onChange={() => { setCourse({ ...course, isPro: false, price: 0 }); }} 
-                      />
-                      Miễn phí
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 'normal' }}>
-                      <input 
-                        type="radio" 
-                        name="isPro" 
-                        checked={course.isPro} 
-                        onChange={() => setCourse({ ...course, isPro: true })} 
-                      />
-                      Trả phí
-                    </label>
-                  </div>
-               </div>
-
-               <div className="form-group half">
-                  <label>Giá tiền (VNĐ)</label>
-                  <input 
-                    type="number" 
-                    name="price" 
-                    value={course.price} 
-                    onChange={handleChange} 
-                    min="0" 
-                    disabled={!course.isPro} 
-                    required={course.isPro}
-                    style={!course.isPro ? { backgroundColor: '#f1f5f9', opacity: 0.6, cursor: 'not-allowed' } : {}}
-                  />
-                  {!course.isPro && <small style={{color: '#64748b'}}>Khóa học miễn phí không yêu cầu nhập giá.</small>}
-               </div>
+             <div className="form-group">
+                <label>Giá đề xuất (VNĐ) / lượt mua</label>
+                <input 
+                  type="number" 
+                  name="price" 
+                  value={course.price} 
+                  onChange={handleChange} 
+                  min="0" 
+                  required
+                  placeholder="Nhập mức giá bạn mong muốn cho khóa học này..."
+                />
+                <small style={{color: '#64748b'}}>Lưu ý: Đây là mức giá đề xuất, giá chính thức sẽ được Admin phê duyệt cùng với chính sách doanh thu sau khi kiểm duyệt nội dung.</small>
              </div>
+
 
               <div className="form-row">
                  <div className="form-group half">
@@ -347,7 +321,13 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
                 <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Tính năng quản lý chương và bài giảng (Content Management) có thể truy cập qua nút "Bài giảng" ở danh sách chính để có trải nghiệm tốt nhất.</p>
              </div>
           )}
+          <div className="form-submit-footer" style={{ marginTop: '40px', display: 'flex', justifyContent: 'center', padding: '20px 0', borderTop: '1px solid #e2e8f0' }}>
+             <button className="inst-add-btn primary" type="submit" form="course-form" disabled={uploadingThumb || uploadingVideo} style={{ width: 'auto', padding: '12px 60px', borderRadius: '12px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Save size={20} /> {uploadingThumb || uploadingVideo ? 'Đang xử lý media...' : 'Lưu thông tin khóa học'}
+             </button>
+          </div>
         </div>
+
 
         <ConfirmDialog 
           isOpen={confirmDialog.isOpen}

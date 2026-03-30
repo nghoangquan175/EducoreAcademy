@@ -94,8 +94,8 @@ const ArticlesHome = () => {
   };
 
   return (
-    <section className="art-section">
-      <div className="art-container">
+    <section className="pc-section">
+      <div className="pc-container">
         <div className="art-header">
           <div className="art-header-left">
             <div className="art-badge">

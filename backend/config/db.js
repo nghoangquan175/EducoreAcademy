@@ -22,7 +22,7 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
 
 const connectDB = async () => {
   try {
-    // Sync — force:false to avoid unnecessary schema checks in every restart.
+    // Sync — force:false to avoid SQL syntax errors with 'alter: true' on MSSQL
     await sequelize.sync({ force: false });
     console.log('Database synced');
 

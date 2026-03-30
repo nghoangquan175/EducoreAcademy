@@ -33,7 +33,8 @@ import {
   Clock,
   HelpCircle,
   Play,
-  DollarSign
+  DollarSign,
+  Tag
 } from 'lucide-react';
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -45,6 +46,7 @@ import InstructorApplications from '../components/InstructorApplications';
 import CourseDetailView from '../components/CourseDetailView';
 import RevenuePolicyDetail from '../components/RevenuePolicyDetail';
 import AdminRevenue from '../components/AdminRevenue';
+import SalesSetupModal from '../components/SalesSetupModal';
 import {
   fetchMyArticlesAPI, 
   deleteArticleAPI, 
@@ -136,7 +138,36 @@ const AdminDashboard = () => {
     type: 'PERCENT',
     instructorPercent: 0,
     fixedAmount: 0,
+    suggestedPrice: 0,
+    pricePerPurchase: 0,
   });
+
+  // Sales Setup State
+  const [showSalesSetup, setShowSalesSetup] = useState(false);
+  const [salesSetupCourseId, setSalesSetupCourseId] = useState(null);
+
+  const handlePublishWithSetup = (courseId, formData) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Xác nhận xuất bản',
+      message: 'Học viên sẽ thấy giá bán và khuyến mãi bạn đã cài đặt. Bạn có chắc chắn muốn xuất bản khóa học này không?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.post(`http://localhost:5000/api/admin/publish-config/${courseId}`, 
+            { ...formData, publish: true }, 
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          toast.success('Khóa học đã được đăng tải thành công!');
+          setShowSalesSetup(false);
+          fetchData();
+        } catch (error) {
+          toast.error('Lỗi khi đăng tải: ' + (error.response?.data?.message || error.message));
+        }
+      }
+    });
+  };
 
   const prevTab = useRef(activeTab);
   const prevSubTab = useRef(articleSubTab);
@@ -366,6 +397,14 @@ const AdminDashboard = () => {
         toast.error('Phần trăm giảng viên phải từ 1 đến 100');
         return;
       }
+      if (revenueData.suggestedPrice <= 0) {
+        toast.error('Giá đề xuất phải lớn hơn 0');
+        return;
+      }
+      if (revenueData.pricePerPurchase <= 0) {
+        toast.error('Giá quy ước mỗi lượt mua phải lớn hơn 0');
+        return;
+      }
     }
     
     if (revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') {
@@ -395,6 +434,8 @@ const AdminDashboard = () => {
         type: 'PERCENT',
         instructorPercent: 0,
         fixedAmount: 0,
+        suggestedPrice: 0,
+        pricePerPurchase: 0,
       });
       fetchData();
     } catch (error) {
@@ -411,6 +452,8 @@ const AdminDashboard = () => {
           type: policy.type,
           instructorPercent: policy.instructorPercent || 0,
           fixedAmount: policy.fixedAmount || 0,
+          suggestedPrice: policy.suggestedPrice || 0,
+          pricePerPurchase: policy.pricePerPurchase || 0,
         });
         setEditingRevenuePolicyId(id);
         setShowRevenuePolicyDetail(false);
@@ -1264,7 +1307,14 @@ const AdminDashboard = () => {
                                                     )}
                                                     {Number(course.published) === 4 && (
                                                         <>
-                                                            <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
+                                                            <button 
+                                                                className="admin-btn approve" 
+                                                                onClick={() => {
+                                                                    setSalesSetupCourseId(course.id);
+                                                                    setShowSalesSetup(true);
+                                                                }} 
+                                                                title="Xuất bản"
+                                                            >
                                                                 <ArrowUpCircle size={18} />
                                                             </button>
                                                             <button 
@@ -1281,7 +1331,14 @@ const AdminDashboard = () => {
                                             ) : (
                                                 <>
                                                     {Number(course.published) === 6 && (
-                                                        <button className="admin-btn approve" onClick={() => handleStatusUpdate(course.id, 5)} title="Xuất bản">
+                                                        <button 
+                                                            className="admin-btn approve" 
+                                                            onClick={() => {
+                                                                setSalesSetupCourseId(course.id);
+                                                                setShowSalesSetup(true);
+                                                            }} 
+                                                            title="Xuất bản"
+                                                        >
                                                             <ArrowUpCircle size={18} />
                                                         </button>
                                                     )}
@@ -2002,7 +2059,7 @@ const AdminDashboard = () => {
                     <tr key={policy.id}>
                       <td>
                         <div style={{ fontWeight: '600' }}>{policy.course?.title}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>GV: {policy.instructor?.name || 'N/A'}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>GV: {policy.course?.instructor?.name || 'N/A'}</div>
                       </td>
                       <td>
                         <span className="status-badge" style={{ background: '#f1f5f9', color: '#475569' }}>
@@ -2584,9 +2641,17 @@ const AdminDashboard = () => {
                     <select 
                       required 
                       className="modal-input"
-                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: (revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') ? '10px' : '0' }}
                       value={revenueData.courseId}
-                      onChange={(e) => setRevenueData({ ...revenueData, courseId: e.target.value })}
+                      onChange={(e) => {
+                        const courseId = e.target.value;
+                        const course = bannerLinkCourses.find(c => Number(c.id) === Number(courseId));
+                        setRevenueData({ 
+                          ...revenueData, 
+                          courseId,
+                          suggestedPrice: course ? course.price : 0
+                        });
+                      }}
                     >
                       <option value="">-- Chọn khóa học --</option>
                       {bannerLinkCourses
@@ -2595,6 +2660,18 @@ const AdminDashboard = () => {
                         <option key={course.id} value={course.id}>{course.title}</option>
                       ))}
                     </select>
+
+                    {revenueData.courseId && (
+                      <div style={{ marginTop: '5px' }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', fontSize: '0.85rem', color: '#64748b' }}>Giá đề xuất của giảng viên (VNĐ/lượt mua)</label>
+                        <input 
+                          type="text" 
+                          disabled 
+                          value={Number(revenueData.suggestedPrice).toLocaleString('vi-VN') + ' đ'}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'not-allowed', fontWeight: '600' }}
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="form-group" style={{ marginBottom: '15px' }}>
                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Loại chính sách</label>
@@ -2611,25 +2688,40 @@ const AdminDashboard = () => {
                   </div>
 
                   {(revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') && (
-                    <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Phần trăm doanh thu (%)</label>
-                      <input 
-                        type="number" 
-                        required 
-                        min="0"
-                        max="100"
-                        className="modal-input" 
-                        value={revenueData.instructorPercent}
-                        onChange={(e) => setRevenueData({ ...revenueData, instructorPercent: e.target.value })}
-                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="%"
-                      />
+                    <div className="form-grid" style={{ gap: '15px', marginBottom: '15px' }}>
+                      <div className="form-group">
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Phần trăm doanh thu (%)</label>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0"
+                          max="100"
+                          className="modal-input" 
+                          value={revenueData.instructorPercent}
+                          onChange={(e) => setRevenueData({ ...revenueData, instructorPercent: e.target.value })}
+                          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          placeholder="%"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Giá quy ước / lượt mua (VNĐ)</label>
+                        <input 
+                          type="number" 
+                          required 
+                          min="0"
+                          className="modal-input" 
+                          value={revenueData.pricePerPurchase}
+                          onChange={(e) => setRevenueData({ ...revenueData, pricePerPurchase: e.target.value })}
+                          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          placeholder="Nhập giá quy ước"
+                        />
+                      </div>
                     </div>
                   )}
 
                   {(revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') && (
                     <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Số tiền cố định (VNĐ)</label>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>{revenueData.type === 'FIXED' ? 'Số tiền mua đứt (VNĐ)' : 'Số tiền cố định bổ sung (VNĐ)'}</label>
                       <input 
                         type="number" 
                         required 
@@ -2638,8 +2730,14 @@ const AdminDashboard = () => {
                         value={revenueData.fixedAmount}
                         onChange={(e) => setRevenueData({ ...revenueData, fixedAmount: e.target.value })}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Nhập số tiền (vd: 5000000)"
+                        placeholder="Nhập số tiền"
                       />
+                    </div>
+                  )}
+
+                  {(revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') && (
+                    <div style={{ marginBottom: '15px' }}>
+                       <small style={{ color: '#64748b' }}>* Giá quy ước là mức giá dùng để làm căn cứ chia sẻ doanh thu cho mỗi lượt mua khóa học.</small>
                     </div>
                   )}
                 </div>
@@ -2664,6 +2762,16 @@ const AdminDashboard = () => {
         policy={selectedRevenuePolicy}
         userRole="admin"
         onAction={handleRevenuePolicyAction}
+      />
+      <SalesSetupModal 
+        isOpen={showSalesSetup}
+        onClose={() => setShowSalesSetup(false)}
+        courseId={salesSetupCourseId}
+        onSuccess={(msg) => {
+          toast.success(msg);
+          fetchData();
+        }}
+        onPublishRequested={(formData) => handlePublishWithSetup(salesSetupCourseId, formData)}
       />
     </div>
   );

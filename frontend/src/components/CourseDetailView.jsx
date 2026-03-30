@@ -18,6 +18,18 @@ const CourseDetailView = ({ courseData, onBack, actions, isReviewMode = false })
     }
   };
 
+  const formatDuration = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const totalLessons = courseData.chapters?.reduce((acc, c) => acc + (c.lessons?.length || 0), 0) || 0;
   const revenue = (courseData.studentsCount || 0) * (courseData.price || 0);
 
@@ -82,7 +94,7 @@ const CourseDetailView = ({ courseData, onBack, actions, isReviewMode = false })
                             {lesson.isFree && <span className="free-badge">Học thử</span>}
                           </div>
                           <div className="lesson-meta-info">
-                            <span className="lesson-duration"><Clock size={14} /> {lesson.duration}p</span>
+                            <span className="lesson-duration"><Clock size={14} /> {formatDuration(lesson.duration)}</span>
                             {lesson.quiz && <span className="quiz-badge"><HelpCircle size={14} /> Có quiz</span>}
                             {lesson.videoUrl && <button className="preview-video-btn" onClick={() => window.open(lesson.videoUrl, '_blank')}><Play size={12} /> Preview</button>}
                           </div>
@@ -107,7 +119,7 @@ const CourseDetailView = ({ courseData, onBack, actions, isReviewMode = false })
             </div>
             <div className="stat-row">
               <span style={{ color: '#64748b' }}>Tổng thời lượng:</span>
-              <strong style={{ color: '#1e293b' }}>{courseData.duration || 0} phút</strong>
+              <strong style={{ color: '#1e293b' }}>{formatDuration(courseData.duration)}</strong>
             </div>
             <div className="stat-row">
               <span style={{ color: '#64748b' }}>Trạng thái:</span>

@@ -16,6 +16,11 @@ const Chapter = sequelize.define('Chapter', {
     allowNull: false,
     defaultValue: 1,
   },
+  duration: {
+    // Tổng thời lượng bài học trong chương (giây)
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
   // courseId là foreign key - sẽ được thêm tự động qua Association
 });
 
