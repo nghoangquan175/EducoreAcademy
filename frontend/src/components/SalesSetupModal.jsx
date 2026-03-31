@@ -42,16 +42,18 @@ const SalesSetupModal = ({
       setData({ course, policy, config });
 
       // Initial form values
+      const isForcedPro = policy?.type === 'PERCENT' || policy?.type === 'HYBRID';
+      
       if (config) {
         setForm({
-          isPro: config.isPro,
+          isPro: isForcedPro ? true : config.isPro,
           price: Number(config.price),
           salePrice: Number(config.salePrice),
           discountPercent: Number(config.discountPercent)
         });
       } else {
         // Default values based on policy or course
-        const basePrice = (policy?.type === 'PERCENT' || policy?.type === 'HYBRID') 
+        const basePrice = isForcedPro 
           ? Number(policy.pricePerPurchase) 
           : Number(course.price);
 
@@ -69,7 +71,11 @@ const SalesSetupModal = ({
     }
   };
 
+  const isForcedPro = data.policy?.type === 'PERCENT' || data.policy?.type === 'HYBRID';
+
   const handleTogglePro = (e) => {
+    if (isForcedPro) return; // Prevent change if forced
+    
     const isPro = e.target.checked;
     if (!isPro) {
       setForm({ ...form, isPro: false, salePrice: 0, discountPercent: 100 });
@@ -148,14 +154,21 @@ const SalesSetupModal = ({
             </div>
 
             <div className="sales-setup-toggle-row">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                 <Monitor size={18} color={form.isPro ? '#4f46e5' : '#64748b'} />
-                <span style={{ fontWeight: '600', color: form.isPro ? '#1e293b' : '#64748b' }}>
-                  {form.isPro ? 'Khóa học trả phí (PRO)' : 'Khóa học miễn phí (FREE)'}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: '600', color: form.isPro ? '#1e293b' : '#64748b' }}>
+                    {form.isPro ? 'Khóa học trả phí (PRO)' : 'Khóa học miễn phí (FREE)'}
+                  </span>
+                </div>
               </div>
-              <label className="toggle-switch">
-                <input type="checkbox" checked={form.isPro} onChange={handleTogglePro} />
+              <label className={`toggle-switch ${isForcedPro ? 'disabled' : ''}`}>
+                <input 
+                  type="checkbox" 
+                  checked={form.isPro} 
+                  onChange={handleTogglePro} 
+                  disabled={isForcedPro}
+                />
                 <span className="toggle-slider"></span>
               </label>
             </div>

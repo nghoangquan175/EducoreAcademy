@@ -1,4 +1,4 @@
-const { PaymentOrder, Payment, Enrollment, Course, RevenuePolicy } = require('../models');
+const { PaymentOrder, Payment, Enrollment, Course, RevenuePolicy, CoursePublishConfig } = require('../models');
 const vnpayConfig = require('../config/vnpay');
 const crypto = require('crypto');
 const querystring = require('qs');
@@ -6,12 +6,27 @@ const moment = require('moment');
 
 exports.createOrder = async (req, res) => {
   try {
-    const { courseId, amount } = req.body;
+    const { courseId } = req.body;
     const userId = req.user.id;
 
-    const course = await Course.findByPk(courseId);
-    if (!course || Number(course.published) !== 2) {
+    const course = await Course.findByPk(courseId, {
+      include: [{ model: CoursePublishConfig, as: 'publishConfig' }]
+    });
+
+    if (!course || Number(course.published) !== 5) {
       return res.status(403).json({ message: 'Khóa học này hiện không chấp nhận đăng ký mới' });
+    }
+
+    // Determine the correct amount from backend data
+    let amount = 0;
+    if (course.publishConfig) {
+      amount = course.publishConfig.isPro ? Number(course.publishConfig.salePrice) : 0;
+    } else {
+      amount = Number(course.price);
+    }
+
+    if (amount === 0) {
+      return res.status(400).json({ message: 'Khóa học miễn phí không cần tạo đơn hàng. Hãy sử dụng chức năng đăng ký trực tiếp.' });
     }
 
     const order = await PaymentOrder.create({
@@ -31,7 +46,7 @@ exports.createOrder = async (req, res) => {
 exports.createPayment = async (req, res) => {
   try {
     process.env.TZ = 'Asia/Ho_Chi_Minh';
-    const { orderId, amount, bankCode } = req.body;
+    const { orderId, bankCode } = req.body;
 
     const order = await PaymentOrder.findByPk(orderId);
     if (!order) {
@@ -46,6 +61,8 @@ exports.createPayment = async (req, res) => {
       req.socket.remoteAddress ||
       req.connection.socket.remoteAddress;
 
+    const vnp_Amount = Math.round(Number(order.amount) * 100);
+
     let vnp_Params = {};
     vnp_Params['vnp_Version'] = '2.1.0';
     vnp_Params['vnp_Command'] = 'pay';
@@ -55,7 +72,7 @@ exports.createPayment = async (req, res) => {
     vnp_Params['vnp_TxnRef'] = orderId;
     vnp_Params['vnp_OrderInfo'] = 'Thanh toan cho ma GD:' + orderId;
     vnp_Params['vnp_OrderType'] = 'other';
-    vnp_Params['vnp_Amount'] = amount * 100;
+    vnp_Params['vnp_Amount'] = vnp_Amount;
     vnp_Params['vnp_ReturnUrl'] = vnpayConfig.vnp_ReturnUrl;
     vnp_Params['vnp_IpAddr'] = ipAddr;
     vnp_Params['vnp_CreateDate'] = createDate;
@@ -206,17 +223,20 @@ async function fulfillOrder(orderId, transactionNo, rawParams) {
     if (revenuePolicy) {
       revenuePolicyId = revenuePolicy.id;
       if (revenuePolicy.type === 'PERCENT') {
-        instructorAmount = orderAmount * (revenuePolicy.instructorPercent / 100);
+        const originalPrice = parseFloat(revenuePolicy.pricePerPurchase) || 0;
+        instructorAmount = originalPrice * (revenuePolicy.instructorPercent / 100);
         adminAmount = orderAmount - instructorAmount;
       } else if (revenuePolicy.type === 'FIXED') {
         // Mua đứt: Học viện nhận 100% doanh thu mỗi khóa bán ra, Giảng viên nhận 0đ
         adminAmount = orderAmount;
         instructorAmount = 0;
       } else if (revenuePolicy.type === 'HYBRID') {
-        // Trả trước 1 phần + vẫn chia % trên mỗi đơn
-        instructorAmount = orderAmount * (revenuePolicy.instructorPercent / 100);
+        // Trả trước (upfront) + Chia % trên giá gốc cho mỗi đơn
+        const originalPrice = parseFloat(revenuePolicy.pricePerPurchase) || 0;
+        instructorAmount = originalPrice * (revenuePolicy.instructorPercent / 100);
         adminAmount = orderAmount - instructorAmount;
       }
+      
     } else {
       adminAmount = orderAmount;
     }

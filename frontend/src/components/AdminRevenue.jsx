@@ -22,6 +22,7 @@ const AdminRevenue = () => {
       const token = localStorage.getItem('token');
       const url = `http://localhost:5000/api/revenue/admin/overview?startDate=${startDate}&endDate=${endDate}`;
       const { data } = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      console.log(data);
       setOverview(data);
     } catch (e) {
       console.error(e);
@@ -189,35 +190,92 @@ const AdminRevenue = () => {
           <div className="chart-container" style={{ height: '300px' }}>
              <div className="chart-wrapper">
                <ResponsiveContainer width="100%" height="100%">
-                 <BarChart 
-                   layout="vertical"
-                   data={[
-                     { name: 'Doanh thu', value: overview.totalGrossRevenue, color: '#6366f1' },
-                     { name: 'Tổng chi', value: overview.totalInstructorRevenue, color: '#f97316' }
-                   ]}
-                   margin={{ left: 40, right: 30 }}
-                 >
-                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                   <XAxis type="number" />
-                   <YAxis dataKey="name" type="category" />
-                   <Tooltip 
-                     formatter={(value) => formatCurrency(value)} 
-                     cursor={false}
-                   />
-                   <Bar dataKey="value" barSize={35} radius={[0, 4, 4, 0]}>
-                     { 
-                       [
-                         { name: 'Doanh thu', value: overview.totalGrossRevenue, color: '#6366f1' },
-                         { name: 'Tổng chi', value: overview.totalInstructorRevenue, color: '#f97316' }
-                       ].map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={entry.color} />
-                       ))
-                     }
-                   </Bar>
-                 </BarChart>
+                  <BarChart 
+                    layout="vertical"
+                    data={[
+                      { name: 'Doanh thu', value: overview.totalGrossRevenue, color: '#6366f1' },
+                      { name: 'Lợi nhuận', value: overview.totalAdminNetRevenue, color: '#10b981' }
+                    ]}
+                    margin={{ left: 40, right: 30 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" />
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(value)} 
+                      cursor={false}
+                    />
+                    <Bar dataKey="value" barSize={35} radius={[0, 4, 4, 0]}>
+                      { 
+                        [
+                          { name: 'Doanh thu', value: overview.totalGrossRevenue, color: '#6366f1' },
+                          { name: 'Lợi nhuận', value: overview.totalAdminNetRevenue, color: '#10b981' }
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))
+                      }
+                    </Bar>
+                  </BarChart>
                </ResponsiveContainer>
              </div>
           </div>
+
+          {/* New Daily Breakdown Table: Only visible when filtered */}
+          {(startDate || endDate) && (
+            <div className="revenue-table-section" style={{ marginTop: '40px' }}>
+              <div className="table-header-custom">
+                <h3 className="text-xl font-bold">Chi tiết doanh thu theo ngày</h3>
+                {overview.totalTransactions > 0 && (
+                  <button 
+                    onClick={() => handleExportCSV(overview.dailyStats.map(s => ({
+                      Ngay: s.date,
+                      DoanhThu_Gross: s.grossRevenue,
+                      LoiNhuan_Admin: s.adminNet,
+                      ChiTra_GiangVien: s.instructorNet,
+                      SoDonHang: s.salesCount
+                    })), 'admin_daily_revenue.csv')}
+                    className="btn-export"
+                  >
+                    <Download size={16} /> Xuất dữ liệu ngày
+                  </button>
+                )}
+              </div>
+              {overview.totalTransactions > 0 ? (
+                <div className="table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Ngày</th>
+                        <th>Tổng Doanh thu (Gross)</th>
+                        <th>Lợi nhuận (Admin)</th>
+                        <th>Chi trả GV</th>
+                        <th>Số đơn</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {overview.dailyStats.map((s, idx) => (
+                        <tr key={idx}>
+                          <td className="font-medium">{new Date(s.date).toLocaleDateString('vi-VN')}</td>
+                          <td>{s.grossRevenue > 0 ? formatCurrency(s.grossRevenue) : <span className="sub-text">---</span>}</td>
+                          <td className={`highlight-text-${s.adminNet < 0 ? 'red' : 'green'}`}>
+                            {s.adminNet !== 0 ? formatCurrency(s.adminNet) : '---'}
+                          </td>
+                          <td className="highlight-text-orange">
+                            {s.instructorNet !== 0 ? formatCurrency(s.instructorNet) : '---'}
+                          </td>
+                          <td>{s.salesCount === 0 ? <span className="sub-text">---</span> : s.salesCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                  Không có dữ liệu giao dịch trong khoảng thời gian này
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

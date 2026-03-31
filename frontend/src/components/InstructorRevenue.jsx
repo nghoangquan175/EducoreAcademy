@@ -163,35 +163,87 @@ const InstructorRevenue = () => {
           <div className="chart-container" style={{ height: '300px' }}>
              <div className="chart-wrapper">
                <ResponsiveContainer width="100%" height="100%">
-                 <BarChart 
-                   layout="vertical"
-                   data={[
-                     { name: 'Phần trăm (%)', value: overview.totalFromTransactions, color: '#6366f1' },
-                     { name: 'Mua đứt', value: overview.totalFromFixed, color: '#10b981' }
-                   ]}
-                   margin={{ left: 40, right: 30 }}
-                 >
-                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                   <XAxis type="number" />
-                   <YAxis dataKey="name" type="category" />
-                   <Tooltip 
-                     formatter={(value) => formatCurrency(value)} 
-                     cursor={false}
-                   />
-                   <Bar dataKey="value" barSize={35} radius={[0, 4, 4, 0]}>
-                     { 
-                       [
-                         { name: 'Phần trăm (%)', value: overview.totalFromTransactions, color: '#6366f1' },
-                         { name: 'Mua đứt', value: overview.totalFromFixed, color: '#10b981' }
-                       ].map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={entry.color} />
-                       ))
-                     }
-                   </Bar>
-                 </BarChart>
+                  <BarChart 
+                    layout="vertical"
+                    data={[
+                      { name: 'Phần trăm (%)', value: overview.totalFromTransactions, color: '#6366f1' },
+                      { name: 'Mua đứt', value: overview.totalFromFixed, color: '#10b981' }
+                    ]}
+                    margin={{ left: 40, right: 30 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" />
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(value)} 
+                      cursor={false}
+                    />
+                    <Bar dataKey="value" barSize={35} radius={[0, 4, 4, 0]}>
+                      { 
+                        [
+                          { name: 'Phần trăm (%)', value: overview.totalFromTransactions, color: '#6366f1' },
+                          { name: 'Mua đứt', value: overview.totalFromFixed, color: '#10b981' }
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))
+                      }
+                    </Bar>
+                  </BarChart>
                </ResponsiveContainer>
              </div>
           </div>
+
+          {/* New Daily Breakdown Table: Only visible when filtered */}
+          {(startDate || endDate) && (
+            <div className="revenue-table-section" style={{ marginTop: '40px' }}>
+              <div className="table-header-custom">
+                <h3 className="text-xl font-bold">Chi tiết doanh thu theo ngày</h3>
+                {overview.totalSales > 0 && (
+                  <button 
+                    onClick={() => handleExportCSV(overview.dailyStats.map(s => ({
+                      Ngay: s.date,
+                      DoanhThu_Gross: s.grossRevenue,
+                      LoiNhuan_CuaToi: s.instructorNet,
+                      SoDonHang: s.salesCount
+                    })), 'instructor_daily_revenue.csv')}
+                    className="btn-export"
+                  >
+                    <Download size={16} /> Xuất dữ liệu ngày
+                  </button>
+                )}
+              </div>
+              {overview.totalSales > 0 ? (
+                <div className="table-container">
+                  <table className="inst-table">
+                    <thead>
+                      <tr>
+                        <th>Ngày</th>
+                        <th>Doanh thu (Gross)</th>
+                        <th>Lợi nhuận của tôi</th>
+                        <th>Số đơn</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {overview.dailyStats.map((s, idx) => (
+                        <tr key={idx}>
+                          <td className="font-medium">{new Date(s.date).toLocaleDateString('vi-VN')}</td>
+                          <td>{s.grossRevenue > 0 ? formatCurrency(s.grossRevenue) : <span className="sub-text">---</span>}</td>
+                          <td className="highlight-text-orange">
+                            {s.instructorNet !== 0 ? formatCurrency(s.instructorNet) : '---'}
+                          </td>
+                          <td>{s.salesCount === 0 ? <span className="sub-text">---</span> : s.salesCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                  Không có dữ liệu lợi nhuận trong khoảng thời gian này
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -303,7 +303,7 @@ router.patch('/:id', protect, instructor, async (req, res) => {
     await course.save();
 
     // Notify admins if course is already published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Cập nhật khóa học đã xuất bản',
         `Giảng viên ${req.user.name} vừa cập nhật nội dung cho khóa học: "${course.title}"`,
@@ -343,7 +343,7 @@ router.get('/:id/curriculum', optionalProtect, async (req, res) => {
         [{ model: Chapter, as: 'chapters' }, { model: Lesson, as: 'lessons' }, 'lessonOrder', 'ASC'],
       ]
     });
-    if (!course || course.published !== 2) {
+    if (!course || course.published !== 5) {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
 
@@ -384,7 +384,7 @@ router.get('/:id/learn', protect, async (req, res) => {
       ]
     });
 
-    if (!course || course.published !== 2) {
+    if (!course || course.published !== 5) {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
 
@@ -497,7 +497,7 @@ router.post('/:id/chapters', protect, instructor, async (req, res) => {
     });
 
     // Notify admins if course is published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Thêm chương mới',
         `Giảng viên ${req.user.name} vừa thêm chương "${title}" vào khóa học: "${course.title}"`,
@@ -528,7 +528,7 @@ router.patch('/chapters/:id', protect, instructor, async (req, res) => {
     await chapter.save();
 
     // Notify admins if course is published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Cập nhật nội dung chương',
         `Giảng viên ${req.user.name} vừa cập nhật chương "${chapter.title}" trong khóa học: "${course.title}"`,
@@ -564,7 +564,7 @@ router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res
     });
 
     // Notify admins if course is published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Thêm bài học mới',
         `Giảng viên ${req.user.name} vừa thêm bài học "${title}" vào khóa học: "${course.title}"`,
@@ -594,7 +594,7 @@ router.delete('/chapters/:id', protect, instructor, async (req, res) => {
     await chapter.destroy();
 
     // Notify admins if course is published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Xóa chương học',
         `Giảng viên ${req.user.name} vừa xóa một chương trong khóa học: "${course.title}"`,
@@ -633,7 +633,7 @@ router.patch('/lessons/:id', protect, instructor, async (req, res) => {
     await lesson.save();
 
     // Notify admins if course is published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Cập nhật nội dung bài học',
         `Giảng viên ${req.user.name} vừa cập nhật bài học "${lesson.title}" trong khóa học: "${course.title}"`,
@@ -664,7 +664,7 @@ router.delete('/lessons/:id', protect, instructor, async (req, res) => {
     await lesson.destroy();
 
     // Notify admins if course is published
-    if (course.published === 2) {
+    if ([2, 5].includes(Number(course.published))) {
       await notifyAdmins(
         'Xóa bài học',
         `Giảng viên ${req.user.name} vừa xóa một bài học trong khóa học: "${course.title}"`,
@@ -690,8 +690,8 @@ router.post('/:id/enroll', protect, async (req, res) => {
       return res.status(404).json({ message: 'Khoá học không tồn tại' });
     }
 
-    // Chỉ cho phép đăng ký nếu khóa học đang ở trạng thái 2 (Đã xuất bản)
-    if (Number(course.published) !== 2) {
+    // Chỉ cho phép đăng ký nếu khóa học đang ở trạng thái 5 (Đã xuất bản)
+    if (Number(course.published) !== 5) {
       return res.status(403).json({ message: 'Khóa học này hiện không chấp nhận đăng ký mới' });
     }
 
@@ -721,7 +721,7 @@ router.post('/:id/edit-request', protect, instructor, async (req, res) => {
     const course = await Course.findByPk(req.params.id);
     if (!course) return res.status(404).json({ message: 'Khoá học không tồn tại' });
     if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
-    if (course.published !== 2) return res.status(400).json({ message: 'Chỉ có thể yêu cầu sửa khóa học đã xuất bản' });
+    if (course.published !== 5) return res.status(400).json({ message: 'Chỉ có thể yêu cầu sửa khóa học đã xuất bản' });
 
     const { reason, contentSummary } = req.body;
 

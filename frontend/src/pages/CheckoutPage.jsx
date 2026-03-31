@@ -45,10 +45,12 @@ const CheckoutPage = () => {
   const handlePayment = async () => {
     setIsProcessing(true);
     try {
+      const finalPrice = course.publishConfig ? Number(course.publishConfig.salePrice) : Number(course.price);
+      
       if (paymentMethod === 'vnpay') {
         const orderRes = await axios.post(`http://localhost:5000/api/payment/order/create`, {
           courseId: courseId,
-          amount: course.price
+          amount: finalPrice
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -57,7 +59,7 @@ const CheckoutPage = () => {
 
         const { data } = await axios.post(`http://localhost:5000/api/payment/vnpay/create`, {
           orderId: newOrderId,
-          amount: course.price
+          amount: finalPrice
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -106,6 +108,11 @@ const CheckoutPage = () => {
       <div className="error-state">Không tìm thấy thông tin khóa học</div>
     </div>
   );
+
+  const originalPrice = course.publishConfig ? Number(course.publishConfig.price) : Number(course.price);
+  const salePrice = course.publishConfig ? Number(course.publishConfig.salePrice) : Number(course.price);
+  const discountPercent = course.publishConfig ? Number(course.publishConfig.discountPercent) : 0;
+  const discountAmount = originalPrice - salePrice;
 
   return (
     <div className="checkout-container">
@@ -170,16 +177,18 @@ const CheckoutPage = () => {
 
             <div className="price-details">
               <div className="price-row">
-                <span>Giá gốc</span>
-                <span className="line-through">{formatCurrency(course.price * 1.5)}</span>
+                <span>{discountPercent > 0 ? `Giá gốc` : 'Giá tiền'}</span>
+                <span className={discountPercent > 0 ? "line-through" : ""}>{formatCurrency(originalPrice)}</span>
               </div>
-              <div className="price-row">
-                <span>Khuyến mãi</span>
-                <span className="text-green-400">-{formatCurrency(course.price * 0.5)}</span>
-              </div>
+              {discountPercent > 0 && (
+                <div className="price-row">
+                  <span>Khuyến mãi ({discountPercent}%)</span>
+                  <span className="text-green-500">-{formatCurrency(discountAmount)}</span>
+                </div>
+              )}
               <div className="price-row total">
                 <span>Tổng cộng</span>
-                <span>{formatCurrency(course.price)}</span>
+                <span>{formatCurrency(salePrice)}</span>
               </div>
             </div>
 

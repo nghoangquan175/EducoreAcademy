@@ -49,13 +49,28 @@ exports.upsertPublishConfig = async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
 
+    // Check for Revenue Policy to enforce PRO status for PERCENT and HYBRID
+    const policy = await RevenuePolicy.findOne({
+      where: { courseId, status: 'accepted' }
+    });
+
+    let finalIsPro = isPro;
+    if (policy && (policy.type === 'PERCENT' || policy.type === 'HYBRID')) {
+      if (isPro === false) {
+        return res.status(400).json({ 
+          message: `Khóa học với chính sách ${policy.type} bắt buộc phải là khóa học trả phí (PRO).` 
+        });
+      }
+      finalIsPro = true; // Force it just in case
+    }
+
     // Check if config exists
     let config = await CoursePublishConfig.findOne({ where: { courseId } });
 
     if (config) {
       // Update
       await config.update({
-        isPro,
+        isPro: finalIsPro,
         price,
         salePrice,
         discountPercent,
@@ -65,7 +80,7 @@ exports.upsertPublishConfig = async (req, res) => {
       // Create
       config = await CoursePublishConfig.create({
         courseId,
-        isPro,
+        isPro: finalIsPro,
         price,
         salePrice,
         discountPercent,
