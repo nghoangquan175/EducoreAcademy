@@ -2,12 +2,47 @@ const express = require('express');
 const router = express.Router();
 const { Quiz, Question, QuizAttempt, Lesson, Chapter, Course, Progress, Enrollment } = require('../models');
 const { protect, instructor } = require('../middleware/authMiddleware');
+const { calculateCourseProgress } = require('../utils/progressUtils');
+const models = require('../models');
+
 
 // @desc    Get quiz for a lesson
 // @route   GET /api/quizzes/lesson/:lessonId
 // @access  Private (Enrolled students/Instructors)
 router.get('/lesson/:lessonId', protect, async (req, res) => {
     try {
+
+        // 1. Find enrollment to check progress
+        const lesson = await Lesson.findByPk(req.params.lessonId, {
+            include: [{ model: Chapter }]
+        });
+        
+        if (!lesson) {
+            return res.status(404).json({ message: 'Không tìm thấy bài học' });
+        }
+
+        const enrollment = await Enrollment.findOne({
+            where: { userId: req.user.id, courseId: lesson.Chapter.courseId }
+        });
+
+        if (!enrollment && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
+        }
+
+        // 2. Check if video has been watched
+        if (enrollment) {
+            const progress = await Progress.findOne({
+                where: { enrollmentId: enrollment.id, lessonId: lesson.id }
+            });
+
+            if (!progress || !progress.videoWatched) {
+                return res.status(403).json({ 
+                    message: 'Bạn cần xem hết video bài học này trước khi thực hiện bài kiểm tra',
+                    errorCode: 'VIDEO_NOT_WATCHED'
+                });
+            }
+        }
+
         const quiz = await Quiz.findOne({
             where: { lessonId: req.params.lessonId },
             include: [{ model: Question, as: 'questions' }]
@@ -17,13 +52,12 @@ router.get('/lesson/:lessonId', protect, async (req, res) => {
             return res.status(404).json({ message: 'Không tìm thấy bài kiểm tra cho bài học này' });
         }
 
-        // TODO: Check enrollment if student is requesting
-
         res.json(quiz);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
+
 
 // @desc    Create or Update quiz for a lesson
 // @route   POST /api/quizzes
@@ -123,7 +157,6 @@ router.post('/:quizId/submit', protect, async (req, res) => {
                         defaults: { completed: true, videoWatched: true, completedAt: new Date() }
                     });
                     
-                    // If progress already exists, ensure it is marked as completed
                     const progress = await Progress.findOne({
                         where: { enrollmentId: enrollment.id, lessonId: lesson.id }
                     });
@@ -133,15 +166,20 @@ router.post('/:quizId/submit', protect, async (req, res) => {
                         progress.completedAt = new Date();
                         await progress.save();
                     }
+
+                    // Calculate new course progress
+                    const courseProgress = await calculateCourseProgress(models, req.user.id, lesson.Chapter.courseId);
+                    return res.json({ attempt, courseProgress });
                 }
             }
         }
 
-        res.json(attempt);
+        res.json({ attempt });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
+
 
 // @desc    Get all lesson IDs passed by user for a specific course
 // @route   GET /api/quizzes/course/:courseId/passed-lessons

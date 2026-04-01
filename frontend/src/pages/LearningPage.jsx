@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ReactPlayer from 'react-player';
 import axios from 'axios';
-import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock } from 'react-icons/fa';
-import { Sun, Moon, LayoutDashboard } from 'lucide-react';
+import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock, FaClipboardList, FaStar } from 'react-icons/fa';
+import { Sun, Moon, LayoutDashboard, Star } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 import QuizPlayer from './QuizPlayer';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -44,6 +44,8 @@ const LearningPage = () => {
     onConfirm: () => {}, 
     type: 'warning' 
   });
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
+
 
   // Flatten lessons for sequence tracking
   const allLessons = useMemo(() => {
@@ -229,10 +231,14 @@ const LearningPage = () => {
             chap.lessons.forEach(l => {
               if (l.id.toString() === lessonId) {
                 l.videoWatched = true;
-                l.completed = response.data.progress.completed;
+                // Note: l.completed logic might be different now (based on quiz)
               }
             });
           });
+          // Update courseProgress if included in response
+          if (response.data.courseProgress) {
+            newCourse.courseProgress = response.data.courseProgress;
+          }
           return newCourse;
         });
       }
@@ -241,6 +247,7 @@ const LearningPage = () => {
       alert("Không thể đánh dấu hoàn thành bài học này.");
     }
   };
+
 
   const handleLessonSelect = (lesson) => {
     // Tạm thời chưa xử lý khóa ở frontend cho admin/người dạy.
@@ -282,31 +289,50 @@ const LearningPage = () => {
     }
   };
 
-  const handleCompleteCourse = () => {
-    navigate(`/course-completed/${courseId}`);
+  const handleCompleteCourse = async () => {
+    try {
+      setIsSubmittingCompletion(true);
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/courses/${courseId}/complete`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      navigate(`/course-completed/${courseId}`);
+    } catch (err) {
+      console.error("Lỗi khi hoàn thành khóa học:", err);
+      alert(err.response?.data?.message || "Không thể hoàn thành khóa học lúc này.");
+    } finally {
+      setIsSubmittingCompletion(false);
+    }
   };
+
 
   return (
     <div className="learning-container">
       {/* TOPBAR */}
       <div className="learning-topbar">
         <div className="topbar-left">
-          <button onClick={() => navigate(-1)} className="back-btn" title="Quay lại">
+          <button onClick={() => navigate('/student-dashboard')} className="back-btn" title="Về bảng điều khiển">
             <FaChevronLeft />
           </button>
-          <Link to="/student-dashboard" className="back-to-dashboard-icon" title="Về bảng điều khiển">
-            <LayoutDashboard size={20} />
-          </Link>
           <div className="topbar-brand-title">
             {/* <span className="brand-logo">EA.</span> */}
             <span className="course-title">{course.title}</span>
           </div>
         </div>
         <div className="topbar-right">
-          <button className="theme-toggle-btn" onClick={toggleTheme}>
+          {passedLessons.length > 0 && (
+            <button 
+              className="topbar-review-btn pulse-anim"
+              onClick={() => navigate(`/course/${courseId}/review`)}
+              title="Đánh giá khóa học này"
+            >
+              <FaStar className="star-icon" /> Đánh giá
+            </button>
+          )}
+          <button className="theme-toggle-btn" onClick={toggleTheme} title="Giao diện sáng/tối">
             {theme === 'light' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button className="toggle-sidebar-btn" onClick={toggleSidebar}>
+          <button className="toggle-sidebar-btn" onClick={toggleSidebar} title="Ẩn/hiện bài học">
             <FaList />
           </button>
         </div>
@@ -323,7 +349,13 @@ const LearningPage = () => {
                 <span className="quiz-label">Đang làm bài kiểm tra</span>
                 <h1 className="learning-lesson-title">{currentLesson.title}</h1>
                 <p className="learning-chapter-title">Chương: {currentChapterTitle}</p>
+                {course?.courseProgress && (
+                   <div className="course-progress-mini-bar">
+                      <span>Tiến độ: {course.courseProgress.watchedCount}/{course.courseProgress.totalLessons} video • {course.courseProgress.passedQuizzesCount}/{course.courseProgress.totalQuizzes} quiz</span>
+                   </div>
+                )}
               </div>
+
               <QuizPlayer 
                 lessonId={currentLesson.id} 
                 initialReviewMode={quizInitialMode}
@@ -402,6 +434,18 @@ const LearningPage = () => {
                       <button 
                         className="btn-take-quiz-now" 
                         onClick={() => {
+                          if (!currentLesson.videoWatched && !videoFinished) {
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: 'Chưa đủ điều kiện',
+                              message: 'Bạn cần xem hết video bài học này trước khi thực hiện bài kiểm tra.',
+                              type: 'warning',
+                              confirmText: 'Đã hiểu',
+                              onConfirm: () => setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+                            });
+                            return;
+                          }
+
                           if (latestAttempt) {
                             setConfirmDialog({
                               isOpen: true,
@@ -421,6 +465,7 @@ const LearningPage = () => {
                       >
                         {latestAttempt ? 'Làm lại bài kiểm tra' : 'Bắt đầu làm bài kiểm tra'}
                       </button>
+
 
                       {latestAttempt && (
                         <button 
@@ -447,15 +492,36 @@ const LearningPage = () => {
                    </div>
                 )}
 
-                {isLastLesson && (passedLessons.includes(parseInt(lessonId)) || passedLessons.includes(currentLesson.id)) && (
-                   <div className="course-completion-final">
-                      <p>🎉 Chúc mừng! Bạn đã hoàn thành tất cả bài học.</p>
-                      <button className="btn-complete-course-final" onClick={handleCompleteCourse}>
-                         NHẬN CHỨNG CHỈ & ĐÁNH GIÁ
+                {/* New Completion Logic */}
+                {course?.courseProgress?.isEligibleForCompletion && course.courseProgress.isCompleted === false && (
+                   <div className="course-completion-final eligible">
+                      <div className="completion-stats-summary">
+                         <FaCheckCircle className="eligible-icon" />
+                         <div>
+                            <p className="eligible-title">Bạn đã đủ điều kiện hoàn thành!</p>
+                            <p className="eligible-subtitle">Đã xem {course.courseProgress.watchedCount}/{course.courseProgress.totalLessons} video & đạt {course.courseProgress.passedQuizzesCount}/{course.courseProgress.totalQuizzes} bài tập.</p>
+                         </div>
+                      </div>
+                      <button 
+                        className="btn-complete-course-final primary-highlight" 
+                        onClick={handleCompleteCourse}
+                        disabled={isSubmittingCompletion}
+                      >
+                         {isSubmittingCompletion ? 'Đang xử lý...' : 'XÁC NHẬN HOÀN THÀNH & NHẬN CHỨNG CHỈ'}
+                      </button>
+                   </div>
+                )}
+
+                {course?.courseProgress?.isCompleted && (
+                   <div className="course-completion-final already-completed">
+                      <p>✨ Bạn đã hoàn thành khóa học này. Chúc mừng!</p>
+                      <button className="btn-complete-course-final secondary" onClick={() => navigate(`/course-completed/${courseId}`)}>
+                         XEM CHỨNG CHỈ & ĐÁNH GIÁ
                       </button>
                    </div>
                 )}
               </div>
+
             </>
           )}
         </div>
@@ -490,30 +556,27 @@ const LearningPage = () => {
                             const isPassed = passedLessons.includes(lesson.id);
                             const isCompleted = isPassed; 
                             
-                            // Unlock conditions:
-                            const isFirstOverall = lessonIndex === 0;
-                            const isFree = lesson.isFree;
-                            const prevLessonPassed = lessonIndex > 0 && passedLessons.includes(allLessons[lessonIndex - 1].id);
-                            
-                            const isLocked = !isFirstOverall && !isFree && !prevLessonPassed && !isPassed; 
-                            
-                            return (
+                        return (
                               <div 
                                 key={lesson.id} 
-                                className={`learning-lesson-item ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
-                                onClick={() => !isLocked && handleLessonSelect(lesson)}
+                                className={`learning-lesson-item ${isActive ? 'active' : ''}`}
+                                onClick={() => handleLessonSelect(lesson)}
                               >
+
                                 <div className="lesson-icon-state">
                                   {isCompleted ? (
-                                    <FaCheckCircle className="icon-completed" />
-                                  ) : isLocked ? (
-                                    <FaLock className="icon-locked" />
+                                    <FaCheckCircle className="icon-completed" title="Đã hoàn thành" />
+                                  ) : lesson.quiz && lesson.videoWatched ? (
+                                    <FaClipboardList className="icon-pending-quiz" title="Chờ làm bài tập" />
                                   ) : (
-                                    <FaPlayCircle className="icon-playable" />
+                                    <FaPlayCircle className="icon-playable" title="Chưa xem" />
                                   )}
                                 </div>
                                 <div className="lesson-text-info">
-                                  <span className="lesson-name">{lesson.title}</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="lesson-name">{lesson.title}</span>
+                                    {lesson.quiz && <span className="lesson-badge-quiz">Quiz</span>}
+                                  </div>
                                   <span className="lesson-length">{formatDuration(lesson.duration)}</span>
                                 </div>
                               </div>

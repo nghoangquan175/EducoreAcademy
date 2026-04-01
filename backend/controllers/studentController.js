@@ -1,4 +1,7 @@
 const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal, Question, Chapter, Review } = require('../models');
+const { calculateCourseProgress } = require('../utils/progressUtils');
+const models = require('../models');
+
 
 // ── GET /api/users/student/stats ───────────────────────────────────────────
 exports.getStudentStats = async (req, res) => {
@@ -147,33 +150,27 @@ exports.getEnrolledCourses = async (req, res) => {
       const course = en.Course;
       if (!course) return null;
 
-      // Calculate progress
-      const courseChapters = await Chapter.findAll({ where: { courseId: course.id }, attributes: ['id'] });
-      const chapterIds = courseChapters.map(c => c.id);
-      
-      const totalLessons = await Lesson.count({
-        where: { chapterId: chapterIds }
-      });
+      // Calculate progress using the new core logic
+      const progress = await calculateCourseProgress(models, userId, course.id);
 
-      const completedLessons = await Progress.count({
-        where: { enrollmentId: en.id }
-      });
-
-      const progressPercent = totalLessons > 0
-        ? Math.round((completedLessons / totalLessons) * 100)
-        : 0;
- 
       return {
         id: course.id,
         title: course.title,
         thumbnail: course.thumbnail,
         instructorName: course.instructor?.name || 'Unknown',
-        progressPercent,
+        progressPercent: progress.progressPercent,
+        totalLessons: progress.totalLessons,
+        watchedCount: progress.watchedCount,
+        totalQuizzes: progress.totalQuizzes,
+        passedQuizzesCount: progress.passedQuizzesCount,
+        isEligibleForCompletion: progress.isEligibleForCompletion,
+        status: en.status,
         category: course.category,
         lastAccessedAt: en.lastAccessedAt,
         isReviewed: reviewedCourseIds.has(course.id)
       };
     }));
+
  
     res.json(courses.filter(c => c !== null));
   } catch (error) {

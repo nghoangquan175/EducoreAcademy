@@ -78,8 +78,9 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setResult(data);
-      if (data.status === 'passed') {
+      const actualResult = data.attempt || data;
+      setResult(actualResult);
+      if (actualResult.status === 'passed') {
         onPass();
       }
     } catch (error) {
@@ -151,6 +152,10 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
             </div>
           </div>
         )}
+        <ConfirmDialog 
+          {...confirmDialog} 
+          onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
+        />
       </div>
     );
   }

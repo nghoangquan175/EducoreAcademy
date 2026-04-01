@@ -10,15 +10,21 @@ const CourseCongrats = () => {
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasReviewed, setHasReviewed] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         const token = localStorage.getItem('token');
-        const { data } = await axios.get(`http://localhost:5000/api/courses/${courseId}`, {
+        const { data: courseData } = await axios.get(`http://localhost:5000/api/courses/${courseId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setCourse(data);
+        setCourse(courseData);
+
+        const { data: reviewData } = await axios.get(`http://localhost:5000/api/courses/${courseId}/my-review`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setHasReviewed(reviewData.hasReviewed);
       } catch (error) {
         console.error("Error fetching course details:", error);
       } finally {
@@ -83,14 +89,20 @@ const CourseCongrats = () => {
 
           <div className="congrats-actions">
             <button className="btn-dashboard-back" onClick={() => navigate('/student-dashboard')}>
-              <Home size={20} /> Quay lại Dashboard
+              <Home size={30} /> Quay lại Dashboard
             </button>
-            <button className="btn-review-shared" onClick={() => navigate(`/course/${courseId}/review`)}>
-              <Star size={20} /> Đánh giá khóa học
+            <button 
+              className="btn-review-shared" 
+              onClick={() => alert('Hệ thống đang xuất chứng chỉ cho bạn. Vui lòng quay trở lại sau nhé!')}
+              style={{ background: '#3b82f6', color: '#fff' }}
+            >
+              <Award size={30} /> Nhận chứng chỉ
             </button>
-            <button className="btn-review-shared" onClick={() => navigate(`/course/${courseId}`)} style={{ background: 'rgba(255,255,255,0.1)' }}>
-              <BookOpen size={20} /> Xem lại khóa học
-            </button>
+            {!hasReviewed && (
+              <button className="topbar-review-btn pulse-anim" onClick={() => navigate(`/course/${courseId}/review`)}>
+                <Star size={30} /> Đánh giá khóa học
+              </button>
+            )}
           </div>
           
           <div className="share-feedback">

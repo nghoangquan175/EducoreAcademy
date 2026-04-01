@@ -137,8 +137,14 @@ const Header = () => {
                         setSearchTerm('');
                       }}
                     >
-                      <div className="search-item-icon">
-                        {item.type === 'course' ? <PlayCircle size={18} /> : <FileText size={18} />}
+                      <div className="search-item-thumbnail">
+                        {item.thumbnail ? (
+                          <img src={item.thumbnail} alt={item.title} className="search-item-img" />
+                        ) : (
+                          <div className="search-item-icon-fallback">
+                            {item.type === 'course' ? <PlayCircle size={18} /> : <FileText size={18} />}
+                          </div>
+                        )}
                       </div>
                       <div className="search-item-info">
                         <div className="search-item-title">{item.title}</div>

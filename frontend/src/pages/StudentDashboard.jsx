@@ -675,33 +675,63 @@ const StudentDashboard = () => {
                         
                         <div className="card-progress-section">
                            <div className="progress-text">
-                              <span>Tiến độ</span>
+                              <span>Tiến độ video</span>
                               <span>{course.progressPercent}%</span>
                            </div>
                            <div className="progress-bar-mini">
                               <div className="progress-fill-mini" style={{ width: `${course.progressPercent}%` }}></div>
                            </div>
+                           {/* Add Quiz Progress Info */}
+                           <div className="progress-text quiz-progress-text" style={{ marginTop: '8px', fontSize: '0.75rem', opacity: 0.8 }}>
+                              <span>Bài tập: {course.passedQuizzesCount}/{course.totalQuizzes}</span>
+                              <span style={{ color: course.passedQuizzesCount >= Math.ceil(course.totalQuizzes * 0.65) ? '#10b981' : 'inherit' }}>
+                                 {course.totalQuizzes > 0 ? (course.passedQuizzesCount >= Math.ceil(course.totalQuizzes * 0.65) ? ' (Đạt)' : ` (Cần ${Math.ceil(course.totalQuizzes * 0.65)})`) : ''}
+                              </span>
+                           </div>
                         </div>
 
-                        <div className="card-actions-row" style={{ display: 'flex', gap: '10px' }}>
+
+                        <div className="card-actions-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                            <button 
                               onClick={() => navigate(`/learn/${course.id}`)} 
-                              className={`card-action-btn ${course.progressPercent === 100 ? 'secondary' : 'primary'}`}
-                              style={{ flex: 2 }}
+                              className={`card-action-btn ${course.status === 'completed' ? 'secondary' : 'primary'}`}
+                              style={{ flex: '1 1 120px' }}
                            >
-                              {course.progressPercent === 100 ? 'Xem lại bài học' : 'Học tiếp'}
+                              {course.status === 'completed' ? 'Xem lại bài học' : 'Học tiếp'}
                            </button>
 
-                           {course.progressPercent === 100 && !course.isReviewed && (
+                           {course.isEligibleForCompletion && course.status !== 'completed' && (
+                              <button 
+                                 onClick={async () => {
+                                    const token = localStorage.getItem('token');
+                                    try {
+                                       await axios.post(`http://localhost:5000/api/courses/${course.id}/complete`, {}, {
+                                          headers: { Authorization: `Bearer ${token}` }
+                                       });
+                                       toast.success('Chúc mừng! Bạn đã hoàn thành khóa học.');
+                                       navigate(`/course-completed/${course.id}`);
+                                    } catch (err) {
+                                       toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+                                    }
+                                 }} 
+                                 className="card-action-btn complete-btn"
+                                 style={{ flex: '1 1 120px', background: '#10b981', color: '#fff', border: 'none' }}
+                              >
+                                 Hoàn thành
+                              </button>
+                           )}
+
+                           {course.watchedCount >= 1 && !course.isReviewed && (
                               <button 
                                  onClick={() => navigate(`/course/${course.id}/review`)} 
                                  className="card-action-btn review-btn"
-                                 style={{ flex: 1, background: '#facc15', color: '#000', border: 'none' }}
+                                 style={{ flex: '1 1 120px', background: '#facc15', color: '#000', border: 'none' }}
                               >
                                  <Star size={14} style={{ marginRight: '4px' }} /> Đánh giá
                               </button>
                            )}
                         </div>
+
                      </div>
                   </div>
                ))

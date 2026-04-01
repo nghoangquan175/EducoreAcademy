@@ -5,6 +5,9 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
 const { notifyAdmins } = require('../utils/notificationUtils');
+const { calculateCourseProgress } = require('../utils/progressUtils');
+const models = require('../models');
+
 
 // ── GET /api/courses — Public/Enrolled-aware: list published courses ──
 router.get('/', optionalProtect, async (req, res) => {
@@ -415,8 +418,13 @@ router.get('/:id/learn', protect, async (req, res) => {
           lesson.setDataValue('completed', prog ? prog.completed : false);
         });
       });
+
+      // Calculate overall course progress
+      const courseProgress = await calculateCourseProgress(models, userId, courseId);
+      return res.json({ ...course.toJSON(), courseProgress });
     }
     res.json(course);
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -895,14 +903,15 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
       return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
     }
 
-    // Create or find progress
+    // Check if this lesson has a quiz
     const quiz = await Quiz.findOne({ where: { lessonId: lesson.id } });
-    
+
+    // Create or find progress
     const [progress, created] = await Progress.findOrCreate({
       where: { enrollmentId: enrollment.id, lessonId },
       defaults: { 
         videoWatched: true,
-        completed: !quiz, // Mark completed ONLY if no quiz exists
+        completed: !quiz, 
         completedAt: !quiz ? new Date() : null 
       }
     });
@@ -916,19 +925,53 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
       await progress.save();
     }
 
+
     // Also update enrollment activity
     enrollment.lastAccessedAt = new Date();
     await enrollment.save();
 
+    // Calculate new course progress
+    const courseProgress = await calculateCourseProgress(models, userId, courseId);
+
     res.json({ 
-      message: quiz ? 'Đã ghi nhận xem video. Vui lòng hoàn thành bài kiểm tra để tiếp tục.' : 'Đã đánh dấu hoàn thành bài học', 
+      message: 'Đã ghi nhận xem video.', 
       progress,
+      courseProgress,
       quizExists: !!quiz
     });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// ── POST /api/courses/:id/complete — Student: Manually complete the course ──
+router.post('/:id/complete', protect, async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user.id;
+
+    const enrollment = await Enrollment.findOne({ where: { courseId, userId } });
+    if (!enrollment) return res.status(404).json({ message: 'Bạn chưa đăng ký khóa học này' });
+
+    const progress = await calculateCourseProgress(models, userId, courseId);
+    
+    if (!progress.isEligibleForCompletion) {
+      return res.status(400).json({ 
+        message: 'Bạn chưa đủ điều kiện hoàn thành khóa học này',
+        details: progress
+      });
+    }
+
+    enrollment.status = 'completed';
+    await enrollment.save();
+
+    res.json({ message: 'Chúc mừng! Bạn đã hoàn thành khóa học.', enrollment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 // ── PUT /api/courses/:id/restore — Instructor/Admin: Restore course ──
 router.put('/:id/restore', protect, async (req, res) => {
@@ -988,6 +1031,18 @@ router.get('/:id/reviews', async (req, res) => {
   }
 });
 
+// ── GET /api/courses/:id/my-review — Student: get their own review ──────────
+router.get('/:id/my-review', protect, async (req, res) => {
+  try {
+    const review = await Review.findOne({
+      where: { courseId: req.params.id, userId: req.user.id }
+    });
+    res.json({ hasReviewed: !!review, review });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ── POST /api/courses/:id/reviews — Student: Submit a review ──────────
 router.post('/:id/reviews', protect, async (req, res) => {
   try {
@@ -1010,9 +1065,9 @@ router.post('/:id/reviews', protect, async (req, res) => {
       where: { enrollmentId: enrollment.id, completed: true }
     });
 
-    if (completedLessons < totalLessons || totalLessons === 0) {
+    if (completedLessons < 1 || totalLessons === 0) {
       return res.status(403).json({ 
-        message: 'Bạn phải hoàn thành toàn bộ khóa học trước khi để lại đánh giá',
+        message: 'Bạn cần hoàn thành ít nhất 1 bài học để có thể đánh giá khóa học này',
         progress: `${completedLessons}/${totalLessons}`
       });
     }

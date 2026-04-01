@@ -40,7 +40,7 @@ const searchContent = async (req, res) => {
       courseWhere.instructorId = instructorId;
     } else {
       // Global search: only published courses
-      courseWhere.published = 2; // 2 = Published
+      courseWhere.published = 5; // 5 = Published
     }
 
     const courses = await Course.findAll({
