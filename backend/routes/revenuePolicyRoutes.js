@@ -5,12 +5,14 @@ const {
   createRevenuePolicy, 
   updatePolicyStatus,
   updateRevenuePolicy,
-  getRevenuePolicyById
+  getRevenuePolicyById,
+  getLatestVersionPolicy
 } = require('../controllers/revenuePolicyController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 // Get policies (Admin see all, Instructor see their own)
 router.get('/', protect, getRevenuePolicies);
+router.get('/previous/:courseId', protect, admin, getLatestVersionPolicy);
 router.get('/:id', protect, getRevenuePolicyById);
 
 // Create policy (Admin only)

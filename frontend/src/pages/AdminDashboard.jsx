@@ -140,11 +140,13 @@ const AdminDashboard = () => {
   const [selectedRevenuePolicy, setSelectedRevenuePolicy] = useState(null);
   const [showRevenuePolicyDetail, setShowRevenuePolicyDetail] = useState(false);
   const [editingRevenuePolicyId, setEditingRevenuePolicyId] = useState(null);
+  const [previousPolicy, setPreviousPolicy] = useState(null);
   const [revenueData, setRevenueData] = useState({
     courseId: '',
     type: 'PERCENT',
     instructorPercent: 0,
     fixedAmount: 0,
+    additionalAmount: 0,
     suggestedPrice: 0,
     pricePerPurchase: 0,
   });
@@ -462,7 +464,34 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleRevenueSubmit = async (e, sendImmediately = false) => {
+  const fetchLatestVersionPolicy = async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`http://localhost:5000/api/revenue-policies/previous/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPreviousPolicy(data);
+      if (data) {
+        setRevenueData(prev => ({
+          ...prev,
+          type: data.type,
+          instructorPercent: data.instructorPercent || 0,
+          fixedAmount: data.fixedAmount || 0,
+          pricePerPurchase: data.pricePerPurchase || 0,
+          additionalAmount: 0 // Reset additional for new version
+        }));
+      } else {
+        setRevenueData(prev => ({
+          ...prev,
+          additionalAmount: 0
+        }));
+      }
+    } catch (error) {
+      console.error('Fetch previous policy error:', error);
+    }
+  };
+
+  const handleRevenueSubmit = async (e, sendImmediately) => {
     if (e) e.preventDefault();
     
     // Validation
@@ -476,10 +505,6 @@ const AdminDashboard = () => {
         toast.error('Phần trăm giảng viên phải từ 1 đến 100');
         return;
       }
-      if (revenueData.suggestedPrice <= 0) {
-        toast.error('Giá đề xuất phải lớn hơn 0');
-        return;
-      }
       if (revenueData.pricePerPurchase <= 0) {
         toast.error('Giá quy ước mỗi lượt mua phải lớn hơn 0');
         return;
@@ -487,8 +512,11 @@ const AdminDashboard = () => {
     }
     
     if (revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') {
-      if (revenueData.fixedAmount <= 0) {
-        toast.error('Số tiền cố định phải lớn hơn 0');
+      const isNewVersion = !!previousPolicy;
+      const amtToCheck = isNewVersion ? Number(revenueData.additionalAmount) : Number(revenueData.fixedAmount);
+      
+      if (amtToCheck <= 0) {
+        toast.error(isNewVersion ? 'Số tiền bổ sung (bù thêm) phải lớn hơn 0' : 'Số tiền cố định phải lớn hơn 0');
         return;
       }
     }
@@ -508,11 +536,13 @@ const AdminDashboard = () => {
       }
       setShowRevenueModal(false);
       setEditingRevenuePolicyId(null);
+      setPreviousPolicy(null);
       setRevenueData({
         courseId: '',
         type: 'PERCENT',
         instructorPercent: 0,
         fixedAmount: 0,
+        additionalAmount: 0,
         suggestedPrice: 0,
         pricePerPurchase: 0,
       });
@@ -1355,16 +1385,20 @@ const AdminDashboard = () => {
                                     {activeTab === 'manage-courses' && <td>{course.studentsCount || 0}</td>}
                                     <td>
                                         <div className="inst-status-badge" style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', textAlign: 'center', display: 'inline-block', whiteSpace: 'nowrap',
-                                            background: Number(course.published) === 0 ? '#f3f4f6' : Number(course.published) === 1 ? '#fef3c7' : Number(course.published) === 2 ? '#dbeafe' : Number(course.published) === 3 ? '#fee2e2' : Number(course.published) === 4 ? '#ede9fe' : Number(course.published) === 5 ? '#d1fae5' : '#ffedd5',
-                                            color: Number(course.published) === 0 ? '#6b7280' : Number(course.published) === 1 ? '#f59e0b' : Number(course.published) === 2 ? '#3b82f6' : Number(course.published) === 3 ? '#ef4444' : Number(course.published) === 4 ? '#8b5cf6' : Number(course.published) === 5 ? '#10b981' : '#f97316'
+                                            background: (Number(course.published) === 6 && !course.isLatest) ? '#f1f5f9' : (Number(course.published) === 0 ? '#f3f4f6' : Number(course.published) === 1 ? '#fef3c7' : Number(course.published) === 2 ? '#dbeafe' : Number(course.published) === 3 ? '#fee2e2' : Number(course.published) === 4 ? '#ede9fe' : Number(course.published) === 5 ? '#d1fae5' : '#ffedd5'),
+                                            color: (Number(course.published) === 6 && !course.isLatest) ? '#64748b' : (Number(course.published) === 0 ? '#6b7280' : Number(course.published) === 1 ? '#f59e0b' : Number(course.published) === 2 ? '#3b82f6' : Number(course.published) === 3 ? '#ef4444' : Number(course.published) === 4 ? '#8b5cf6' : Number(course.published) === 5 ? '#10b981' : '#f97316')
                                         }}>
-                                            {Number(course.published) === 0 && 'Nháp'}
-                                            {Number(course.published) === 1 && 'Chờ duyệt'}
-                                            {Number(course.published) === 2 && 'Đã duyệt nội dung'}
-                                            {Number(course.published) === 3 && 'Từ chối'}
-                                            {Number(course.published) === 4 && 'Chờ xuất bản'}
-                                            {Number(course.published) === 5 && 'Đã đăng'}
-                                            {Number(course.published) === 6 && 'Đã gỡ'}
+                                            {Number(course.published) === 6 && !course.isLatest ? 'Bản cũ' : (
+                                                <>
+                                                    {Number(course.published) === 0 && 'Nháp'}
+                                                    {Number(course.published) === 1 && 'Chờ duyệt'}
+                                                    {Number(course.published) === 2 && 'Đã duyệt nội dung'}
+                                                    {Number(course.published) === 3 && 'Từ chối'}
+                                                    {Number(course.published) === 4 && 'Chờ xuất bản'}
+                                                    {Number(course.published) === 5 && 'Đã đăng'}
+                                                    {Number(course.published) === 6 && 'Đã gỡ'}
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                     <td>
@@ -2190,11 +2224,12 @@ const AdminDashboard = () => {
                         </div>
                       </td>
                       <td>
-                        <span className={`status-badge ${policy.status === 'accepted' ? 'active' : policy.status === 'rejected' ? 'rejected' : policy.status === 'draft' ? 'draft' : 'pending'}`}>
+                        <span className={`status-badge ${policy.status === 'accepted' ? 'active' : policy.status === 'rejected' ? 'rejected' : policy.status === 'outdated' ? 'outdated' : policy.status === 'draft' ? 'draft' : 'pending'}`}>
                           {policy.status === 'draft' && 'Bản nháp'}
                           {policy.status === 'waiting_confirm' && 'Chờ xác nhận'}
                           {policy.status === 'accepted' && 'Đã chấp nhận'}
                           {policy.status === 'rejected' && 'Đã từ chối'}
+                          {policy.status === 'outdated' && 'Hết hiệu lực'}
                           {policy.status === 'waiting_delete' && 'Chờ xác nhận xóa'}
                         </span>
                       </td>
@@ -2892,7 +2927,7 @@ const AdminDashboard = () => {
                     <select 
                       required 
                       className="modal-input"
-                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: (revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') ? '10px' : '0' }}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}
                       value={revenueData.courseId}
                       onChange={(e) => {
                         const courseId = e.target.value;
@@ -2902,6 +2937,8 @@ const AdminDashboard = () => {
                           courseId,
                           suggestedPrice: course ? course.price : 0
                         });
+                        if (courseId) fetchLatestVersionPolicy(courseId);
+                        else setPreviousPolicy(null);
                       }}
                     >
                       <option value="">-- Chọn khóa học --</option>
@@ -2913,14 +2950,24 @@ const AdminDashboard = () => {
                     </select>
 
                     {revenueData.courseId && (
-                      <div style={{ marginTop: '5px' }}>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', fontSize: '0.85rem', color: '#64748b' }}>Giá đề xuất của giảng viên (VNĐ/lượt mua)</label>
-                        <input 
-                          type="text" 
-                          disabled 
-                          value={Number(revenueData.suggestedPrice).toLocaleString('vi-VN') + ' đ'}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'not-allowed', fontWeight: '600' }}
-                        />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '5px' }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', fontSize: '0.85rem', color: '#64748b' }}>Giá đề xuất của GV</label>
+                          <input 
+                            type="text" 
+                            disabled 
+                            value={Number(revenueData.suggestedPrice).toLocaleString('vi-VN') + ' đ'}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'not-allowed', fontWeight: '600' }}
+                          />
+                        </div>
+                        {previousPolicy && (
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', fontSize: '0.85rem', color: '#6366f1' }}>Phiên bản trước</label>
+                            <div style={{ padding: '8px 12px', background: '#eef2ff', borderRadius: '8px', color: '#4f46e5', fontSize: '0.85rem', fontWeight: '600', border: '1px dashed #c7d2fe' }}>
+                              Loại: {previousPolicy.type}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2928,7 +2975,8 @@ const AdminDashboard = () => {
                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Loại chính sách</label>
                     <select 
                       className="modal-input"
-                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                      disabled={!!previousPolicy}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: previousPolicy ? '#f8fafc' : 'white' }}
                       value={revenueData.type}
                       onChange={(e) => setRevenueData({ ...revenueData, type: e.target.value })}
                     >
@@ -2936,12 +2984,14 @@ const AdminDashboard = () => {
                       <option value="FIXED">Số tiền cố định (đ)</option>
                       <option value="HYBRID">Hỗn hợp (Phần trăm + Cố định)</option>
                     </select>
+                    {previousPolicy && <small style={{ color: '#6366f1' }}>* Kế thừa từ phiên bản trước, không thể thay đổi loại.</small>}
                   </div>
 
                   {(revenueData.type === 'PERCENT' || revenueData.type === 'HYBRID') && (
                     <div className="form-grid" style={{ gap: '15px', marginBottom: '15px' }}>
                       <div className="form-group">
                         <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Phần trăm doanh thu (%)</label>
+                        {previousPolicy && <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Cũ: {previousPolicy.instructorPercent}%</div>}
                         <input 
                           type="number" 
                           required 
@@ -2956,6 +3006,7 @@ const AdminDashboard = () => {
                       </div>
                       <div className="form-group">
                         <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Giá quy ước / lượt mua (VNĐ)</label>
+                        {previousPolicy && <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Cũ: {Number(previousPolicy.pricePerPurchase).toLocaleString('vi-VN')}đ</div>}
                         <input 
                           type="number" 
                           required 
@@ -2972,16 +3023,48 @@ const AdminDashboard = () => {
 
                   {(revenueData.type === 'FIXED' || revenueData.type === 'HYBRID') && (
                     <div className="form-group" style={{ marginBottom: '15px' }}>
-                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>{revenueData.type === 'FIXED' ? 'Số tiền mua đứt (VNĐ)' : 'Số tiền cố định bổ sung (VNĐ)'}</label>
+                      <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>
+                        {previousPolicy ? 'Số tiền bổ sung (bù thêm) (VNĐ)' : (revenueData.type === 'FIXED' ? 'Số tiền mua đứt (VNĐ)' : 'Số tiền cố định bổ sung (VNĐ)')}
+                      </label>
+                      
+                      {previousPolicy && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                            <span color="#64748b">Số tiền bản cũ:</span>
+                            <span style={{ fontWeight: '600' }}>{Number(previousPolicy.fixedAmount).toLocaleString('vi-VN')}đ</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#10b981' }}>
+                            <span>Bù thêm mới:</span>
+                            <span style={{ fontWeight: '700' }}>+{Number(revenueData.additionalAmount || 0).toLocaleString('vi-VN')}đ</span>
+                          </div>
+                          <div style={{ height: '1px', background: '#e2e8f0' }}></div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: '700', color: '#1e293b' }}>
+                            <span>Tổng thanh toán:</span>
+                            <span>{Number(Number(previousPolicy.fixedAmount) + Number(revenueData.additionalAmount || 0)).toLocaleString('vi-VN')}đ</span>
+                          </div>
+                        </div>
+                      )}
+
                       <input 
                         type="number" 
                         required 
                         min="0"
                         className="modal-input" 
-                        value={revenueData.fixedAmount}
-                        onChange={(e) => setRevenueData({ ...revenueData, fixedAmount: e.target.value })}
+                        value={previousPolicy ? revenueData.additionalAmount : revenueData.fixedAmount}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          if (previousPolicy) {
+                            setRevenueData({ 
+                              ...revenueData, 
+                              additionalAmount: val,
+                              fixedAmount: Number(previousPolicy.fixedAmount) + val 
+                            });
+                          } else {
+                            setRevenueData({ ...revenueData, fixedAmount: val });
+                          }
+                        }}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Nhập số tiền"
+                        placeholder={previousPolicy ? "Nhập số tiền bù thêm" : "Nhập số tiền"}
                       />
                     </div>
                   )}

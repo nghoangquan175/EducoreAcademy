@@ -29,6 +29,7 @@ const RevenuePolicyDetail = ({
       case 'waiting_confirm': return <span className="status-badge pending">Chờ xác nhận</span>;
       case 'accepted': return <span className="status-badge active">Đã chấp nhận</span>;
       case 'rejected': return <span className="status-badge rejected">Đã từ chối</span>;
+      case 'outdated': return <span className="status-badge outdated">Hết hiệu lực</span>;
       case 'waiting_delete': return <span className="status-badge pending pulse">Chờ xác nhận xóa</span>;
       default: return null;
     }
@@ -88,9 +89,23 @@ const RevenuePolicyDetail = ({
               )}
 
               {(policy.type === 'FIXED' || policy.type === 'HYBRID') && (
-                <div className="detail-item">
+                <div className="detail-item full-width">
                   <label><CreditCard size={16} /> {policy.type === 'FIXED' ? 'Giá mua đứt / cố định' : 'Mức phí cố định'}</label>
-                  <div className="detail-value" style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '1.2rem' }}>{policy.fixedAmount?.toLocaleString('vi-VN')}đ</div>
+                  <div className="detail-value" style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '1.2rem' }}>
+                    {parseFloat(policy.additionalAmount) > 0 ? (
+                      <>
+                        <span style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 'normal' }}>
+                          {(parseFloat(policy.fixedAmount) - parseFloat(policy.additionalAmount)).toLocaleString('vi-VN')}đ (Cũ) + 
+                        </span>
+                        <span style={{ color: '#10b981' }}> {parseFloat(policy.additionalAmount).toLocaleString('vi-VN')}đ (Bù thêm)</span>
+                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+                          Tổng cộng: {parseFloat(policy.fixedAmount).toLocaleString('vi-VN')}đ
+                        </div>
+                      </>
+                    ) : (
+                      <>{policy.fixedAmount?.toLocaleString('vi-VN')}đ</>
+                    )}
+                  </div>
                 </div>
               )}
 

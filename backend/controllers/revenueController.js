@@ -276,7 +276,7 @@ exports.getAdminInstructors = async (req, res) => {
 
     activePolicies.forEach(p => {
       const instId = p.course?.instructorId;
-      const fAmt = parseFloat(p.fixedAmount || 0);
+      const fAmt = (parseFloat(p.additionalAmount) > 0) ? parseFloat(p.additionalAmount) : parseFloat(p.fixedAmount || 0);
       if (instId && resultDict[instId]) {
         resultDict[instId].totalAdminNet -= fAmt;
         resultDict[instId].totalInstructorNet += fAmt;
@@ -393,21 +393,17 @@ exports.getInstructorOverview = async (req, res) => {
 
     let totalFromFixed = 0;
     activePolicies.forEach(p => {
-      if (p.type === 'FIXED' || p.type === 'HYBRID') {
-        const fAmt = parseFloat(p.fixedAmount || 0);
-        totalFromFixed += fAmt;
+      const fAmt = parseFloat(p.fixedAmount || 0);
+      totalFromFixed += fAmt;
 
-        const dateKey = toLocalDateString(p.updatedAt);
-        if (dailyStatsMap[dateKey]) {
-          dailyStatsMap[dateKey].grossRevenue += fAmt;
-          dailyStatsMap[dateKey].instructorNet += fAmt;
-        } else if (!startDate && !endDate) {
-          if (!dailyStatsMap[dateKey]) {
-            dailyStatsMap[dateKey] = { date: dateKey, grossRevenue: 0, instructorNet: 0, salesCount: 0 };
-          }
-          dailyStatsMap[dateKey].grossRevenue += fAmt;
-          dailyStatsMap[dateKey].instructorNet += fAmt;
+      const dateKey = toLocalDateString(p.updatedAt);
+      if (dailyStatsMap[dateKey]) {
+        dailyStatsMap[dateKey].instructorNet += fAmt;
+      } else if (!startDate && !endDate) {
+        if (!dailyStatsMap[dateKey]) {
+          dailyStatsMap[dateKey] = { date: dateKey, grossRevenue: 0, instructorNet: 0, salesCount: 0 };
         }
+        dailyStatsMap[dateKey].instructorNet += fAmt;
       }
     });
 

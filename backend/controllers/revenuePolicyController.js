@@ -47,12 +47,40 @@ exports.getRevenuePolicies = async (req, res) => {
   }
 };
 
+// @desc    Get the latest accepted or outdated policy for a course version chain
+// @route   GET /api/revenue-policies/previous/:courseId
+// @access  Private/Admin
+exports.getLatestVersionPolicy = async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const course = await Course.findByPk(courseId);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+
+    const rootId = course.rootCourseId || course.id;
+
+    // Find the latest accepted or outdated policy for any course in this root group
+    const latestPolicy = await RevenuePolicy.findOne({
+      include: [{ 
+        model: Course, 
+        as: 'course', 
+        where: { [Op.or]: [{ id: rootId }, { rootCourseId: rootId }] } 
+      }],
+      where: { status: { [Op.in]: ['accepted', 'outdated'] } },
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json(latestPolicy);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Create a new revenue policy
 // @route   POST /api/revenue-policies
 // @access  Private/Admin
 exports.createRevenuePolicy = async (req, res) => {
   try {
-    const { courseId, type, instructorPercent, fixedAmount, upfrontAmount, sendImmediately } = req.body;
+    const { courseId, type, instructorPercent, fixedAmount, additionalAmount, upfrontAmount, sendImmediately } = req.body;
 
     const course = await Course.findByPk(courseId);
     if (!course) {
@@ -63,11 +91,28 @@ exports.createRevenuePolicy = async (req, res) => {
       return res.status(400).json({ message: 'Chỉ có thể tạo chính sách cho khóa học đã được duyệt nội dung (Status 2)' });
     }
 
+    // VERSION CONSTRAINT: Check if there's a previous policy type to inherit
+    const rootId = course.rootCourseId || course.id;
+    const previousPolicy = await RevenuePolicy.findOne({
+      include: [{ 
+        model: Course, 
+        as: 'course', 
+        where: { [Op.or]: [{ id: rootId }, { rootCourseId: rootId }] } 
+      }],
+      where: { status: { [Op.in]: ['accepted', 'outdated'] } },
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (previousPolicy && previousPolicy.type !== type) {
+      return res.status(400).json({ message: `Loại chính sách không khớp với phiên bản trước. Phải là ${previousPolicy.type}.` });
+    }
+
     const policy = await RevenuePolicy.create({
       courseId,
       type,
       instructorPercent,
       fixedAmount,
+      additionalAmount: additionalAmount || 0,
       suggestedPrice: (type === 'PERCENT' || type === 'HYBRID') ? req.body.suggestedPrice : null,
       pricePerPurchase: (type === 'PERCENT' || type === 'HYBRID') ? req.body.pricePerPurchase : null,
       upfrontAmount,
@@ -247,6 +292,29 @@ exports.updatePolicyStatus = async (req, res) => {
         });
         if (existingAccepted && existingAccepted.id !== policy.id) {
           return res.status(400).json({ message: 'Khóa học này đã có một chính sách đã được chấp nhận.' });
+        }
+
+        // AUTO-OUTDATE PREVIOUS VERSIONS' POLICIES
+        const rootId = policy.course.rootCourseId || policy.course.id;
+        const otherCourses = await Course.findAll({
+          where: {
+            [Op.or]: [{ id: rootId }, { rootCourseId: rootId }],
+            id: { [Op.ne]: policy.course.id }
+          },
+          attributes: ['id']
+        });
+        
+        if (otherCourses.length > 0) {
+          const otherCourseIds = otherCourses.map(c => c.id);
+          await RevenuePolicy.update(
+            { status: 'outdated' },
+            {
+              where: {
+                courseId: { [Op.in]: otherCourseIds },
+                status: 'accepted'
+              }
+            }
+          );
         }
 
         policy.confirmedByInstructorId = req.user.id;

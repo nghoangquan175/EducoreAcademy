@@ -124,9 +124,25 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
     const oldStatus = course.published;
     course.published = Number(status);
 
-    // If approving a new version, update isLatest
+    // If publishing a course (status 5)
+    if (status === 5) {
+      if (course.rootCourseId) {
+        // Mark all other versions of this rootCourseId as UNPUBLISHED (6) and isLatest: false
+        await Course.update(
+          { published: 6, isLatest: false },
+          {
+            where: {
+              [Op.or]: [{ id: course.rootCourseId }, { rootCourseId: course.rootCourseId }],
+              id: { [Op.ne]: course.id }
+            }
+          }
+        );
+      }
+      course.isLatest = true;
+    }
+
+    // If approving a new version (status 2), update isLatest but keep previous published version as is until status 5
     if (status === 2 && course.rootCourseId) {
-      // Logic for versioning (existing)
       await Course.update(
         { isLatest: false },
         {

@@ -358,7 +358,7 @@ const CoursePage = () => {
                 <li><FaPlayCircle /> {course.videoCount || 0} bài học video chất lượng</li>
                 <li><FaStar /> {course.quizCount || 0} bài kiểm tra kiến thức</li>
                 <li><FaGlobe /> Ngôn ngữ: Tiếng Việt</li>
-                {/* <li><FaCertificate /> Cấp chứng chỉ hoàn thành</li> */}
+                <li><FaCertificate /> Cấp chứng chỉ hoàn thành</li>
               </ul>
             </div>
           </div>

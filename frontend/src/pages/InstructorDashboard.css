@@ -437,6 +437,12 @@
     color: #ef4444;
 }
 
+.inst-status-badge.outdated {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
 /* Buttons & Actions */
 .inst-actions {
     display: flex;

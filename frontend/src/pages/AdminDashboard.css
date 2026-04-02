@@ -529,6 +529,54 @@
     color: #475569;
 }
 
+.status-badge.outdated {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* Diff View Highlights */
+.diff-chapter.added, .diff-lesson.added {
+    background-color: #f0fdf4 !important;
+    border-left: 4px solid #10b981 !important;
+    padding-left: 12px;
+}
+
+.diff-tag.added {
+    background: #10b981;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 10px;
+}
+
+.diff-tag.modified {
+    background: #3b82f6;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 10px;
+}
+
+.highlight {
+    background-color: #fef9c3;
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.row-changed {
+    background-color: #fffbeb;
+}
+
+.new-val.highlight {
+    color: #b45309;
+}
+
 /* Moderation & Reputation Styles */
 .status-badge.ai {
     background: #f5f3ff;

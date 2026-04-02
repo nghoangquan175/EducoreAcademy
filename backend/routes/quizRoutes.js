@@ -13,26 +13,31 @@ const models = require('../models');
 // @access  Private (Enrolled students/Instructors)
 router.get('/lesson/:lessonId', protect, async (req, res) => {
     try {
-
-        // 1. Find enrollment to check progress
         const lesson = await Lesson.findByPk(req.params.lessonId, {
-            include: [{ model: Chapter }]
+            include: [{ 
+                model: Chapter,
+                include: [{ model: Course }]
+            }]
         });
         
         if (!lesson) {
             return res.status(404).json({ message: 'Không tìm thấy bài học' });
         }
 
-        const enrollment = await Enrollment.findOne({
-            where: { userId: req.user.id, courseId: lesson.Chapter.courseId }
-        });
+        const isInstructor = lesson.Chapter.Course.instructorId === req.user.id;
+        const isAdmin = req.user.role === 'admin';
 
-        if (!enrollment && req.user.role !== 'admin') {
-            return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
-        }
+        // Perform student-specific checks ONLY if the user is NOT the instructor or admin
+        if (!isInstructor && !isAdmin) {
+            const enrollment = await Enrollment.findOne({
+                where: { userId: req.user.id, courseId: lesson.Chapter.courseId }
+            });
 
-        // 2. Check if video has been watched
-        if (enrollment) {
+            if (!enrollment) {
+                return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
+            }
+
+            // Check if video has been watched
             const progress = await Progress.findOne({
                 where: { enrollmentId: enrollment.id, lessonId: lesson.id }
             });

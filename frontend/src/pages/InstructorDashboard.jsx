@@ -662,10 +662,11 @@ const InstructorDashboard = () => {
                     </div>
                   </td>
                   <td>
-                    <span className={`inst-status-badge ${policy.status === 'accepted' ? 'published' : policy.status === 'rejected' ? 'rejected' : policy.status === 'waiting_delete' ? 'pending' : 'pending'}`}>
+                    <span className={`inst-status-badge ${policy.status === 'accepted' ? 'published' : policy.status === 'rejected' ? 'rejected' : policy.status === 'outdated' ? 'outdated' : policy.status === 'waiting_delete' ? 'pending' : 'pending'}`}>
                       {policy.status === 'waiting_confirm' && 'Chờ bạn xác nhận'}
                       {policy.status === 'accepted' && 'Đã chấp nhận'}
                       {policy.status === 'rejected' && 'Đã từ chối'}
+                      {policy.status === 'outdated' && 'Hết hiệu lực'}
                       {policy.status === 'waiting_delete' && 'Yêu cầu xóa từ Admin'}
                     </span>
                   </td>
@@ -968,18 +969,24 @@ const InstructorDashboard = () => {
                                         )}
                                         <td>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <span className="inst-status-badge" style={{
-                                                    background: Number(course.published) === 0 ? '#f3f4f6' : Number(course.published) === 1 ? '#fef3c7' : Number(course.published) === 2 ? '#dbeafe' : Number(course.published) === 3 ? '#fee2e2' : Number(course.published) === 4 ? '#ede9fe' : Number(course.published) === 5 ? '#d1fae5' : '#ffedd5',
-                                                    color: Number(course.published) === 0 ? '#6b7280' : Number(course.published) === 1 ? '#f59e0b' : Number(course.published) === 2 ? '#3b82f6' : Number(course.published) === 3 ? '#ef4444' : Number(course.published) === 4 ? '#8b5cf6' : Number(course.published) === 5 ? '#10b981' : '#f97316'
-                                                }}>
-                                                    {Number(course.published) === 0 && 'Nháp'}
-                                                    {Number(course.published) === 1 && 'Chờ duyệt'}
-                                                    {Number(course.published) === 2 && 'Đã duyệt nội dung'}
-                                                    {Number(course.published) === 3 && 'Từ chối'}
-                                                    {Number(course.published) === 4 && 'Chờ xuất bản'}
-                                                    {Number(course.published) === 5 && 'Đã xuất bản'}
-                                                    {Number(course.published) === 6 && 'Đã tạm gỡ'}
-                                                </span>
+                                                {Number(course.published) === 6 && !course.isLatest ? (
+                                                    <span className="inst-status-badge" style={{ background: '#f1f5f9', color: '#64748b' }}>
+                                                        Bản cũ (Outdated)
+                                                    </span>
+                                                ) : (
+                                                    <span className="inst-status-badge" style={{
+                                                        background: Number(course.published) === 0 ? '#f3f4f6' : Number(course.published) === 1 ? '#fef3c7' : Number(course.published) === 2 ? '#dbeafe' : Number(course.published) === 3 ? '#fee2e2' : Number(course.published) === 4 ? '#ede9fe' : Number(course.published) === 5 ? '#d1fae5' : '#ffedd5',
+                                                        color: Number(course.published) === 0 ? '#6b7280' : Number(course.published) === 1 ? '#f59e0b' : Number(course.published) === 2 ? '#3b82f6' : Number(course.published) === 3 ? '#ef4444' : Number(course.published) === 4 ? '#8b5cf6' : Number(course.published) === 5 ? '#10b981' : '#f97316'
+                                                    }}>
+                                                        {Number(course.published) === 0 && 'Nháp'}
+                                                        {Number(course.published) === 1 && 'Chờ duyệt'}
+                                                        {Number(course.published) === 2 && 'Đã duyệt nội dung'}
+                                                        {Number(course.published) === 3 && 'Từ chối'}
+                                                        {Number(course.published) === 4 && 'Chờ xuất bản'}
+                                                        {Number(course.published) === 5 && 'Đã xuất bản'}
+                                                        {Number(course.published) === 6 && 'Đã tạm gỡ'}
+                                                    </span>
+                                                )}
                                                 {course.editRequests?.[0]?.status === 'pending' && <span className="inst-request-badge pending">Chờ duyệt sửa</span>}
                                                 {course.editRequests?.[0]?.status === 'expired' && <span className="inst-request-badge expired">Đã hết hạn</span>}
                                             </div>
@@ -999,7 +1006,8 @@ const InstructorDashboard = () => {
                                             </>
                                         ) : (
                                             <>
-                                                {[0, 3].includes(Number(course.published)) && (
+                                                {/* Chỉ cho phép gửi phê duyệt nếu không phải bản cũ */}
+                                                {[0, 3].includes(Number(course.published)) && (course.isLatest !== false) && (
                                                     <button className="inst-btn approve" onClick={() => handleSubmitForReview(course.id)} title="Gửi phê duyệt">
                                                         <Send size={16} />
                                                     </button>
@@ -1011,7 +1019,7 @@ const InstructorDashboard = () => {
                                                     </button>
                                                 )}
 
-                                                {Number(course.published) === 4 && (
+                                                {Number(course.published) === 4 && (course.isLatest !== false) && (
                                                     <button 
                                                         className="inst-btn view" 
                                                         onClick={() => handleOpenPolicyByCourse(course.id)} 
@@ -1029,7 +1037,7 @@ const InstructorDashboard = () => {
                                                         </button>
                                                     )
                                                 ) : (
-                                                    ![1, 2, 4].includes(Number(course.published)) && (
+                                                    ![1, 2, 4].includes(Number(course.published)) && (course.isLatest !== false) && (
                                                         <button 
                                                             className="inst-btn view" 
                                                             onClick={() => {
@@ -1057,7 +1065,7 @@ const InstructorDashboard = () => {
                                                     <Eye size={16} />
                                                 </button>
 
-                                                {[0, 3].includes(Number(course.published)) && (
+                                                {[0, 3].includes(Number(course.published)) && (course.isLatest !== false) && (
                                                     <button 
                                                         className="inst-btn view" 
                                                         onClick={(e) => {
