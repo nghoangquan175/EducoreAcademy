@@ -6,8 +6,10 @@ const path = require('path');
 const fs = require('fs');
 const moment = require('moment');
 const { Readable } = require('stream');
+const { adjustReputation, REWARDS } = require('../services/reputationService');
 
 /**
+
  * @desc    Generate a certificate for a completed course
  * @route   POST /api/certificates/generate
  * @access  Private (Student)
@@ -101,7 +103,11 @@ const generateCertificate = async (req, res) => {
             issuedAt: new Date()
         });
 
+        // 7. Reward User for Course Completion
+        await adjustReputation(userId, REWARDS.COURSE_COMPLETED, `Hoàn thành khóa học: ${courseTitle}`);
+
         res.status(201).json({
+
             message: 'Cung cấp chứng chỉ thành công!',
             pdfUrl: certificate.pdfUrl,
             certificateCode: certificate.certificateCode

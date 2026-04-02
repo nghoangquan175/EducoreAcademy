@@ -272,4 +272,12 @@ export const deleteCommentAPI = async (commentId) => {
     throw error;
   }
 };
-
+export const toggleCommentReactionAPI = async (commentId, type) => {
+  try {
+    const response = await axios.post(`${API_URL}/articles/comments/${commentId}/reaction`, { type }, getAuthConfig());
+    return response.data;
+  } catch (error) {
+    console.error('Error toggling reaction:', error);
+    throw error;
+  }
+};

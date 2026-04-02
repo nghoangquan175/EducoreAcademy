@@ -22,7 +22,6 @@ const AdminRevenue = () => {
       const token = localStorage.getItem('token');
       const url = `http://localhost:5000/api/revenue/admin/overview?startDate=${startDate}&endDate=${endDate}`;
       const { data } = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
-      console.log(data);
       setOverview(data);
     } catch (e) {
       console.error(e);

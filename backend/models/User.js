@@ -41,6 +41,18 @@ const User = sequelize.define('User', {
   avatar: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  reputationScore: {
+    type: DataTypes.INTEGER,
+    defaultValue: 100,
+    validate: {
+      min: 0,
+      max: 100
+    }
+  },
+  mutedUntil: {
+    type: DataTypes.DATE, // null means not muted
+    allowNull: true
   }
 }, {
   hooks: {

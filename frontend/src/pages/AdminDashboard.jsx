@@ -31,11 +31,18 @@ import {
   Mail,
   Calendar,
   Clock,
-  HelpCircle,
   Play,
   DollarSign,
-  Tag
+  Tag,
+  ShieldCheck,
+  AlertTriangle,
+  ThumbsUp,
+  Heart,
+  HelpCircle,
+  MessageCircle,
+  Clock8
 } from 'lucide-react';
+
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useAuth } from '../contexts/AuthContext';
@@ -146,6 +153,14 @@ const AdminDashboard = () => {
   const [showSalesSetup, setShowSalesSetup] = useState(false);
   const [salesSetupCourseId, setSalesSetupCourseId] = useState(null);
 
+  // Moderation State
+  const [moderationComments, setModerationComments] = useState([]);
+  const [moderationStats, setModerationStats] = useState({ totalRejected: 0, rejectedToday: 0, mutedUsers: 0 });
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderationPage, setModerationPage] = useState(1);
+  const [moderationTotalPages, setModerationTotalPages] = useState(1);
+
+
   const handlePublishWithSetup = (courseId, formData) => {
     setConfirmDialog({
       isOpen: true,
@@ -250,7 +265,9 @@ const AdminDashboard = () => {
       ]
     },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} /> },
+    { id: 'moderation', label: 'Kiểm duyệt', icon: <ShieldCheck size={20} /> },
   ];
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -321,7 +338,23 @@ const AdminDashboard = () => {
       } else if (activeTab === 'revenue-policy') {
         const { data } = await axios.get(`http://localhost:5000/api/revenue-policies?search=${debouncedRevenueSearch}`, { headers });
         setRevenuePolicies(data.policies || []);
+      } else if (activeTab === 'moderation') {
+        setModerationLoading(true);
+        try {
+          const [commentsRes, statsRes] = await Promise.all([
+            axios.get(`http://localhost:5000/api/admin/moderation/comments?page=${moderationPage}`, { headers }),
+            axios.get('http://localhost:5000/api/admin/moderation/stats', { headers })
+          ]);
+          setModerationComments(commentsRes.data.comments);
+          setModerationTotalPages(commentsRes.data.totalPages);
+          setModerationStats(statsRes.data);
+        } catch (err) {
+          console.error('Error fetching moderation data:', err);
+        } finally {
+          setModerationLoading(false);
+        }
       }
+
       
       // Always fetch notifications to update unread count
       const { data: notifs } = await axios.get('http://localhost:5000/api/notifications', { headers });
@@ -334,6 +367,52 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  const handleReputationAdjust = async (userId, amount, reason) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`http://localhost:5000/api/admin/users/${userId}/reputation`, 
+        { amount, reason, action: 'adjust' }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Đã cập nhật điểm uy tín');
+      if (selectedUserDetails?.id === userId) {
+        // Refresh detail
+        const { data } = await axios.get(`http://localhost:5000/api/admin/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+        setSelectedUserDetails(data);
+      }
+      fetchData(true);
+    } catch (error) {
+      toast.error('Lỗi khi cập nhật điểm uy tín');
+    }
+  };
+
+  const handleReputationReset = (userId) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Khôi phục uy tín',
+      message: 'Bạn có chắc chắn muốn khôi phục điểm uy tín của người dùng này về 100?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.patch(`http://localhost:5000/api/admin/users/${userId}/reputation`, 
+            { action: 'reset' }, 
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          toast.success('Đã khôi phục điểm uy tín');
+          if (selectedUserDetails?.id === userId) {
+            const { data } = await axios.get(`http://localhost:5000/api/admin/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+            setSelectedUserDetails(data);
+          }
+          fetchData(true);
+        } catch (error) {
+          toast.error('Lỗi khi khôi phục điểm uy tín');
+        }
+      }
+    });
+  };
+
 
   const fetchReviewCourse = async (id) => {
     setReviewLoading(true);
@@ -1425,6 +1504,7 @@ const AdminDashboard = () => {
                             <th>Họ tên</th>
                             <th>Email</th>
                             <th>Ngày tham gia</th>
+                            <th>Uy tín</th>
                             <th>Trạng thái</th>
                         </tr>
                     </thead>
@@ -1437,6 +1517,18 @@ const AdminDashboard = () => {
                                     <td className="user-name-cell">{u.name}</td>
                                     <td>{u.email}</td>
                                     <td>{new Date(u.createdAt).toLocaleDateString('vi-VN')}</td>
+                                    <td>
+                                        <div style={{ 
+                                            color: u.reputationScore < 50 ? '#ef4444' : (u.reputationScore < 80 ? '#f59e0b' : '#10b981'),
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontWeight: '600'
+                                        }}>
+                                            <ShieldCheck size={14} />
+                                            {u.reputationScore || 100}
+                                        </div>
+                                    </td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                                             <span className="status-badge active">Hoạt động</span>
@@ -1878,8 +1970,34 @@ const AdminDashboard = () => {
                                     <CheckCircle size={16} />
                                     <span>Ngày tham gia: {new Date(selectedUserDetails.createdAt).toLocaleDateString('vi-VN')}</span>
                                 </div>
+                                <div className="meta-item">
+                                    <ShieldCheck size={16} color={selectedUserDetails.reputationScore < 50 ? '#ef4444' : (selectedUserDetails.reputationScore < 80 ? '#f59e0b' : '#10b981')} />
+                                    <span style={{ fontWeight: '700', color: selectedUserDetails.reputationScore < 50 ? '#ef4444' : (selectedUserDetails.reputationScore < 80 ? '#f59e0b' : '#10b981') }}>
+                                        Uy tín: {selectedUserDetails.reputationScore || 100}/100
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="user-reputation-management" style={{ padding: '20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <div>
+                               <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Quản lý Uy tín</h4>
+                               <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Điều chỉnh hoặc khôi phục điểm uy tín của người dùng.</p>
+                           </div>
+                           <div style={{ display: 'flex', gap: '10px' }}>
+                               <button className="admin-btn view" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px' }} onClick={() => handleReputationReset(selectedUserDetails.id)}>
+                                   <Clock8 size={14} /> Khôi phục (100)
+                               </button>
+                               <button className="admin-btn reject" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px' }} onClick={() => {
+                                   const amount = prompt('Nhập số điểm cần cộng/trừ (VD: -10 hoặc 5):');
+                                   if (amount) handleReputationAdjust(selectedUserDetails.id, amount, 'Điều chỉnh thủ công từ Admin');
+                               }}>
+                                   <Pencil size={14} /> Điều chỉnh thủ công
+                               </button>
+                           </div>
+                       </div>
                     </div>
 
                     <div className="user-detail-sections">
@@ -2249,6 +2367,139 @@ const AdminDashboard = () => {
                     <div className="empty-state">
                         <Bell size={48} />
                         <p>Bạn không có thông báo nào</p>
+                    </div>
+                )}
+            </div>
+          </div>
+        );
+      case 'moderation':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+                <div>
+                    <h2 className="content-title">Kiểm duyệt Nội dung</h2>
+                    <p className="section-desc">Theo dõi các bình luận bị chặn bởi hệ thống tự động.</p>
+                </div>
+            </div>
+
+            <div className="stats-grid" style={{ marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                <div className="stat-card" style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '12px', color: '#ef4444' }}>
+                            <XCircle size={24} />
+                        </div>
+                        <div>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Tổng số bị từ chối</span>
+                            <h3 style={{ fontSize: '1.75rem', margin: '4px 0 0 0', color: '#1e293b' }}>{moderationStats.totalRejected || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat-card" style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ padding: '12px', background: '#ffedd5', borderRadius: '12px', color: '#f59e0b' }}>
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Bị chặn hôm nay</span>
+                            <h3 style={{ fontSize: '1.75rem', margin: '4px 0 0 0', color: '#1e293b' }}>{moderationStats.rejectedToday || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="stat-card" style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ padding: '12px', background: '#ecfeff', borderRadius: '12px', color: '#06b6d4' }}>
+                            <ShieldCheck size={24} />
+                        </div>
+                        <div>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>User đang bị mute</span>
+                            <h3 style={{ fontSize: '1.75rem', margin: '4px 0 0 0', color: '#1e293b' }}>{moderationStats.mutedUsers || 0}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="table-container" style={{ background: 'white', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                <table className="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID & Người dùng</th>
+                            <th>Nội dung bình luận</th>
+                            <th style={{ width: '120px' }}>Nguồn</th>
+                            <th>Lý do hệ thống</th>
+                            <th style={{ width: '150px' }}>Ngày</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {moderationComments.length > 0 ? moderationComments.map(comment => (
+                            <tr key={comment.id}>
+                                <td>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontWeight: '600', color: '#6366f1' }}>#{comment.id}</span>
+                                        <span style={{ fontSize: '0.9rem', color: '#1e293b' }}>{comment.user?.name}</span>
+                                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Uy tín: {comment.user?.reputationScore}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', maxWidth: '350px', whiteSpace: 'normal', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                        {comment.content}
+                                    </p>
+                                </td>
+                                <td>
+                                    <span className={`status-badge ${comment.moderationSource === 'GEMINI_AI' ? 'ai' : 'regex'}`} style={{ 
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600',
+                                        background: comment.moderationSource === 'GEMINI_AI' ? '#f5f3ff' : '#f0f9ff',
+                                        color: comment.moderationSource === 'GEMINI_AI' ? '#7c3aed' : '#0369a1',
+                                        border: comment.moderationSource === 'GEMINI_AI' ? '1px solid #ddd6fe' : '1px solid #bae6fd'
+                                    }}>
+                                        {comment.moderationSource === 'GEMINI_AI' ? 'Gemini AI' : 'Regex'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style={{ fontSize: '0.85rem', color: '#ef4444', fontWeight: '500' }}>
+                                        {comment.moderationReason}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                        {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
+                                        <br />
+                                        {new Date(comment.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                </td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan="5" className="empty-table-cell">Không có bình luận vi phạm</td></tr>
+                        )}
+                    </tbody>
+                </table>
+
+                {moderationTotalPages > 1 && (
+                    <div className="pagination" style={{ padding: '20px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                        {[...Array(moderationTotalPages)].map((_, i) => (
+                            <button
+                                key={i}
+                                className={`page-btn ${moderationPage === i + 1 ? 'active' : ''}`}
+                                onClick={() => {
+                                    setModerationPage(i + 1);
+                                    fetchData(true);
+                                }}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #e2e8f0',
+                                    background: moderationPage === i + 1 ? '#6366f1' : 'white',
+                                    color: moderationPage === i + 1 ? 'white' : '#64748b',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
                     </div>
                 )}
             </div>

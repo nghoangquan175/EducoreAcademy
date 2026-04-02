@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { Quiz, Question, QuizAttempt, Lesson, Chapter, Course, Progress, Enrollment } = require('../models');
+const { Quiz, Question, QuizAttempt, Lesson, Chapter, Course, Progress, Enrollment, User } = require('../models');
 const { protect, instructor } = require('../middleware/authMiddleware');
 const { calculateCourseProgress } = require('../utils/progressUtils');
+const { adjustReputation, REWARDS } = require('../services/reputationService');
 const models = require('../models');
+
 
 
 // @desc    Get quiz for a lesson
@@ -141,7 +143,11 @@ router.post('/:quizId/submit', protect, async (req, res) => {
         });
 
         if (status === 'passed') {
+            // Reward for passing quiz
+            await adjustReputation(req.user.id, REWARDS.QUIZ_PASSED, `Vượt qua bài kiểm tra: ${quiz.id}`);
+
             // Find lesson to get courseId
+
             const lesson = await Lesson.findByPk(quiz.lessonId, {
                 include: [{ model: Chapter }]
             });

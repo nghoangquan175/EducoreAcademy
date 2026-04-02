@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { User, Course, Enrollment, Article, PaymentOrder, Payment, Notification, Chapter, Lesson, Quiz } = require('../models');
+const { User, Course, Enrollment, Article, PaymentOrder, Payment, Notification, Chapter, Lesson, Quiz, Comment } = require('../models');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { sequelize } = require('../config/db');
 const { Op } = require('sequelize');
 const { CourseEditRequest } = require('../models');
+const { adjustReputation, resetReputation } = require('../services/reputationService');
+
 const { cloneCourse } = require('../utils/courseCloner');
 const { notifyUser } = require('../utils/notificationUtils');
 const {
@@ -414,4 +416,73 @@ router.get('/courses/:id/diff', protect, admin, async (req, res) => {
 router.get('/publish-config/:courseId', protect, admin, getPublishConfig);
 router.post('/publish-config/:courseId', protect, admin, upsertPublishConfig);
 
+// ── Moderation & Reputation Management ──────────────────────
+
+// @desc    Get rejected comments for moderation panel
+// @route   GET /api/admin/moderation/comments
+router.get('/moderation/comments', protect, admin, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, source } = req.query;
+    const offset = (page - 1) * limit;
+    const where = { status: 'REJECTED' };
+    if (source) where.moderationSource = source;
+
+    const { count, rows: comments } = await Comment.findAndCountAll({
+      where,
+      include: [{ model: User, as: 'user', attributes: ['id', 'name', 'email', 'reputationScore'] }],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({ comments, totalPages: Math.ceil(count / limit), totalCount: count });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @desc    Get moderation statistics
+// @route   GET /api/admin/moderation/stats
+router.get('/moderation/stats', protect, admin, async (req, res) => {
+  try {
+    const totalRejected = await Comment.count({ where: { status: 'REJECTED' } });
+    const rejectedToday = await Comment.count({ 
+      where: { 
+        status: 'REJECTED',
+        createdAt: { [Op.gte]: new Date().setHours(0,0,0,0) }
+      } 
+    });
+    const mutedUsers = await User.count({ 
+      where: { mutedUntil: { [Op.gt]: new Date() } } 
+    });
+
+    res.json({ totalRejected, rejectedToday, mutedUsers });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @desc    Adjust user reputation
+// @route   PATCH /api/admin/users/:id/reputation
+router.patch('/users/:id/reputation', protect, admin, async (req, res) => {
+  try {
+    const { amount, reason, action } = req.body; // action: 'adjust' or 'reset'
+
+    if (action === 'reset') {
+      await resetReputation(req.params.id);
+      return res.json({ message: 'Đã khôi phục điểm uy tín về 100' });
+    }
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ message: 'Số điểm điều chỉnh không hợp lệ' });
+    }
+
+    const result = await adjustReputation(req.params.id, parseInt(amount), reason || 'Admin manual adjustment');
+    res.json({ message: 'Đã cập nhật điểm uy tín', ...result });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
+

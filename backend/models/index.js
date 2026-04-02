@@ -24,6 +24,8 @@ const CourseEditRequest = require('./CourseEditRequest');
 const RevenuePolicy = require('./RevenuePolicy');
 const CoursePublishConfig = require('./CoursePublishConfig');
 const Certificate = require('./Certificate');
+const CommentReaction = require('./CommentReaction');
+
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -145,6 +147,13 @@ Certificate.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Course.hasMany(Certificate, { foreignKey: 'courseId', as: 'certificates' });
 Certificate.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 
+// Comment Reactions
+Comment.hasMany(CommentReaction, { foreignKey: 'commentId', as: 'reactions', onDelete: 'CASCADE' });
+CommentReaction.belongsTo(Comment, { foreignKey: 'commentId' });
+User.hasMany(CommentReaction, { foreignKey: 'userId' });
+CommentReaction.belongsTo(User, { foreignKey: 'userId' });
+
+
 module.exports = {
   User,
   Course,
@@ -171,5 +180,7 @@ module.exports = {
   CourseEditRequest,
   RevenuePolicy,
   CoursePublishConfig,
-  Certificate
+  Certificate,
+  CommentReaction
 };
+

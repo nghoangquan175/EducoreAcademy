@@ -7,9 +7,9 @@
 }
 
 .pc-container {
-  /* max-width: 1280px; */
-  /* Bằng với carousel mới */
+  max-width: 1440px;
   margin: 0 auto;
+  padding: 0 32px;
 }
 
 /* ─── Header ──────────────────────────────────────────────────────────── */

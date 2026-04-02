@@ -6,6 +6,8 @@
   /* margin-left: calc(50% - 40vw); */
   /* reserve space at bottom for pagination */
   padding-bottom: 48px;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
 /* ─── Swiper shell ────────────────────────────────────── */

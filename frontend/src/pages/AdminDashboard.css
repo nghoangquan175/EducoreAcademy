@@ -529,6 +529,83 @@
     color: #475569;
 }
 
+/* Moderation & Reputation Styles */
+.status-badge.ai {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+}
+
+.status-badge.regex {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.reputation-badge-admin {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid transparent;
+}
+
+.user-reputation-management-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.reputation-stat-box {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #f1f5f9;
+}
+
+.reputation-stat-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.reputation-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-top: 2px;
+}
+
+/* User Meta Refinement */
+.user-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.user-main-info h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
 .role-badge.instructor {
     background: #eff6ff;
     color: #3b82f6;

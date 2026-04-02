@@ -31,8 +31,10 @@ router.put('/:id/restore', protect, articleController.restoreArticle);
 router.delete('/:id/force', protect, articleController.forceDeleteArticle);
  
 // Comment routes
-router.get('/:id/comments', commentController.getArticleComments);
+router.get('/:id/comments', optionalProtect, commentController.getArticleComments);
 router.post('/:id/comments', protect, commentController.addComment);
 router.delete('/comments/:id', protect, commentController.deleteComment);
+router.post('/comments/:commentId/reaction', protect, commentController.toggleReaction);
+
 
 module.exports = router;

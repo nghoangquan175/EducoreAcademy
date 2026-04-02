@@ -1,0 +1,12 @@
+{
+  "badwords": [
+    "đm", "dm", "vl", "vcl", "cl", "dcm", "đcm", "clgt", "đm", "đéo", "đít", "lồn",
+    "buồi", "cặc", "đụ", "chó", "ngu", "óc", "khốn", "điếm",
+    "mẹ", "fuck", "shit", "ass", "bitch", "pussy", "dick", "bastard", "cunt", "hell", "fucker",
+    "gà"
+  ],
+  "linkWhitelist": [
+    "youtube.com", "youtu.be", "github.com", "stackoverflow.com", "medium.com", "wikipedia.org", "google.com",
+    "facebook.com", "fb.me", "linkedin.com", "twitter.com", "x.com"
+  ]
+}

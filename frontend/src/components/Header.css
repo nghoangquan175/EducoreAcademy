@@ -1,14 +1,23 @@
 .header-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
   height: 72px;
   background-color: #ffffff;
+  padding: 40px 0;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   position: sticky;
   top: 0;
   z-index: 1000;
+  width: 100%;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .header-left .logo {

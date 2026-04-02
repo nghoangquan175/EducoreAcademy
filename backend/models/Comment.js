@@ -23,7 +23,31 @@ const Comment = sequelize.define('Comment', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
-  likesCount: {
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'PUBLISHED',
+    allowNull: false,
+    validate: {
+      isIn: [['PUBLISHED', 'REJECTED']]
+    }
+  },
+  moderationSource: {
+    type: DataTypes.STRING,      // 'BLACKLIST', 'LINK_FILTER', 'AI_TOXIC', null
+    allowNull: true
+  },
+  moderationReason: {
+    type: DataTypes.STRING(500), // Detailed reason
+    allowNull: true
+  },
+  likeCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  heartCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  helpfulCount: {
     type: DataTypes.INTEGER,
     defaultValue: 0
   }

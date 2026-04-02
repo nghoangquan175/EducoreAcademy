@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "concurrently -n BACKEND,STUDENT,ADMIN,INSTRUCTOR \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\" \"npm --prefix frontend run dev -- --port 5174\" \"npm --prefix frontend run dev -- --port 5175\""
+    "dev": "concurrently -n STUDENT,ADMIN,INSTRUCTOR \"npm --prefix frontend run dev\" \"npm --prefix frontend run dev -- --port 5174\" \"npm --prefix frontend run dev -- --port 5175\""
   },
   "dependencies": {
     "axios": "^1.13.6",
