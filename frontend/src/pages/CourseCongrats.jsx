@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Trophy, Home, BookOpen, Star, Share2, Award } from 'lucide-react';
 import axios from 'axios';
 import confetti from 'canvas-confetti';
+import toast from 'react-hot-toast';
 import './CourseCongrats.css';
 
 const CourseCongrats = () => {
@@ -93,7 +94,21 @@ const CourseCongrats = () => {
             </button>
             <button 
               className="btn-review-shared" 
-              onClick={() => alert('Hệ thống đang xuất chứng chỉ cho bạn. Vui lòng quay trở lại sau nhé!')}
+              onClick={async () => {
+                const token = localStorage.getItem('token');
+                const loadingToast = toast.loading('Đang khởi tạo chứng chỉ...');
+                try {
+                  const res = await axios.post(`http://localhost:5000/api/certificates/generate`, { courseId }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  toast.dismiss(loadingToast);
+                  toast.success('Chứng chỉ đã sẵn sàng!');
+                  window.open(`/certificate/view/${res.data.certificateCode}`, '_blank');
+                } catch (err) {
+                  toast.dismiss(loadingToast);
+                  toast.error(err.response?.data?.message || 'Lỗi khi tạo chứng chỉ');
+                }
+              }}
               style={{ background: '#3b82f6', color: '#fff' }}
             >
               <Award size={30} /> Nhận chứng chỉ

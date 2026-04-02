@@ -28,6 +28,7 @@ import PartnerApplicationDetail from './pages/PartnerApplicationDetail';
 import LearningPage from './pages/LearningPage';
 import InstructorDashboard from './pages/InstructorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import CertificateViewer from './pages/CertificateViewer';
 import { BookOpen, X } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 
@@ -117,6 +118,9 @@ function App() {
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
                 <Route path="/articles/:id" element={<ArticleDetail />} />
               </Route>
+
+              {/* Public Certificate View — Standalone (No Header/Footer) */}
+              <Route path="/certificate/view/:code" element={<CertificateViewer />} />
 
               {/* Checkout page — custom layout */}
               <Route element={<CheckoutLayout />}>

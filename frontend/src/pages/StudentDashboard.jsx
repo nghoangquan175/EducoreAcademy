@@ -691,16 +691,42 @@ const StudentDashboard = () => {
                         </div>
 
 
-                        <div className="card-actions-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                           <button 
-                              onClick={() => navigate(`/learn/${course.id}`)} 
-                              className={`card-action-btn ${course.status === 'completed' ? 'secondary' : 'primary'}`}
-                              style={{ flex: '1 1 120px' }}
-                           >
-                              {course.status === 'completed' ? 'Xem lại bài học' : 'Học tiếp'}
-                           </button>
+                         <div className="card-actions-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            <button 
+                               onClick={() => navigate(`/learn/${course.id}`)} 
+                               className={`card-action-btn ${course.status === 'completed' ? 'secondary' : 'primary'}`}
+                               style={{ flex: '1 1 120px' }}
+                            >
+                               {course.status === 'completed' ? 'Xem lại bài học' : 'Học tiếp'}
+                            </button>
 
-                           {course.isEligibleForCompletion && course.status !== 'completed' && (
+                            {course.status === 'completed' && (
+                               <button 
+                                  onClick={async (e) => {
+                                     e.stopPropagation();
+                                     const token = localStorage.getItem('token');
+                                     const loadingToast = toast.loading('Đang khởi tạo chứng chỉ...');
+                                     try {
+                                        const res = await axios.post(`http://localhost:5000/api/certificates/generate`, { courseId: course.id }, {
+                                           headers: { Authorization: `Bearer ${token}` }
+                                        });
+                                        toast.dismiss(loadingToast);
+                                        toast.success('Chứng chỉ đã sẵn sàng!');
+                                        // Mở viewer trong tab mới
+                                        window.open(`/certificate/view/${res.data.certificateCode}`, '_blank');
+                                     } catch (err) {
+                                        toast.dismiss(loadingToast);
+                                        toast.error(err.response?.data?.message || 'Lỗi khi tạo chứng chỉ');
+                                     }
+                                  }} 
+                                  className="card-action-btn certificate-btn"
+                                  style={{ flex: '1 1 120px', background: '#3b82f6', color: '#fff', border: 'none' }}
+                               >
+                                  Cung cấp chứng chỉ
+                               </button>
+                            )}
+
+                            {course.isEligibleForCompletion && course.status !== 'completed' && (
                               <button 
                                  onClick={async () => {
                                     const token = localStorage.getItem('token');

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Completion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3b82f6;
+            --dark: #0f172a;
+            --slate: #475569;
+            --light: #f8fafc;
+            --border: #e2e8f0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: white;
+            color: var(--dark);
+        }
+
+        .certificate-container {
+            width: 297mm;
+            /* A4 Landscape width */
+            height: 210mm;
+            /* A4 Landscape height */
+            padding: 2.5rem;
+            box-sizing: border-box;
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.05) 0%, transparent 40%);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Border Decoration */
+        .certificate-container::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            border: 2px solid var(--primary);
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            color: #2563eb;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2563eb;
+            letter-spacing: -0.5px;
+        }
+
+        .cert-no-section {
+            text-align: right;
+        }
+
+        .cert-no-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--slate);
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .cert-no-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .badge-icon {
+            color: var(--secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .divider {
+            width: 120px;
+            height: 4px;
+            background: var(--secondary);
+            margin: 1.5rem 0 2.5rem;
+            border-radius: 2px;
+        }
+
+        .presented-to {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--slate);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+
+        .student-name {
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin: 0 0 1.5rem 0;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.03em;
+        }
+
+        .completion-text {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            color: var(--slate);
+            max-width: 800px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .program-container {
+            background: var(--light);
+            padding: 1.5rem 4rem;
+            border-radius: 12px;
+            display: inline-block;
+            border: 1px solid var(--border);
+        }
+
+        .program-label {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--slate);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .program-name {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 3rem;
+            position: relative;
+            padding: 0 2rem;
+            z-index: 10;
+        }
+
+        .footer-item {
+            text-align: center;
+        }
+
+        .footer-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--slate);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .footer-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .signature-box {
+            text-align: center;
+        }
+
+        .signature-line {
+            width: 200px;
+            height: 1px;
+            background: var(--border);
+            margin-bottom: 12px;
+        }
+
+        .signature-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .signature-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--slate);
+        }
+
+        /* Abstract shapes */
+        .shape {
+            position: absolute;
+            background: var(--secondary);
+            opacity: 0.03;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .shape-1 {
+            width: 400px;
+            height: 400px;
+            top: -100px;
+            left: -100px;
+        }
+
+        .shape-2 {
+            width: 300px;
+            height: 300px;
+            bottom: -50px;
+            right: -50px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="certificate-container">
+        <!-- Decoration shapes -->
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+
+        <header>
+            <div class="logo-section">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" class="logo-icon">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <div class="brand-name">EducoreAcademy</div>
+            </div>
+            <div class="cert-no-section">
+                <div class="cert-no-label">CERTIFICATE NO.</div>
+                <div class="cert-no-value">{{certificateCode}}</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="badge-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path d="M12 7L13.5 10.5H17L14.25 12.5L15.25 16L12 14L8.75 16L9.75 12.5L7 10.5H10.5L12 7Z"
+                        fill="currentColor" />
+                </svg>
+            </div>
+            <h1>CERTIFICATE OF COMPLETION</h1>
+            <div class="divider"></div>
+
+            <div class="presented-to">This acknowledgment is proudly presented to</div>
+            <div class="student-name">{{studentName}}</div>
+
+            <div class="completion-text">
+                For the successful completion of the intensive professional development program, demonstrating
+                exceptional mastery, technical proficiency, and dedication to the field of modern web engineering.
+            </div>
+
+            <div class="program-container">
+                <div class="program-label">Program of Excellence</div>
+                <h2 class="program-name">{{courseName}}</h2>
+            </div>
+        </main>
+
+        {{!-- <footer>
+            <div class="footer-item">
+                <div class="footer-label">Duration</div>
+                <div class="footer-value">{{duration}}</div>
+            </div>
+            <div class="footer-item">
+                <div class="footer-label">Issued Date</div>
+                <div class="footer-value">{{issuedDate}}</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-name">Le Quang Song</div>
+                <div class="signature-title">CEO, Educore Academy</div>
+            </div>
+        </footer> --}}
+    </div>
+</body>
+
+</html>

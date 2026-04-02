@@ -144,7 +144,7 @@ const CourseReview = () => {
 
   return (
     <div className="review-page-container">
-      <button className="review-back-btn" onClick={() => navigate(-1)}>
+      <button className="review-back-btn" style={{ borderRadius: '20px', marginBottom: '15px' }} onClick={() => navigate(-1)}>
         <ChevronLeft size={20} /> Quay lại
       </button>
 
@@ -173,7 +173,6 @@ const CourseReview = () => {
 
         <div className="review-form-container">
           <div className="review-header">
-            <MessageSquare size={32} className="header-icon" />
             <div className="header-text">
                 <h1>Đánh giá khóa học</h1>
                 <p>Trải nghiệm của bạn rất quan trọng với chúng tôi</p>

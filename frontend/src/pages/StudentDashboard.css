@@ -2112,3 +2112,13 @@
     color: #f97316;
     font-weight: 600;
 }
+/* Certificate Styles */
+.card-action-btn.certificate-btn {
+    background: #3b82f6 !important;
+    border: none;
+    color: white;
+    font-weight: 600;
+}
+.card-action-btn.certificate-btn:hover {
+    background: #2563eb !important;
+}

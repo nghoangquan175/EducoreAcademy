@@ -23,6 +23,7 @@ const Message = require('./Message');
 const CourseEditRequest = require('./CourseEditRequest');
 const RevenuePolicy = require('./RevenuePolicy');
 const CoursePublishConfig = require('./CoursePublishConfig');
+const Certificate = require('./Certificate');
 
 // ─── Associations ───────────────────────────────────────────
 
@@ -138,6 +139,12 @@ Course.hasOne(CoursePublishConfig, { foreignKey: 'courseId', as: 'publishConfig'
 CoursePublishConfig.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 CoursePublishConfig.belongsTo(User, { foreignKey: 'createdByAdminId', as: 'admin' });
 
+// Certificate
+User.hasMany(Certificate, { foreignKey: 'userId', as: 'certificates' });
+Certificate.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Course.hasMany(Certificate, { foreignKey: 'courseId', as: 'certificates' });
+Certificate.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+
 module.exports = {
   User,
   Course,
@@ -163,5 +170,6 @@ module.exports = {
   Message,
   CourseEditRequest,
   RevenuePolicy,
-  CoursePublishConfig
+  CoursePublishConfig,
+  Certificate
 };
