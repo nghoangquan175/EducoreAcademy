@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review, Category, CourseEditRequest, CoursePublishConfig } = require('../models');
+const { Course, Chapter, Lesson, User, Enrollment, Quiz, Progress, Review, Category, CourseEditRequest, CoursePublishConfig, RefundRequest } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { protect, instructor, optionalProtect } = require('../middleware/authMiddleware');
@@ -398,6 +398,18 @@ router.get('/:id/learn', protect, async (req, res) => {
 
     if (!enrollment && !isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
+    }
+
+    if (enrollment && enrollment.status === 'cancelled') {
+        return res.status(403).json({ message: 'Khóa học đã bị hủy do hoàn tiền.' });
+    }
+
+    // Check for pending refund request
+    const pendingRefund = await RefundRequest.findOne({
+        where: { userId, courseId, status: 'pending' }
+    });
+    if (pendingRefund) {
+        return res.status(403).json({ message: 'Khóa học đang chờ xử lý hoàn tiền.' });
     }
 
     // Update lastAccessedAt if it's a student
@@ -901,6 +913,18 @@ router.post('/lessons/:id/complete', protect, async (req, res) => {
 
     if (!enrollment) {
       return res.status(403).json({ message: 'Bạn chưa đăng ký khóa học này' });
+    }
+
+    if (enrollment.status === 'cancelled') {
+        return res.status(403).json({ message: 'Khóa học đã bị hủy do hoàn tiền.' });
+    }
+
+    // Check for pending refund request
+    const pendingRefund = await RefundRequest.findOne({
+        where: { userId, courseId, status: 'pending' }
+    });
+    if (pendingRefund) {
+        return res.status(403).json({ message: 'Không thể cập nhật tiến độ khi đang chờ hoàn tiền.' });
     }
 
     // Check if this lesson has a quiz

@@ -30,7 +30,7 @@ const buildUserResponse = async (user) => {
       const message = user.loginViolationCount >= 2
         ? 'Tài khoản bị khóa vĩnh viễn do vi phạm đăng nhập bất thường nhiều lần. Vui lòng liên hệ Admin.'
         : `Tài khoản đang bị tạm khóa do hoạt động bất thường. Vui lòng thử lại sau ${remainingMinutes} phút.`;
-      
+
       const error = new Error(message);
       error.statusCode = 403;
       error.code = 'ACCOUNT_LOCKED';
@@ -53,7 +53,7 @@ const buildUserResponse = async (user) => {
           user.lockedUntil = new Date('9999-12-31T23:59:59Z'); // effectively permanent
           user.tokenVersion += 1; // invalidate current session too
           await user.save();
-          
+
           const error = new Error('Tài khoản đã bị khóa vĩnh viễn do tái phạm đăng nhập bất thường.');
           error.statusCode = 403;
           error.code = 'ACCOUNT_LOCKED';
@@ -85,7 +85,7 @@ const buildUserResponse = async (user) => {
 
   // Common response building logic
   const enrollmentCount = await Enrollment.count({ where: { userId: user.id } });
-  
+
   return {
     id: user.id,
     name: user.name,
@@ -120,7 +120,7 @@ const sendOtp = async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
     }
-    
+
     // Kiểm tra mật khẩu mạnh (Backend)
     if (!validator.isStrongPassword(password, {
       minLength: 8,
@@ -129,8 +129,8 @@ const sendOtp = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ 
-        message: 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt' 
+      return res.status(400).json({
+        message: 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt'
       });
     }
 
@@ -356,8 +356,8 @@ const forgotPassword = async (req, res) => {
     }
 
     if (user.provider !== 'local') {
-      return res.status(400).json({ 
-        message: `Tài khoản này được đăng ký qua ${user.provider}. Vui lòng đăng nhập qua ${user.provider}.` 
+      return res.status(400).json({
+        message: `Tài khoản này được đăng ký qua ${user.provider}. Vui lòng đăng nhập qua ${user.provider}.`
       });
     }
 
@@ -384,7 +384,7 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
-    
+
     if (!token || !password) {
       return res.status(400).json({ message: 'Thiếu thông tin đặt lại mật khẩu' });
     }
@@ -392,8 +392,8 @@ const resetPassword = async (req, res) => {
     // Hash token to compare with DB
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const user = await User.findOne({ 
-      where: { 
+    const user = await User.findOne({
+      where: {
         resetPasswordToken: hashedToken,
         resetPasswordExpire: { [require('sequelize').Op.gt]: Date.now() }
       }
@@ -411,8 +411,8 @@ const resetPassword = async (req, res) => {
       minNumbers: 1,
       minSymbols: 1
     })) {
-      return res.status(400).json({ 
-        message: 'Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt' 
+      return res.status(400).json({
+        message: 'Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt'
       });
     }
 

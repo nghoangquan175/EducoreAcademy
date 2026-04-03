@@ -12,7 +12,7 @@ import {
   Undo, History, RotateCcw
 } from 'lucide-react';
 
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
 import RefundRequestModal from '../components/RefundRequestModal';
@@ -105,6 +105,15 @@ const StudentDashboard = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.error) {
+      toast.error(location.state.error);
+      // Clear state after showing toast to avoid re-showing on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const [confirmDialog, setConfirmDialog] = useState({ 
     isOpen: false, 

@@ -148,8 +148,15 @@ const LearningPage = () => {
         
         setLoading(false);
       } catch (err) {
-        setError(err.response?.data?.message || 'Lỗi khi tải dữ liệu');
         setLoading(false);
+        if (err.response?.status === 403) {
+            // Access denied (likely due to refund pending/approved)
+            navigate('/student-dashboard', { 
+                state: { error: err.response?.data?.message || 'Bạn không có quyền truy cập khóa học này.' } 
+            });
+            return;
+        }
+        setError(err.response?.data?.message || 'Lỗi khi tải dữ liệu');
       }
     };
     fetchCourse();

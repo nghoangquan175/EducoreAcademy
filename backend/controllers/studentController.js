@@ -1,5 +1,6 @@
-const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal, Question, Chapter, Review } = require('../models');
+const { User, Enrollment, Course, Progress, Lesson, QuizAttempt, Quiz, StudyGoal, Question, Chapter, Review, RefundRequest } = require('../models');
 const { calculateCourseProgress } = require('../utils/progressUtils');
+const { Op } = require('sequelize');
 const models = require('../models');
 
 
@@ -8,8 +9,19 @@ exports.getStudentStats = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Total enrolled courses
-    const totalCourses = await Enrollment.count({ where: { userId } });
+    // Total enrolled courses (Exclude cancelled and pending refund)
+    const pendingRefundCourseIds = (await RefundRequest.findAll({
+      where: { userId, status: 'pending' },
+      attributes: ['courseId']
+    })).map(r => r.courseId);
+
+    const totalCourses = await Enrollment.count({ 
+      where: { 
+        userId, 
+        status: { [Op.in]: ['active', 'completed'] },
+        ...(pendingRefundCourseIds.length > 0 && { courseId: { [Op.notIn]: pendingRefundCourseIds } })
+      } 
+    });
 
     // Completed lessons (assuming Progress with status 'completed' or just existing record)
     const completedLessons = await Progress.count({
@@ -130,7 +142,10 @@ exports.getEnrolledCourses = async (req, res) => {
   try {
     const userId = req.user.id;
     const enrollments = await Enrollment.findAll({
-      where: { userId },
+      where: { 
+        userId,
+        status: { [Op.ne]: 'cancelled' } // Hide refunded/cancelled courses
+      },
       include: [
         {
           model: Course,
