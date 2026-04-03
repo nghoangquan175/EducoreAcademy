@@ -2122,3 +2122,27 @@
 .card-action-btn.certificate-btn:hover {
     background: #2563eb !important;
 }
+
+/* Refund Tab Specialized Styles */
+.std-course-card-premium.disabled-card {
+    opacity: 0.75;
+    filter: grayscale(0.4);
+    pointer-events: none;
+    position: relative;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.std-course-card-premium.disabled-card .card-thumb-container img {
+    filter: blur(1px);
+}
+
+.std-filter-btn.active {
+    background: var(--accent);
+    color: white;
+}
+
+/* Adjustments for Transaction Table */
+.std-quiz-history-table table tr:hover {
+    background: rgba(59, 130, 246, 0.02);
+}

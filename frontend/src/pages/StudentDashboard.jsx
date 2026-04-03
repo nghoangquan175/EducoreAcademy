@@ -1,40 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText,
-  PlayCircle,
   LayoutDashboard, 
   BookOpen, 
-  History,
-  Trophy,
-  LogOut,
-  ChevronRight,
-  Menu,
-  X,
-  Search,
-  Calendar,
-  Bell,
-  BookMarked,
-  BarChart3,
-  ShieldCheck,
-  Check,
-  Clock,
-  Trash2,
-  Plus,
-  ChevronLeft,
-  Sun,
-  Moon,
-  Flame,
-  Eye,
-  Edit,
-  Send,
-  RotateCcw,
-  Undo,
-  Star
+  BarChart3, 
+  ChevronRight, Calendar, BookMarked, Clock, Plus,
+  Trophy, Check, Flame, Star, Search, 
+  Moon, Sun, X, Calendar as CalendarIcon, 
+  ChevronLeft, Send, Trash2, Edit, 
+  LogOut, PlayCircle, Eye, ShieldCheck, 
+  Undo, History, RotateCcw
 } from 'lucide-react';
 
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import ConfirmDialog from '../components/ConfirmDialog';
+import RefundRequestModal from '../components/RefundRequestModal';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { useTheme } from '../contexts/ThemeContext';
@@ -108,6 +89,10 @@ const StudentDashboard = () => {
   const [articleTotalPages, setArticleTotalPages] = useState(1);
   const [debouncedArticleSearch, setDebouncedArticleSearch] = useState('');
   const [trashArticles, setTrashArticles] = useState([]);
+  
+  // Refund States
+  const [refundModal, setRefundModal] = useState({ isOpen: false, course: null });
+  const [isSubmittingRefund, setIsSubmittingRefund] = useState(false);
 
 
   useEffect(() => {
@@ -135,6 +120,7 @@ const StudentDashboard = () => {
     { id: 'courses', label: 'Khóa học', icon: <BookOpen size={20} /> },
     { id: 'tests', label: 'Bài tập & Báo cáo', icon: <BarChart3 size={20} /> },
     { id: 'articles', label: 'Bài viết', icon: <FileText size={20} /> },
+    { id: 'transactions', label: 'Lịch sử giao dịch', icon: <History size={20} /> },
   ];
 
   useEffect(() => {
@@ -443,6 +429,26 @@ const StudentDashboard = () => {
     navigate('/login');
   };
 
+  const handleRefundSubmit = async (reason) => {
+    setIsSubmittingRefund(true);
+    const token = localStorage.getItem('token');
+    try {
+      await axios.post('http://localhost:5000/api/refund/request', {
+        orderId: refundModal.course.paymentOrderId,
+        reason: reason
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Yêu cầu hoàn tiền đã được gửi!');
+      setRefundModal({ isOpen: false, course: null });
+      fetchDashboardData(); // Refresh to update status
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Lỗi khi gửi yêu cầu hoàn tiền');
+    } finally {
+      setIsSubmittingRefund(false);
+    }
+  };
+
   const recentlyActive = [...courses]
     .sort((a, b) => new Date(b.lastAccessedAt || 0) - new Date(a.lastAccessedAt || 0))[0] || courses[0];
 
@@ -608,10 +614,12 @@ const StudentDashboard = () => {
     // Logic for filtering
     const filteredCourses = courses.filter(course => {
       const matchesSearch = course.title.toLowerCase().includes(debouncedSearch.toLowerCase());
+      const isLocked = course.refundStatus === 'pending' || course.refundStatus === 'approved';
 
-      if (filterType === 'all') return matchesSearch;
-      if (filterType === 'in-progress') return matchesSearch && course.progressPercent < 100;
-      if (filterType === 'completed') return matchesSearch && course.progressPercent === 100;
+      if (filterType === 'all') return matchesSearch && !isLocked;
+      if (filterType === 'in-progress') return matchesSearch && course.progressPercent < 100 && !isLocked;
+      if (filterType === 'completed') return matchesSearch && course.progressPercent === 100 && !isLocked;
+      if (filterType === 'refunded') return matchesSearch && isLocked;
       return matchesSearch;
     });
 
@@ -638,6 +646,12 @@ const StudentDashboard = () => {
                >
                   Đã hoàn thành
                </button>
+               <button 
+                  className={`std-filter-btn ${filterType === 'refunded' ? 'active' : ''}`}
+                  onClick={() => setFilterType('refunded')}
+               >
+                  Hoàn tiền
+               </button>
             </div>
             <div className="std-course-search">
                <Search size={18} />
@@ -659,7 +673,12 @@ const StudentDashboard = () => {
                </div>
             ) : (
                filteredCourses.map(course => (
-                  <div key={course.id} className="std-course-card-premium">
+                  <div 
+                    key={course.id} 
+                    className={`std-course-card-premium ${filterType === 'refunded' ? 'disabled-card' : ''}`}
+                    onClick={() => filterType !== 'refunded' && navigate(`/learn/${course.id}`)}
+                    style={{ cursor: filterType === 'refunded' ? 'not-allowed' : 'pointer' }}
+                  >
                      <div className="card-thumb-container">
                         <img src={course.thumbnail || 'https://via.placeholder.com/300x180'} alt={course.title} />
                         {course.progressPercent === 100 && (
@@ -691,13 +710,14 @@ const StudentDashboard = () => {
                         </div>
 
 
-                         <div className="card-actions-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {filterType !== 'refunded' && (
+                          <div className="card-actions-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             <button 
                                onClick={() => navigate(`/learn/${course.id}`)} 
                                className={`card-action-btn ${course.status === 'completed' ? 'secondary' : 'primary'}`}
                                style={{ flex: '1 1 120px' }}
                             >
-                               {course.status === 'completed' ? 'Xem lại bài học' : 'Học tiếp'}
+                               {course.status === 'completed' ? 'Xem lại bài học' : 'Vào Học'}
                             </button>
 
                             {course.status === 'completed' && (
@@ -747,16 +767,39 @@ const StudentDashboard = () => {
                               </button>
                            )}
 
-                           {course.watchedCount >= 1 && !course.isReviewed && (
-                              <button 
-                                 onClick={() => navigate(`/course/${course.id}/review`)} 
-                                 className="card-action-btn review-btn"
-                                 style={{ flex: '1 1 120px', background: '#facc15', color: '#000', border: 'none' }}
-                              >
-                                 <Star size={14} style={{ marginRight: '4px' }} /> Đánh giá
-                              </button>
-                           )}
-                        </div>
+                            {course.watchedCount >= 1 && !course.isReviewed && (
+                               <button 
+                                  onClick={() => navigate(`/course/${course.id}/review`)} 
+                                  className="card-action-btn review-btn"
+                                  style={{ flex: '1 1 120px', background: '#facc15', color: '#000', border: 'none' }}
+                               >
+                                  <Star size={14} style={{ marginRight: '4px' }} /> Đánh giá
+                               </button>
+                            )}
+
+                            
+
+                          </div>
+                          )}
+                          
+                          {filterType === 'refunded' && course.refundStatus && (
+                             <div className={`refund-status-tag ${course.refundStatus}`} style={{ 
+                                fontSize: '0.85rem', 
+                                padding: '10px', 
+                                borderRadius: '8px',
+                                width: '100%',
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                backgroundColor: course.refundStatus === 'pending' ? '#fef3c7' : 
+                                               course.refundStatus === 'approved' ? '#d1fae5' : '#fee2e2',
+                                color: course.refundStatus === 'pending' ? '#d97706' : 
+                                       course.refundStatus === 'approved' ? '#059669' : '#dc2626'
+                             }}>
+                                {course.refundStatus === 'pending' ? 'Đang chờ xử lý hoàn tiền...' :
+                                 course.refundStatus === 'approved' ? 'Khóa học đã được hoàn tiền' :
+                                 course.refundStatus === 'rejected' ? 'Yêu cầu hoàn tiền bị từ chối' : 'Lỗi hệ thống hoàn tiền'}
+                             </div>
+                          )}
 
                      </div>
                   </div>
@@ -1215,6 +1258,95 @@ const StudentDashboard = () => {
     );
   };
 
+  const renderTransactionHistory = () => {
+    const proCourses = courses.filter(c => c.isPro && c.paymentOrderId);
+
+    return (
+      <div className="std-content-fade-in">
+        <div className="std-section-header">
+           <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Lịch sử giao dịch</h3>
+           <p style={{ color: 'var(--text-muted)' }}>Quản lý các giao dịch mua khóa học PRO và yêu cầu hoàn tiền.</p>
+        </div>
+        
+        <div className="std-quiz-history-table">
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <th style={{ padding: '0 15px' }}>Khóa học</th>
+                <th>Ngày mua</th>
+                <th>Số tiền</th>
+                <th style={{ textAlign: 'center' }}>Trạng thái</th>
+                <th style={{ textAlign: 'center' }}>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {proCourses.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '15px' }}>
+                    <History size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
+                    <p>Bạn chưa có giao dịch khóa học PRO nào.</p>
+                  </td>
+                </tr>
+              ) : (
+                proCourses.map(course => {
+                  const orderDate = new Date(course.orderDate);
+                  const diff = Date.now() - orderDate.getTime();
+                  const diffDays = diff / (1000 * 60 * 60 * 24);
+                  const isEligible = diffDays <= 7 && course.progressPercent < 15 && course.status !== 'completed' && !course.refundStatus;
+
+                  return (
+                    <tr key={course.id} style={{ background: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <td style={{ padding: '15px', fontWeight: 600, borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                           <img src={course.thumbnail || 'https://via.placeholder.com/60x40'} style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border-color)' }} />
+                           <span>{course.title}</span>
+                        </div>
+                      </td>
+                      <td>{orderDate.toLocaleDateString('vi-VN')}</td>
+                      <td style={{ fontWeight: 600 }}>{parseFloat(course.paidAmount || 0).toLocaleString()}đ</td>
+                      <td style={{ textAlign: 'center' }}>
+                        {course.refundStatus ? (
+                          <span className={`std-badge ${
+                            course.refundStatus === 'pending' ? 'warning' : 
+                            course.refundStatus === 'approved' ? 'success' : 'danger'
+                          }`} style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>
+                            {course.refundStatus === 'pending' ? 'Chờ hoàn tiền' : 
+                             course.refundStatus === 'approved' ? 'Đã hoàn tiền' : 'Từ chối hoàn tiền'}
+                          </span>
+                        ) : (
+                          <span className="std-badge success" style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>Thành công</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '15px', borderTopRightRadius: '12px', borderBottomRightRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          {isEligible ? (
+                            <button
+                              className="btn-action-small delete"
+                              style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                              onClick={() => setRefundModal({ isOpen: true, course })}
+                            >
+                              Hoàn tiền
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>
+                              {course.refundStatus === 'pending' ? '⌛ Đang xử lý' : 
+                               course.refundStatus === 'approved' ? '✅ Đã hoàn tiền' : 
+                               course.refundStatus === 'rejected' ? '❌ Đã từ chối' : 'Hết hạn/Không đủ đ.kiện'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="student-dashboard-layout">
       {/* Sidebar */}
@@ -1326,6 +1458,7 @@ const StudentDashboard = () => {
                {activeTab === 'courses' && renderCourses()}
                {activeTab === 'tests' && renderTests()}
                {activeTab === 'articles' && renderArticles()}
+               {activeTab === 'transactions' && renderTransactionHistory()}
             </main>
 
            {/* Modals */}
@@ -1384,10 +1517,21 @@ const StudentDashboard = () => {
            </aside>
         </div>
       </div>
-      <ConfirmDialog 
-        {...confirmDialog} 
-        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 
-      />
+      {confirmDialog.isOpen && (
+        <ConfirmDialog 
+          {...confirmDialog} 
+          onClose={() => setConfirmDialog({...confirmDialog, isOpen: false})} 
+        />
+      )}
+
+       {/* Refund Modal */}
+       <RefundRequestModal 
+         isOpen={refundModal.isOpen}
+         onClose={() => setRefundModal({ isOpen: false, course: null })}
+         course={refundModal.course}
+         onSubmit={handleRefundSubmit}
+         isSubmitting={isSubmittingRefund}
+       />
     </div>
   );
 };

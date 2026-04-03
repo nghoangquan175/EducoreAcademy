@@ -40,7 +40,8 @@ import {
   Heart,
   HelpCircle,
   MessageCircle,
-  Clock8
+  Clock8,
+  RotateCcw
 } from 'lucide-react';
 
 import axios from 'axios';
@@ -162,6 +163,10 @@ const AdminDashboard = () => {
   const [moderationPage, setModerationPage] = useState(1);
   const [moderationTotalPages, setModerationTotalPages] = useState(1);
 
+  // Refund Management State
+  const [refundRequests, setRefundRequests] = useState([]);
+  const [refundFilter, setRefundFilter] = useState('pending');
+
 
   const handlePublishWithSetup = (courseId, formData) => {
     setConfirmDialog({
@@ -268,6 +273,7 @@ const AdminDashboard = () => {
     },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={20} /> },
     { id: 'moderation', label: 'Kiểm duyệt', icon: <ShieldCheck size={20} /> },
+    { id: 'refunds', label: 'Hoàn tiền', icon: <RotateCcw size={20} /> },
   ];
 
 
@@ -355,6 +361,9 @@ const AdminDashboard = () => {
         } finally {
           setModerationLoading(false);
         }
+      } else if (activeTab === 'refunds') {
+        const { data } = await axios.get(`http://localhost:5000/api/refund/requests?status=${refundFilter}`, { headers });
+        setRefundRequests(data);
       }
 
       
@@ -387,6 +396,36 @@ const AdminDashboard = () => {
     } catch (error) {
       toast.error('Lỗi khi cập nhật điểm uy tín');
     }
+  };
+  const handleRefundAction = async (requestId, action) => {
+    const actionLabel = action === 'approve' ? 'Duyệt hoàn tiền' : 'Từ chối hoàn tiền';
+    const actionColor = action === 'approve' ? 'success' : 'danger';
+    const actionMsg = action === 'approve' 
+      ? 'Duyệt hoàn tiền sẽ kích hoạt lệnh hoàn trả qua VNPay. Bạn có chắc chắn?' 
+      : 'Bạn có chắc chắn muốn từ chối yêu cầu hoàn tiền này?';
+
+    setConfirmDialog({
+      isOpen: true,
+      title: actionLabel,
+      message: actionMsg,
+      type: actionColor,
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const endpoint = action === 'approve' ? 'approve' : 'reject';
+          
+          await axios.patch(`http://localhost:5000/api/refund/${requestId}/${endpoint}`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          toast.success(`${actionLabel} thành công!`);
+          fetchData();
+        } catch (error) {
+          console.error(`Lỗi khi ${actionLabel}:`, error);
+          toast.error(error.response?.data?.message || `Lỗi khi ${actionLabel}`);
+        }
+      }
+    });
   };
 
   const handleReputationReset = (userId) => {
@@ -2537,6 +2576,104 @@ const AdminDashboard = () => {
                         ))}
                     </div>
                 )}
+            </div>
+          </div>
+        );
+      case 'refunds':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+              <h2 className="content-title">Quản lý Hoàn tiền</h2>
+              <div className="filter-group" style={{ display: 'flex', gap: '10px' }}>
+                <select 
+                  className="admin-select"
+                  value={refundFilter}
+                  onChange={(e) => setRefundFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                >
+                  <option value="pending">Chờ duyệt</option>
+                  <option value="approved">Đã duyệt</option>
+                  <option value="rejected">Bị từ chối</option>
+                  <option value="failed">Lỗi VNPay</option>
+                  <option value="all">Tất cả</option>
+                </select>
+              </div>
+            </div>
+            
+            <p className="section-desc">Xem và xử lý các yêu cầu hoàn tiền từ học viên.</p>
+
+            <div className="table-container">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Học viên</th>
+                    <th>Khóa học</th>
+                    <th>Số tiền</th>
+                    <th>Lý do</th>
+                    <th>Ngày yêu cầu</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refundRequests.length > 0 ? refundRequests.map(r => (
+                    <tr key={r.id}>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: '600' }}>{r.user?.name}</span>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>{r.user?.email}</span>
+                        </div>
+                      </td>
+                      <td>{r.course?.title}</td>
+                      <td style={{ fontWeight: '600', color: '#ef4444' }}>
+                        {parseFloat(r.amount).toLocaleString()}đ
+                      </td>
+                      <td>
+                        <div style={{ maxWidth: '200px', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.reason}>
+                          {r.reason}
+                        </div>
+                      </td>
+                      <td>{new Date(r.createdAt).toLocaleDateString('vi-VN')}</td>
+                      <td>
+                        <span className={`status-badge ${r.status}`} style={{ 
+                          padding: '4px 8px', borderRadius: '4px', fontSize: '12px',
+                          backgroundColor: r.status === 'pending' ? '#fef3c7' : r.status === 'approved' ? '#d1fae5' : '#fee2e2',
+                          color: r.status === 'pending' ? '#d97706' : r.status === 'approved' ? '#059669' : '#dc2626'
+                        }}>
+                          {r.status === 'pending' ? 'Chờ duyệt' : r.status === 'approved' ? 'Đã hoàn' : r.status === 'rejected' ? 'Từ chối' : 'Lỗi VNPay'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-actions">
+                          {r.status === 'pending' && (
+                            <>
+                              <button 
+                                className="admin-btn approve" 
+                                onClick={() => handleRefundAction(r.id, 'approve')}
+                                title="Duyệt hoàn tiền"
+                              >
+                                <Check size={18} />
+                              </button>
+                              <button 
+                                className="admin-btn reject" 
+                                onClick={() => handleRefundAction(r.id, 'reject')}
+                                title="Từ chối"
+                              >
+                                <X size={18} />
+                              </button>
+                            </>
+                          )}
+                          {(r.status === 'approved' || r.status === 'rejected') && (
+                             <span style={{ fontSize: '12px', color: '#94a3b8', whiteSpace: 'nowrap' }}>Xử lý: {r.admin?.name?.split(' ').pop() || 'Admin'}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="7" className="empty-table-cell">Không có yêu cầu hoàn tiền nào</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         );

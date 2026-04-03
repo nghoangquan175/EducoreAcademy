@@ -25,6 +25,7 @@ const RevenuePolicy = require('./RevenuePolicy');
 const CoursePublishConfig = require('./CoursePublishConfig');
 const Certificate = require('./Certificate');
 const CommentReaction = require('./CommentReaction');
+const RefundRequest = require('./RefundRequest');
 
 
 // ─── Associations ───────────────────────────────────────────
@@ -106,10 +107,10 @@ StudyGoal.belongsTo(User, { foreignKey: 'userId' });
 
 // Order
 User.hasMany(PaymentOrder, { foreignKey: 'userId' });
-PaymentOrder.belongsTo(User, { foreignKey: 'userId' });
+PaymentOrder.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 Course.hasMany(PaymentOrder, { foreignKey: 'courseId' });
-PaymentOrder.belongsTo(Course, { foreignKey: 'courseId' });
+PaymentOrder.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 
 PaymentOrder.belongsTo(RevenuePolicy, { foreignKey: 'revenuePolicyId', as: 'revenuePolicy' });
 RevenuePolicy.hasMany(PaymentOrder, { foreignKey: 'revenuePolicyId', as: 'orders' });
@@ -153,6 +154,19 @@ CommentReaction.belongsTo(Comment, { foreignKey: 'commentId' });
 User.hasMany(CommentReaction, { foreignKey: 'userId' });
 CommentReaction.belongsTo(User, { foreignKey: 'userId' });
 
+// Refund Request
+User.hasMany(RefundRequest, { foreignKey: 'userId', as: 'refundRequests', onDelete: 'NO ACTION' });
+RefundRequest.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'NO ACTION' });
+
+Course.hasMany(RefundRequest, { foreignKey: 'courseId', as: 'refundRequests', onDelete: 'NO ACTION' });
+RefundRequest.belongsTo(Course, { foreignKey: 'courseId', as: 'course', onDelete: 'NO ACTION' });
+
+PaymentOrder.hasMany(RefundRequest, { foreignKey: 'paymentOrderId', as: 'refundRequests' });
+RefundRequest.belongsTo(PaymentOrder, { foreignKey: 'paymentOrderId', as: 'order' });
+
+User.hasMany(RefundRequest, { foreignKey: 'processedByAdminId', as: 'processedRefunds' });
+RefundRequest.belongsTo(User, { foreignKey: 'processedByAdminId', as: 'admin' });
+
 
 module.exports = {
   User,
@@ -181,6 +195,7 @@ module.exports = {
   RevenuePolicy,
   CoursePublishConfig,
   Certificate,
-  CommentReaction
+  CommentReaction,
+  RefundRequest
 };
 

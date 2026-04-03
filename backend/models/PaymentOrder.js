@@ -35,7 +35,7 @@ const PaymentOrder = sequelize.define('PaymentOrder', {
     type: DataTypes.STRING,
     defaultValue: 'pending',
     validate: {
-      isIn: [['pending', 'paid', 'failed']]
+      isIn: [['pending', 'paid', 'failed', 'refunded']]
     }
   }
 }, {

@@ -59,7 +59,7 @@ async function getRelevantContext(message) {
     // ── Platform stats (always include for non-greeting) ──
     if (intent !== 'greeting') {
       const [courseCount, articleCount, userCount, categoryList] = await Promise.all([
-        Course.count({ where: { published: 2 } }),
+        Course.count({ where: { published: 5 } }),
         Article.count({ where: { articleStatus: 2 } }),
         User.count({ where: { role: 'student' } }),
         Category.findAll({ attributes: ['name'], order: [['name', 'ASC']] })
@@ -92,7 +92,7 @@ async function getRelevantContext(message) {
     // ── Course search ──
     if (['course_search', 'course_detail', 'pricing', 'instructor', 'general'].includes(intent) && keywords.length > 0) {
       const courseWhere = {
-        published: 2,
+        published: 5,
         [Op.or]: [
           ...keywords.map(kw => ({ title: { [Op.like]: `%${kw}%` } })),
           ...keywords.map(kw => ({ description: { [Op.like]: `%${kw}%` } })),
@@ -317,10 +317,10 @@ exports.sendMessage = async (req, res) => {
     console.error('Chat error detail:', error);
 
     const statusCode = error.status || (error.response && error.response.status) || 500;
-    
+
     if (statusCode === 429) {
-      return res.status(429).json({ 
-        error: 'Bạn đã hết giới hạn sử dụng (Quota) của Gemini API. Hãy kiểm tra lại gói cước hoặc thử lại sau 1 phút.' 
+      return res.status(429).json({
+        error: 'Bạn đã hết giới hạn sử dụng (Quota) của Gemini API. Hãy kiểm tra lại gói cước hoặc thử lại sau 1 phút.'
       });
     }
 

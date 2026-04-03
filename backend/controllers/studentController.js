@@ -153,6 +153,22 @@ exports.getEnrolledCourses = async (req, res) => {
       // Calculate progress using the new core logic
       const progress = await calculateCourseProgress(models, userId, course.id);
 
+      // Fetch Pro status
+      const publishConfig = await models.CoursePublishConfig.findOne({ where: { courseId: course.id } });
+      const isPro = publishConfig ? publishConfig.isPro : false;
+
+      // Fetch Payment Order
+      const paymentOrder = await models.PaymentOrder.findOne({
+        where: { userId, courseId: course.id, status: ['paid', 'refunded'] },
+        order: [['createdAt', 'DESC']]
+      });
+
+      // Fetch Refund Request
+      const refundRequest = await models.RefundRequest.findOne({
+        where: { userId, courseId: course.id },
+        order: [['createdAt', 'DESC']]
+      });
+
       return {
         id: course.id,
         title: course.title,
@@ -167,7 +183,13 @@ exports.getEnrolledCourses = async (req, res) => {
         status: en.status,
         category: course.category,
         lastAccessedAt: en.lastAccessedAt,
-        isReviewed: reviewedCourseIds.has(course.id)
+        isReviewed: reviewedCourseIds.has(course.id),
+        isPro,
+        paymentOrderId: paymentOrder ? paymentOrder.id : null,
+        refundStatus: refundRequest ? refundRequest.status : null,
+        refundAmount: refundRequest ? refundRequest.amount : null,
+        orderDate: paymentOrder ? paymentOrder.createdAt : null,
+        paidAmount: paymentOrder ? paymentOrder.amount : 0
       };
     }));
 

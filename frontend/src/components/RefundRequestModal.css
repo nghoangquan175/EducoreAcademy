@@ -1,0 +1,269 @@
+.refund-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.refund-modal-card {
+  width: 100%;
+  max-width: 550px;
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: scaleIn 0.3s ease-out;
+}
+
+.refund-modal-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.05), transparent);
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refund-modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+  background: var(--main-bg);
+  color: var(--text-main);
+}
+
+.refund-modal-body {
+  padding: 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Course Summary inside Modal */
+.refund-course-summary {
+  display: flex;
+  gap: 16px;
+  background: var(--main-bg);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.refund-course-summary img {
+  width: 120px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.course-details {
+  flex: 1;
+}
+
+.course-details .label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.course-details .title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.course-details .price-tag {
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.course-details .price-tag strong {
+  margin-left: 4px;
+  color: #ef4444;
+}
+
+/* Policy Notice Section */
+.refund-policy-notice {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.dark-theme .refund-policy-notice {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #d97706;
+  margin-bottom: 12px;
+}
+
+.refund-policy-notice ul {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.refund-policy-notice li {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+.dark-theme .refund-policy-notice li {
+  color: #fbbf24;
+}
+
+/* Form Group Styles */
+.refund-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.refund-form-group label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.refund-form-group .required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.refund-form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.refund-form-group textarea:focus {
+  outline: none;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: -4px;
+}
+
+/* Modal Footer */
+.refund-modal-footer {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid var(--border-color);
+  background: var(--main-bg);
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.btn-submit {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 700;
+  background: #ef4444;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

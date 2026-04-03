@@ -30,6 +30,7 @@ app.use('/api/instructor-applications', require('./routes/instructorApplicationR
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/revenue', require('./routes/revenueRoutes'));
 app.use('/api/certificates', require('./routes/certificateRoutes'));
+app.use('/api/refund', require('./routes/refundRoutes'));
 const paymentController = require('./controllers/paymentController');
 
 // Callback route matching VNPay Return URL

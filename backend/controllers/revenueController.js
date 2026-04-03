@@ -1,4 +1,4 @@
-const { PaymentOrder, Course, User, RevenuePolicy } = require('../models');
+const { PaymentOrder, Course, User, RevenuePolicy, RefundRequest } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 
 const getDateFilters = (query) => {
@@ -141,12 +141,44 @@ exports.getAdminOverview = async (req, res) => {
 
     const dailyStats = Object.values(dailyStatsMap).sort((a, b) => b.date.localeCompare(a.date));
 
+    // Handle Refunds
+    const refundWhere = { status: 'approved' };
+    if (dates) refundWhere.processedAt = dates;
+    const refunds = await RefundRequest.findAll({ where: refundWhere });
+    
+    let totalRefundedAmount = 0;
+    refunds.forEach(r => {
+      const amt = parseFloat(r.amount);
+      const adminAmt = parseFloat(r.reversedAdminAmount || 0);
+      const instAmt = parseFloat(r.reversedInstructorAmount || 0);
+      
+      totalGrossRevenue -= amt;
+      totalAdminNetRevenue -= adminAmt;
+      totalInstructorRevenue -= instAmt;
+      totalRefundedAmount += amt;
+
+      const dateKey = toLocalDateString(r.processedAt);
+      if (dailyStatsMap[dateKey]) {
+        dailyStatsMap[dateKey].grossRevenue -= amt;
+        dailyStatsMap[dateKey].adminNet -= adminAmt;
+        dailyStatsMap[dateKey].instructorNet -= instAmt;
+      } else if (!startDate && !endDate) {
+        if (!dailyStatsMap[dateKey]) {
+          dailyStatsMap[dateKey] = { date: dateKey, grossRevenue: 0, adminNet: 0, instructorNet: 0, salesCount: 0 };
+        }
+        dailyStatsMap[dateKey].grossRevenue -= amt;
+        dailyStatsMap[dateKey].adminNet -= adminAmt;
+        dailyStatsMap[dateKey].instructorNet -= instAmt;
+      }
+    });
+
     res.json({
       totalGrossRevenue,
       totalAdminNetRevenue: totalAdminNetRevenue - totalFixedCosts,
       totalInstructorRevenue: totalInstructorRevenue + totalFixedCosts,
+      totalRefundedAmount,
       totalTransactions: orders.length,
-      dailyStats
+      dailyStats: Object.values(dailyStatsMap).sort((a, b) => b.date.localeCompare(a.date))
     });
   } catch (error) {
     console.error(error);
@@ -224,6 +256,22 @@ exports.getAdminCourses = async (req, res) => {
           totalSales: 0
         };
       }
+    });
+
+    // Subtract Refunds
+    const refundWhere = { status: 'approved' };
+    if (dates) refundWhere.processedAt = dates;
+    const refunds = await RefundRequest.findAll({ where: refundWhere });
+    refunds.forEach(r => {
+        const cId = r.courseId;
+        const amt = parseFloat(r.amount);
+        const adminAmt = parseFloat(r.reversedAdminAmount || 0);
+        const instAmt = parseFloat(r.reversedInstructorAmount || 0);
+        if (resultDict[cId]) {
+            resultDict[cId].totalGross -= amt;
+            resultDict[cId].totalAdminNet -= adminAmt;
+            resultDict[cId].totalInstructorNet -= instAmt;
+        }
     });
 
     res.json(Object.values(resultDict));
@@ -409,13 +457,41 @@ exports.getInstructorOverview = async (req, res) => {
 
     const dailyStats = Object.values(dailyStatsMap).sort((a, b) => b.date.localeCompare(a.date));
 
+    // Handle Refunds for Instructor
+    const refundWhere = { status: 'approved' };
+    if (dates) refundWhere.processedAt = dates;
+    const refunds = await RefundRequest.findAll({ 
+        where: refundWhere,
+        include: [{ model: Course, as: 'course', where: { instructorId }, attributes: [] }]
+    });
+
+    refunds.forEach(r => {
+        const amt = parseFloat(r.amount);
+        const instAmt = parseFloat(r.reversedInstructorAmount || 0);
+        
+        totalGrossRevenue -= amt;
+        totalFromTransactions -= instAmt;
+
+        const dateKey = toLocalDateString(r.processedAt);
+        if (dailyStatsMap[dateKey]) {
+            dailyStatsMap[dateKey].grossRevenue -= amt;
+            dailyStatsMap[dateKey].instructorNet -= instAmt;
+        } else if (!startDate && !endDate) {
+            if (!dailyStatsMap[dateKey]) {
+                dailyStatsMap[dateKey] = { date: dateKey, grossRevenue: 0, instructorNet: 0, salesCount: 0 };
+            }
+            dailyStatsMap[dateKey].grossRevenue -= amt;
+            dailyStatsMap[dateKey].instructorNet -= instAmt;
+        }
+    });
+
     res.json({
       totalGrossRevenue: totalGrossRevenue + totalFromFixed,
       totalInstructorNetRevenue: totalFromTransactions + totalFromFixed,
       totalFromTransactions,
       totalFromFixed,
       totalSales: orders.length,
-      dailyStats
+      dailyStats: Object.values(dailyStatsMap).sort((a, b) => b.date.localeCompare(a.date))
     });
   } catch (error) {
     console.error(error);
@@ -492,6 +568,24 @@ exports.getInstructorCourses = async (req, res) => {
         }
         resultDict[cId].policy = { type: p.type, instructorPercent: p.instructorPercent, fixedAmount: p.fixedAmount };
       }
+    });
+
+    // Subtract Refunds for Instructor Courses
+    const refundWhere = { status: 'approved' };
+    if (dates) refundWhere.processedAt = dates;
+    const refunds = await RefundRequest.findAll({ 
+        where: refundWhere,
+        include: [{ model: Course, as: 'course', where: { instructorId }, attributes: [] }]
+    });
+
+    refunds.forEach(r => {
+        const cId = r.courseId;
+        const amt = parseFloat(r.amount);
+        const instAmt = parseFloat(r.reversedInstructorAmount || 0);
+        if (resultDict[cId]) {
+            resultDict[cId].totalGross -= amt;
+            resultDict[cId].totalInstructorNet -= instAmt;
+        }
     });
 
     // Sort theo net revenue
