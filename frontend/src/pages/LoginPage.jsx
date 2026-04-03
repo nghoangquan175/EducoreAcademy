@@ -142,6 +142,10 @@ const LoginPage = () => {
     }, { scope: 'public_profile,email' });
   };
 
+  const sessionExpired = searchParams.get('session_expired') === '1';
+  const accountLocked = searchParams.get('account_locked') === '1';
+  const lockedMessage = searchParams.get('message');
+
   if (user) return null;
 
   return (
@@ -175,6 +179,18 @@ const LoginPage = () => {
           {registered && (
             <div className="auth-success">
               ✅ Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.
+            </div>
+          )}
+
+          {sessionExpired && (
+            <div className="auth-error">
+              ⚠️ Phiên đăng nhập đã hết hạn hoặc được đăng nhập ở thiết bị khác. Vui lòng đăng nhập lại.
+            </div>
+          )}
+
+          {accountLocked && (
+            <div className="auth-error">
+              🚫 {lockedMessage || 'Tài khoản hiện đang bị khóa dọ hoạt động bất thường.'}
             </div>
           )}
 

@@ -53,6 +53,29 @@ const User = sequelize.define('User', {
   mutedUntil: {
     type: DataTypes.DATE, // null means not muted
     allowNull: true
+  },
+  tokenVersion: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false
+  },
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  rapidLoginCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false
+  },
+  loginViolationCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false
+  },
+  lockedUntil: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   hooks: {

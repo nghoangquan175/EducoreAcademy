@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext(null);
 
@@ -16,6 +16,27 @@ export const AuthProvider = ({ children }) => {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
+  }, []);
+
+  // Axios Response Interceptor for handling session / lock events
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const status = error.response?.status;
+        const code = error.response?.data?.code;
+
+        if (status === 401 && code === 'SESSION_EXPIRED') {
+          logout();
+          window.location.href = '/login?session_expired=1';
+        } else if (status === 403 && code === 'ACCOUNT_LOCKED') {
+          logout();
+          window.location.href = `/login?account_locked=1&message=${encodeURIComponent(error.response?.data?.message || '')}`;
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
   // Update document title based on user role

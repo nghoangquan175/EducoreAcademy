@@ -500,5 +500,24 @@ router.patch('/users/:id/reputation', protect, admin, async (req, res) => {
   }
 });
 
+// @desc    Get accounts locked due to multiple login violations
+// @route   GET /api/admin/locked-accounts
+// @access  Private/Admin
+router.get('/locked-accounts', protect, admin, async (req, res) => {
+  try {
+    const lockedUsers = await User.findAll({
+      where: {
+        role: 'student',
+        loginViolationCount: { [Op.gte]: 2 }
+      },
+      attributes: ['id', 'name', 'email', 'loginViolationCount', 'lockedUntil', 'createdAt'],
+      order: [['lockedUntil', 'DESC']]
+    });
+    res.json(lockedUsers);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
 

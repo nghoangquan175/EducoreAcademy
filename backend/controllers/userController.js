@@ -14,12 +14,75 @@ const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+const generateToken = (id, version) => {
+  return jwt.sign({ id, version }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
 const buildUserResponse = async (user) => {
-  // Check if student has any enrollments
+  // Logic apply ONLY for students
+  if (user.role === 'student') {
+    const now = new Date();
+
+    // 1. Check if account is currently locked
+    if (user.lockedUntil && user.lockedUntil > now) {
+      const remainingMinutes = Math.ceil((user.lockedUntil - now) / (60 * 1000));
+      const message = user.loginViolationCount >= 2
+        ? 'Tài khoản bị khóa vĩnh viễn do vi phạm đăng nhập bất thường nhiều lần. Vui lòng liên hệ Admin.'
+        : `Tài khoản đang bị tạm khóa do hoạt động bất thường. Vui lòng thử lại sau ${remainingMinutes} phút.`;
+      
+      const error = new Error(message);
+      error.statusCode = 403;
+      error.code = 'ACCOUNT_LOCKED';
+      throw error;
+    }
+
+    // 2. Check for rapid login (anomaly detection)
+    const RAPID_WINDOW = 2 * 60 * 1000; // 2 minutes
+    const MAX_RAPID_ATTEMPTS = 3;
+    const LOCK_DURATION = 15 * 60 * 1000; // 15 minutes
+
+    if (user.lastLoginAt && (now - user.lastLoginAt) < RAPID_WINDOW) {
+      user.rapidLoginCount += 1;
+
+      if (user.rapidLoginCount >= MAX_RAPID_ATTEMPTS) {
+        // Punish based on violation count
+        if (user.loginViolationCount >= 1) {
+          // Second offense: Permanent lock
+          user.loginViolationCount = 2;
+          user.lockedUntil = new Date('9999-12-31T23:59:59Z'); // effectively permanent
+          user.tokenVersion += 1; // invalidate current session too
+          await user.save();
+          
+          const error = new Error('Tài khoản đã bị khóa vĩnh viễn do tái phạm đăng nhập bất thường.');
+          error.statusCode = 403;
+          error.code = 'ACCOUNT_LOCKED';
+          throw error;
+        } else {
+          // First offense: 15-minute lock
+          user.loginViolationCount = 1;
+          user.lockedUntil = new Date(now.getTime() + LOCK_DURATION);
+          user.rapidLoginCount = 0;
+          user.tokenVersion += 1; // invalidate current session
+          await user.save();
+
+          const error = new Error('Phát hiện đăng nhập bất thường liên tiếp. Tài khoản bị tạm khóa 15 phút.');
+          error.statusCode = 403;
+          error.code = 'ACCOUNT_LOCKED';
+          throw error;
+        }
+      }
+    } else {
+      // Not a rapid login, reset the counter
+      user.rapidLoginCount = 0;
+    }
+
+    // 3. Successful login logic for students
+    user.tokenVersion += 1;
+    user.lastLoginAt = now;
+    await user.save();
+  }
+
+  // Common response building logic
   const enrollmentCount = await Enrollment.count({ where: { userId: user.id } });
   
   return {
@@ -30,7 +93,7 @@ const buildUserResponse = async (user) => {
     avatar: user.avatar,
     provider: user.provider,
     hasEnrolledCourses: enrollmentCount > 0,
-    token: generateToken(user.id)
+    token: generateToken(user.id, user.tokenVersion)
   };
 };
 
@@ -167,6 +230,9 @@ const registerUser = async (req, res) => {
     const user = await User.create({ name, email, password, role, provider: 'local' });
     res.status(201).json(await buildUserResponse(user));
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message, code: error.code });
+    }
     res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
@@ -186,6 +252,9 @@ const loginUser = async (req, res) => {
       res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
     }
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message, code: error.code });
+    }
     res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
@@ -221,6 +290,9 @@ const googleLogin = async (req, res) => {
 
     res.json(await buildUserResponse(user));
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message, code: error.code });
+    }
     console.error('Google login error:', error);
     res.status(401).json({ message: 'Xác thực Google thất bại', error: error.message });
   }
@@ -262,6 +334,9 @@ const facebookLogin = async (req, res) => {
 
     res.json(await buildUserResponse(user));
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message, code: error.code });
+    }
     console.error('Facebook login error:', error);
     res.status(401).json({ message: 'Xác thực Facebook thất bại', error: error.message });
   }

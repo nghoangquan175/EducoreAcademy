@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, LogIn, ArrowLeft } from 'lucide-react';
@@ -12,7 +12,11 @@ const StaffLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, user } = useAuth();
+  
+  const searchParams = new URLSearchParams(location.search);
+  const sessionExpired = searchParams.get('session_expired') === '1';
 
   useEffect(() => {
     if (user) {
@@ -71,6 +75,11 @@ const StaffLogin = () => {
         </div>
 
         {error && <div className="staff-error-message">{error}</div>}
+        {sessionExpired && (
+          <div className="staff-error-message" style={{ backgroundColor: '#fff3cd', color: '#856404', borderColor: '#ffeeba' }}>
+             ⚠️ Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="staff-form">
           <div className="staff-input-group">

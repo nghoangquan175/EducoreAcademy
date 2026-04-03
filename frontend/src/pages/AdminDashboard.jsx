@@ -167,6 +167,10 @@ const AdminDashboard = () => {
   const [refundRequests, setRefundRequests] = useState([]);
   const [refundFilter, setRefundFilter] = useState('pending');
 
+  // Locked Accounts State
+  const [lockedAccounts, setLockedAccounts] = useState([]);
+  const [loadingLockedAccounts, setLoadingLockedAccounts] = useState(false);
+
 
   const handlePublishWithSetup = (courseId, formData) => {
     setConfirmDialog({
@@ -252,6 +256,7 @@ const AdminDashboard = () => {
       subItems: [
         { id: 'students', label: 'Học viên', icon: <GraduationCap size={18} /> },
         { id: 'instructors', label: 'Giảng viên', icon: <UserCheck size={18} /> },
+        { id: 'locked-accounts', label: 'Tài khoản bị khóa', icon: <XCircle size={18} /> },
         { id: 'bulk-notification', label: 'Gửi thông báo', icon: <Send size={18} /> },
         { id: 'applications', label: 'Đơn đăng ký GV', icon: <FileText size={18} /> },
       ]
@@ -364,6 +369,16 @@ const AdminDashboard = () => {
       } else if (activeTab === 'refunds') {
         const { data } = await axios.get(`http://localhost:5000/api/refund/requests?status=${refundFilter}`, { headers });
         setRefundRequests(data);
+      } else if (activeTab === 'locked-accounts') {
+        setLoadingLockedAccounts(true);
+        try {
+          const { data } = await axios.get('http://localhost:5000/api/admin/locked-accounts', { headers });
+          setLockedAccounts(data);
+        } catch (err) {
+          console.error('Error fetching locked accounts:', err);
+        } finally {
+          setLoadingLockedAccounts(false);
+        }
       }
 
       
@@ -2674,6 +2689,74 @@ const AdminDashboard = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        );
+      case 'locked-accounts':
+        return (
+          <div className="admin-content-fade-in">
+            <div className="section-header">
+              <h2 className="content-title">Tài khoản bị khóa (Vi phạm đăng nhập)</h2>
+            </div>
+            <p className="section-desc">Danh sách các tài khoản Student bị khóa vĩnh viễn do phát hiện hành vi chia sẻ tài khoản (đăng nhập bất thường liên tiếp).</p>
+
+            <div className="table-container">
+              {loadingLockedAccounts ? (
+                <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải...</div>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID & Người dùng</th>
+                      <th>Email</th>
+                      <th>Số lần vi phạm</th>
+                      <th>Ngày bị khóa</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lockedAccounts.length > 0 ? lockedAccounts.map(acc => (
+                      <tr key={acc.id}>
+                        <td>
+                          <div style={{ fontWeight: '600' }}>{acc.name}</div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>#{acc.id}</div>
+                        </td>
+                        <td>{acc.email}</td>
+                        <td>
+                          <span style={{ 
+                            padding: '4px 8px', borderRadius: '4px', fontSize: '12px',
+                            backgroundColor: '#fee2e2', color: '#dc2626', fontWeight: '600'
+                          }}>
+                            {acc.loginViolationCount} lần
+                          </span>
+                        </td>
+                        <td>{new Date(acc.lockedUntil).toLocaleString('vi-VN')}</td>
+                        <td>
+                          <button 
+                            className="admin-btn info" 
+                            onClick={() => {
+                              setActiveTab('user-detail');
+                              setSelectedUserDetails(null);
+                              setLoadingUserDetail(true);
+                              axios.get(`http://localhost:5000/api/admin/users/${acc.id}`, {
+                                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                              }).then(res => {
+                                setSelectedUserDetails(res.data);
+                                setLoadingUserDetail(false);
+                              });
+                            }}
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr><td colSpan="5" className="empty-table-cell">Không có tài khoản nào bị khóa do vi phạm</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         );
