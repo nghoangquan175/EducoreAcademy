@@ -535,6 +535,18 @@
     border: 1px solid #e2e8f0;
 }
 
+.status-badge.locked-temp {
+    background: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #ffedd5;
+}
+
+.status-badge.locked-perm {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fee2e2;
+}
+
 /* Diff View Highlights */
 .diff-chapter.added, .diff-lesson.added {
     background-color: #f0fdf4 !important;

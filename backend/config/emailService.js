@@ -132,8 +132,62 @@ const sendInstructorApplicationApproveEmail = async (to, name, email, password) 
   await transporter.sendMail(mailOptions);
 };
 
+/**
+ * Gửi email đặt lại mật khẩu
+ */
+const sendPasswordResetEmail = async (to, name, resetUrl) => {
+  const mailOptions = {
+    from: '"EducoreAcademy" <no-reply@educoreacademy.com>',
+    to,
+    subject: 'Đặt lại mật khẩu của bạn – EducoreAcademy',
+    html: `
+      <div style="font-family: 'Inter', Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 36px 40px; text-align: center;">
+          <h1 style="color: #fff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
+            📚 EducoreAcademy
+          </h1>
+          <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 14px;">Nền tảng học tập trực tuyến</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 40px; background: #ffffff;">
+          <h2 style="color: #0f172a; font-size: 20px; margin: 0 0 12px;">Yêu cầu đặt lại mật khẩu</h2>
+          <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 28px;">
+            Xin chào ${name},<br/><br/>
+            Bạn nhận được email này vì chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Vui lòng nhấn vào nút bên dưới để tiến hành thay đổi:
+          </p>
+
+          <!-- Action Button -->
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);">
+              Đặt lại mật khẩu
+            </a>
+          </div>
+
+          <p style="color: #64748b; font-size: 13px; line-height: 1.6; margin: 0 0 12px; text-align: center;">
+            Link này sẽ hết hạn sau <strong>1 giờ</strong>.
+          </p>
+
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin: 0;">
+            Nếu bạn không yêu cầu điều này, hãy bỏ qua email này. Bảo mật tài khoản của bạn là ưu tiên hàng đầu của chúng tôi.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+          <p style="color: #94a3b8; font-size: 12px; margin: 0;">© 2025 EducoreAcademy. Bảo lưu mọi quyền.</p>
+        </div>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 module.exports = { 
   sendOtpEmail,
   sendInstructorApplicationRejectEmail,
-  sendInstructorApplicationApproveEmail
+  sendInstructorApplicationApproveEmail,
+  sendPasswordResetEmail
 };

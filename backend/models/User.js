@@ -76,6 +76,14 @@ const User = sequelize.define('User', {
   lockedUntil: {
     type: DataTypes.DATE,
     allowNull: true
+  },
+  resetPasswordToken: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  resetPasswordExpire: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   hooks: {

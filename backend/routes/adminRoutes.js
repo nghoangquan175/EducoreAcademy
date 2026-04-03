@@ -508,7 +508,10 @@ router.get('/locked-accounts', protect, admin, async (req, res) => {
     const lockedUsers = await User.findAll({
       where: {
         role: 'student',
-        loginViolationCount: { [Op.gte]: 2 }
+        [Op.or]: [
+          { loginViolationCount: { [Op.gte]: 2 } },
+          { lockedUntil: { [Op.gt]: new Date() } }
+        ]
       },
       attributes: ['id', 'name', 'email', 'loginViolationCount', 'lockedUntil', 'createdAt'],
       order: [['lockedUntil', 'DESC']]

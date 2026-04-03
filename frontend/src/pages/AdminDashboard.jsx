@@ -1619,7 +1619,17 @@ const AdminDashboard = () => {
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                            <span className="status-badge active">Hoạt động</span>
+                                            {(() => {
+                                                const now = new Date();
+                                                const isLocked = u.lockedUntil && new Date(u.lockedUntil) > now;
+                                                if (isLocked) {
+                                                    if (u.loginViolationCount >= 2) {
+                                                        return <span className="status-badge locked-perm">Khóa vĩnh viễn</span>;
+                                                    }
+                                                    return <span className="status-badge locked-temp" title={`Mở khóa lúc: ${new Date(u.lockedUntil).toLocaleTimeString()}`}>Tạm khóa 15p</span>;
+                                                }
+                                                return <span className="status-badge active">Hoạt động</span>;
+                                            })()}
                                             <button 
                                                 className="admin-btn view" 
                                                 title="Xem chi tiết"
@@ -2028,7 +2038,17 @@ const AdminDashboard = () => {
                 </h2>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                  <span className={`status-badge active`}>Đang hoạt động</span>
+                  {(() => {
+                      const now = new Date();
+                      const isLocked = selectedUserDetails.lockedUntil && new Date(selectedUserDetails.lockedUntil) > now;
+                      if (isLocked) {
+                          if (selectedUserDetails.loginViolationCount >= 2) {
+                              return <span className="status-badge locked-perm">Khóa vĩnh viễn</span>;
+                          }
+                          return <span className="status-badge locked-temp" title={`Mở khóa lúc: ${new Date(selectedUserDetails.lockedUntil).toLocaleTimeString()}`}>Tạm khóa 15p</span>;
+                      }
+                      return <span className="status-badge active">Đang hoạt động</span>;
+                  })()}
               </div>
             </div>
 
@@ -2709,50 +2729,73 @@ const AdminDashboard = () => {
                     <tr>
                       <th>ID & Người dùng</th>
                       <th>Email</th>
-                      <th>Số lần vi phạm</th>
-                      <th>Ngày bị khóa</th>
+                      <th>Vi phạm</th>
+                      <th>Trạng thái</th>
+                      <th>Hết hạn khóa</th>
                       <th>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {lockedAccounts.length > 0 ? lockedAccounts.map(acc => (
-                      <tr key={acc.id}>
-                        <td>
-                          <div style={{ fontWeight: '600' }}>{acc.name}</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>#{acc.id}</div>
-                        </td>
-                        <td>{acc.email}</td>
-                        <td>
-                          <span style={{ 
-                            padding: '4px 8px', borderRadius: '4px', fontSize: '12px',
-                            backgroundColor: '#fee2e2', color: '#dc2626', fontWeight: '600'
-                          }}>
-                            {acc.loginViolationCount} lần
-                          </span>
-                        </td>
-                        <td>{new Date(acc.lockedUntil).toLocaleString('vi-VN')}</td>
-                        <td>
-                          <button 
-                            className="admin-btn info" 
-                            onClick={() => {
-                              setActiveTab('user-detail');
-                              setSelectedUserDetails(null);
-                              setLoadingUserDetail(true);
-                              axios.get(`http://localhost:5000/api/admin/users/${acc.id}`, {
-                                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                              }).then(res => {
-                                setSelectedUserDetails(res.data);
-                                setLoadingUserDetail(false);
-                              });
-                            }}
-                            title="Xem chi tiết"
-                          >
-                            <Eye size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    )) : (
-                      <tr><td colSpan="5" className="empty-table-cell">Không có tài khoản nào bị khóa do vi phạm</td></tr>
+                    {lockedAccounts.length > 0 ? lockedAccounts.map(acc => {
+                      const now = new Date();
+                      const isPerm = acc.loginViolationCount >= 2;
+                      const isLockedNow = new Date(acc.lockedUntil) > now;
+                      
+                      return (
+                        <tr key={acc.id}>
+                          <td>
+                            <div style={{ fontWeight: '600' }}>{acc.name}</div>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>#{acc.id}</div>
+                          </td>
+                          <td>{acc.email}</td>
+                          <td>
+                            <span style={{ 
+                              padding: '4px 8px', borderRadius: '4px', fontSize: '11px',
+                              backgroundColor: '#f1f5f9', color: '#475569', fontWeight: '600'
+                            }}>
+                              {acc.loginViolationCount} lần
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`status-badge ${isPerm ? 'locked-perm' : 'locked-temp'}`} style={{ fontSize: '11px' }}>
+                              {isPerm ? 'Khóa vĩnh viễn' : 'Tạm khóa 15p'}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '13px', color: '#475569' }}>
+                            {isPerm ? '—' : (
+                              isLockedNow ? (
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: '600', color: '#ea580c' }}>{new Date(acc.lockedUntil).toLocaleTimeString('vi-VN')}</span>
+                                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(acc.lockedUntil).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                              ) : (
+                                <span style={{ color: '#10b981', fontWeight: '600' }}>Đã hết hạn</span>
+                              )
+                            )}
+                          </td>
+                          <td>
+                            <button 
+                              className="admin-btn info" 
+                              onClick={() => {
+                                setActiveTab('user-detail');
+                                setSelectedUserDetails(null);
+                                setLoadingUserDetail(true);
+                                axios.get(`http://localhost:5000/api/admin/users/${acc.id}`, {
+                                  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+                                }).then(res => {
+                                  setSelectedUserDetails(res.data);
+                                  setLoadingUserDetail(false);
+                                });
+                              }}
+                              title="Xem chi tiết"
+                            >
+                              <Eye size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr><td colSpan="6" className="empty-table-cell">Không có tài khoản nào bị khóa do vi phạm</td></tr>
                     )}
                   </tbody>
                 </table>

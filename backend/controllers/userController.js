@@ -3,7 +3,8 @@ const { User, Enrollment } = require('../models');
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 const { verifyGoogleToken, verifyFacebookToken } = require('../config/socialAuth');
-const { sendOtpEmail } = require('../config/emailService');
+const { sendOtpEmail, sendPasswordResetEmail } = require('../config/emailService');
+const crypto = require('crypto');
 
 // ─── OTP In-memory Store ──────────────────────────────────────────────────────
 // Map<email, { otp, name, password, expiresAt }>
@@ -342,4 +343,91 @@ const facebookLogin = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, googleLogin, facebookLogin, sendOtp, verifyOtp };
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ where: { email } });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({ message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu' });
+    }
+
+    if (user.provider !== 'local') {
+      return res.status(400).json({ 
+        message: `Tài khoản này được đăng ký qua ${user.provider}. Vui lòng đăng nhập qua ${user.provider}.` 
+      });
+    }
+
+    // Generate token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    // Set token and expiry (1 hour)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = Date.now() + 3600000;
+    await user.save();
+
+    // Send email
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${rawToken}`;
+    await sendPasswordResetEmail(user.email, user.name, resetUrl);
+
+    res.json({ message: 'Link đặt lại mật khẩu đã được gửi tới email của bạn' });
+  } catch (error) {
+    console.error('forgotPassword error:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Thiếu thông tin đặt lại mật khẩu' });
+    }
+
+    // Hash token to compare with DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({ 
+      where: { 
+        resetPasswordToken: hashedToken,
+        resetPasswordExpire: { [require('sequelize').Op.gt]: Date.now() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn' });
+    }
+
+    // Validate password strength
+    if (!validator.isStrongPassword(password, {
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })) {
+      return res.status(400).json({ 
+        message: 'Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt' 
+      });
+    }
+
+    // Update password
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpire = null;
+    user.tokenVersion += 1; // Invalidate current sessions
+    await user.save();
+
+    res.json({ message: 'Mật khẩu đã được cập nhật thành công' });
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, googleLogin, facebookLogin, sendOtp, verifyOtp, forgotPassword, resetPassword };

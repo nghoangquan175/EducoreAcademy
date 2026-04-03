@@ -19,3 +19,9 @@ export const sendOtpAPI = (name, email, password) =>
 
 export const verifyOtpAPI = (email, otp) =>
   axios.post(`${API}/verify-otp`, { email, otp });
+
+export const forgotPasswordAPI = (email) =>
+  axios.post(`${API}/forgot-password`, { email });
+
+export const resetPasswordAPI = (token, password) =>
+  axios.post(`${API}/reset-password`, { token, password });

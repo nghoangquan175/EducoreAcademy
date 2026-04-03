@@ -14,6 +14,8 @@ import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ArticleDetail from './pages/ArticleDetail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import StaffLogin from './pages/StaffLogin';
 import CheckoutPage from './pages/CheckoutPage';
 import StudentDashboard from './pages/StudentDashboard';
@@ -98,6 +100,8 @@ function App() {
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route path="/staff/login" element={<StaffLogin />} />
                 <Route path="/partner-application" element={<PartnerApplication />} />
               </Route>

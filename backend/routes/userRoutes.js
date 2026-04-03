@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, googleLogin, facebookLogin, sendOtp, verifyOtp } = require('../controllers/userController');
-const { 
-  getStudentStats, 
-  getEnrolledCourses, 
+const { registerUser, loginUser, googleLogin, facebookLogin, sendOtp, verifyOtp, forgotPassword, resetPassword } = require('../controllers/userController');
+const {
+  getStudentStats,
+  getEnrolledCourses,
   getQuizAttempts,
   getStudyGoals,
   getStudyGoalsSummary,
@@ -23,6 +23,10 @@ router.post('/login', loginUser);
 // Email verification OTP
 router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtp);
+
+// Forgot Password
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Social auth
 router.post('/auth/google', googleLogin);
