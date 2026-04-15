@@ -173,11 +173,21 @@
 @media (max-width: 640px) {
   .footer-container {
     grid-template-columns: 1fr;
+    padding: 0 24px;
+    gap: 32px;
   }
 
   .footer-bottom-container {
     flex-direction: column;
     gap: 16px;
     text-align: center;
+  }
+  
+  .footer-section {
+    padding-top: 40px;
+  }
+  
+  .footer-heading {
+    margin-bottom: 16px;
   }
 }

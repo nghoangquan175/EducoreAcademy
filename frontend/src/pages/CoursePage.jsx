@@ -161,205 +161,182 @@ const CoursePage = () => {
   return (
     <div className="course-detail-container">
       <div className="course-main-body container">
-        {/* LEFT COLUMN - CONTENT */}
-        <div className="course-left-column">
-
-          {/* Moved from Header Banner */}
-          <div className="course-header-content">
-            <button 
-              className="btn-back-home" 
-              onClick={() => navigate('/')}
-            >
-              <FaArrowLeft /> Quay lại trang chủ
-            </button>
-            <div className="breadcrumb">
-              <Link to="/">Trang chủ</Link> <span>/</span>               <span>Khóa học</span> <span>/</span> 
-              <span className="current">{course.category || 'Phát triển Web'}</span>
-            </div>
-            <h1 className="course-main-title">{course.title}</h1>
-            <p className="course-short-desc">{course.description}</p>
-            <div className="course-meta">
-              <span className="rating">⭐ {(course.rating || 4.8).toFixed(1)} ({course.studentsCount || 0} học viên)</span>
-              <span className="instructor">Giảng viên: <strong>{course.instructor?.name || 'Giảng viên'}</strong></span>
-            </div>
+        
+        {/* 1. FULL WIDTH HEADER */}
+        <div className="course-header-top">
+          <button 
+            className="btn-back-home" 
+            onClick={() => navigate('/')}
+          >
+            <FaArrowLeft /> Quay lại trang chủ
+          </button>
+          <div className="breadcrumb">
+            <Link to="/">Trang chủ</Link> <span>/</span> <span>Khóa học</span> <span>/</span> 
+            <span className="current">{course.category || 'Phát triển Web'}</span>
           </div>
-          
-          <div className="course-section" style={{ marginTop: '40px' }}>
-            <h2 className="section-title">Nội dung khóa học</h2>
-            <div className="curriculum-stats">
-              <span>{course.chapters?.length || 0} chương</span> • 
-              <span> {totalLessons} bài học</span> • 
-              <span> {course.videoCount || 0} bài học video</span> •
-              <span> {course.quizCount || 0} bài kiểm tra</span>
-            </div>
-
-            <div className="curriculum-accordion">
-              {course.chapters && course.chapters.map((chapter) => {
-                const isOpen = activeChapters.includes(chapter.id);
-                return (
-                  <div key={chapter.id} className={`chapter-item ${isOpen ? 'open' : ''}`}>
-                    <div 
-                      className="chapter-header" 
-                      onClick={() => toggleChapter(chapter.id)}
-                    >
-                      <div className="chapter-title-group">
-                        {isOpen ? <FaAngleUp /> : <FaAngleDown />}
-                        <h3>{chapter.title}</h3>
-                      </div>
-                      <span className="chapter-meta">
-                        {chapter.lessons ? chapter.lessons.length : 0} bài học
-                      </span>
-                    </div>
-
-                    {isOpen && chapter.lessons && (
-                      <div className="chapter-body">
-                        {chapter.lessons.map(lesson => (
-                          <div key={lesson.id} className="lesson-item">
-                            <div className="lesson-title-group">
-                              {lesson.isFree ? (
-                                <FaPlayCircle className="icon-play" />
-                              ) : (
-                                <FaLock className="icon-lock" />
-                              )}
-                              <span className={lesson.isFree ? 'text-free' : 'text-locked'}>
-                                {lesson.title}
-                              </span>
-                            </div>
-                            <div className="lesson-meta-group">
-                              {lesson.isFree && <span className="badge-preview">Học thử</span>}
-                              <span className="lesson-duration">{formatDuration(lesson.duration)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+          <h1 className="course-main-title">{course.title}</h1>
+          <p className="course-short-desc">{course.description}</p>
+          <div className="course-meta">
+            <span className="rating">⭐ {(course.rating || 4.8).toFixed(1)} ({course.studentsCount || 0} học viên)</span>
+            <span className="instructor">Giảng viên: <strong>{course.instructor?.name || 'Giảng viên'}</strong></span>
           </div>
- 
-          {/* Reviews Section */}
-          <div className="course-section reviews-section">
-            <h2 className="section-title">Đánh giá từ người học</h2>
-            
-            {course.isEnrolled && isCompleted && (
-              <div className="write-review-prompt">
-                <div className="prompt-content">
-                  <h3>Bạn thấy khóa học này thế nào?</h3>
-                  <p>Chia sẻ cảm nhận của bạn để giúp các học viên khác nhé!</p>
-                </div>
-                <button 
-                  className="btn-go-to-review" 
-                  onClick={() => navigate(`/course/${id}/review`)}
-                >
-                  <FaStar style={{ marginRight: '8px' }} /> Viết đánh giá
-                </button>
-              </div>
-            )}
- 
-            <div className="reviews-list" onScroll={handleReviewsScroll}>
-              {reviews.length === 0 ? (
-                <p className="no-reviews">Chưa có đánh giá nào cho khóa học này.</p>
-              ) : (
-                <>
-                  {reviews.map(review => (
-                    <div key={review.id} className="review-item">
-                      <img src={review.user?.avatar || "https://i.pravatar.cc/150"} alt="avatar" className="review-avatar" />
-                      <div className="review-content">
-                        <div className="review-user-name">{review.user?.name}</div>
-                        <div className="review-stars">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <span key={s} className={review.rating >= s ? 'star active' : 'star'}>
-                              <FaStar />
-                            </span>
-                          ))}
-                        </div>
-                        <p className="review-text">{review.comment}</p>
-                        <span className="review-date">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {loadingMoreReviews && (
-                    <div style={{ textAlign: 'center', padding: '15px 0', color: 'var(--brand-primary)' }}>
-                      <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto' }} />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
- 
         </div>
 
-        {/* RIGHT COLUMN - SIDEBAR PAYMENT */}
-        <div className="course-right-sidebar">
+        {/* 2. TWO COLUMN GRID */}
+        <div className="course-grid-content">
           
-          {/* VIDEO LÊN ĐẦU, NGOÀI BOX MUA HÀNG */}
-          <div className="sidebar-video-section">
-            <div className="video-player-wrapper">
-              <video 
-                src={previewVideoUrl} 
-                controls
-                width="100%"
-                height="100%"
-                style={{ 
-                  position: 'absolute', 
-                  top: 0, 
-                  left: 0, 
-                  width: '100%', 
-                  height: '100%', 
-                  objectFit: 'cover' 
-                }}
-              />
+          <div className="course-left-column">
+            <div className="course-section">
+              <h2 className="section-title">Nội dung khóa học</h2>
+              <div className="curriculum-stats">
+                <span>{course.chapters?.length || 0} chương</span> • 
+                <span> {totalLessons} bài học</span> • 
+                <span> {course.videoCount || 0} bài học video</span> •
+                <span> {course.quizCount || 0} bài kiểm tra</span>
+              </div>
+
+              <div className="curriculum-accordion">
+                {course.chapters && course.chapters.map((chapter) => {
+                  const isOpen = activeChapters.includes(chapter.id);
+                  return (
+                    <div key={chapter.id} className={`chapter-item ${isOpen ? 'open' : ''}`}>
+                      <div 
+                        className="chapter-header" 
+                        onClick={() => toggleChapter(chapter.id)}
+                      >
+                        <div className="chapter-title-group">
+                          {isOpen ? <FaAngleUp /> : <FaAngleDown />}
+                          <h3>{chapter.title}</h3>
+                        </div>
+                        <span className="chapter-meta">
+                          {chapter.lessons ? chapter.lessons.length : 0} bài học
+                        </span>
+                      </div>
+
+                      {isOpen && chapter.lessons && (
+                        <div className="chapter-body">
+                          {chapter.lessons.map(lesson => (
+                            <div key={lesson.id} className="lesson-item">
+                              <div className="lesson-title-group">
+                                {lesson.isFree ? (
+                                  <FaPlayCircle className="icon-play" />
+                                ) : (
+                                  <FaLock className="icon-lock" />
+                                )}
+                                <span className={lesson.isFree ? 'text-free' : 'text-locked'}>
+                                  {lesson.title}
+                                </span>
+                              </div>
+                              <div className="lesson-meta-group">
+                                {lesson.isFree && <span className="badge-preview">Học thử</span>}
+                                <span className="lesson-duration">{formatDuration(lesson.duration)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reviews Section */}
+            <div className="course-section reviews-section">
+              <h2 className="section-title">Đánh giá từ người học</h2>
+              <div className="reviews-list" onScroll={handleReviewsScroll}>
+                {reviews.length === 0 ? (
+                  <p className="no-reviews">Chưa có đánh giá nào cho khóa học này.</p>
+                ) : (
+                  <>
+                    {reviews.map(review => (
+                      <div key={review.id} className="review-item">
+                        <img src={review.user?.avatar || "https://i.pravatar.cc/150"} alt="avatar" className="review-avatar" />
+                        <div className="review-content">
+                          <div className="review-user-name">{review.user?.name}</div>
+                          <div className="review-stars">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <span key={s} className={review.rating >= s ? 'star active' : 'star'}>
+                                <FaStar />
+                              </span>
+                            ))}
+                          </div>
+                          <p className="review-text">{review.comment}</p>
+                          <span className="review-date">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="purchase-card sticky">
-            <div className="price-container">
-              {course.publishConfig ? (
-                <>
-                  <h2 className={`current-price ${!course.publishConfig.isPro ? 'is-free' : 'is-sale'}`}>
-                    {course.publishConfig.isPro ? formatCurrency(course.publishConfig.salePrice) : 'Miễn phí'}
-                  </h2>
-                  {course.publishConfig.discountPercent > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                      <span className="original-price">{formatCurrency(course.publishConfig.price)}</span>
-                      <span className="discount-badge">-{course.publishConfig.discountPercent}%</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <h2 className={`current-price ${course.price === 0 ? 'is-free' : 'is-sale'}`}>
-                    {course.price === 0 ? 'Miễn phí' : formatCurrency(course.price || 0)}
-                  </h2>
-                  {course.price > 0 && <span className="original-price">{formatCurrency(course.price * 1.2)}</span>}
-                </>
-              )}
+          <div className="course-right-sidebar">
+            <div className="sidebar-video-section">
+              <div className="video-player-wrapper">
+                <video 
+                  src={previewVideoUrl} 
+                  controls
+                  width="100%"
+                  height="100%"
+                  style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover' 
+                  }}
+                />
+              </div>
             </div>
 
-            <button 
-              onClick={handleEnroll} 
-               className="btn-enroll primary" 
-               style={{ display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-             >
-               {course.isEnrolled ? 'TIẾP TỤC HỌC' : (
-                 (course.publishConfig ? course.publishConfig.salePrice === 0 : course.price === 0) 
-                   ? 'VÀO HỌC NGAY' 
-                   : 'ĐĂNG KÝ NGAY'
-               )}
-             </button>
-            {(course.publishConfig ? course.publishConfig.salePrice > 0 : course.price > 0) && <p className="guarantee-text">Đảm bảo hoàn tiền trong 30 ngày</p>}
+            <div className="purchase-card sticky">
+              <div className="price-container">
+                {course.publishConfig ? (
+                  <>
+                    <h2 className={`current-price ${!course.publishConfig.isPro ? 'is-free' : 'is-sale'}`}>
+                      {course.publishConfig.isPro ? formatCurrency(course.publishConfig.salePrice) : 'Miễn phí'}
+                    </h2>
+                    {course.publishConfig.discountPercent > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <span className="original-price">{formatCurrency(course.publishConfig.price)}</span>
+                        <span className="discount-badge">-{course.publishConfig.discountPercent}%</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 className={`current-price ${course.price === 0 ? 'is-free' : 'is-sale'}`}>
+                      {course.price === 0 ? 'Miễn phí' : formatCurrency(course.price || 0)}
+                    </h2>
+                    {course.price > 0 && <span className="original-price">{formatCurrency(course.price * 1.2)}</span>}
+                  </>
+                )}
+              </div>
 
-            <div className="course-features">
-              <h3 className="features-title">Khóa học này bao gồm:</h3>
-              <ul className="features-list">
-                <li><FaPlayCircle /> {course.videoCount || 0} bài học video chất lượng</li>
-                <li><FaStar /> {course.quizCount || 0} bài kiểm tra kiến thức</li>
-                <li><FaGlobe /> Ngôn ngữ: Tiếng Việt</li>
-                <li><FaCertificate /> Cấp chứng chỉ hoàn thành</li>
-              </ul>
+              <button 
+                onClick={handleEnroll} 
+                className="btn-enroll primary" 
+                style={{ display: 'block', width: '100%', textAlign: 'center', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {course.isEnrolled ? 'TIẾP TỤC HỌC' : (
+                  (course.publishConfig ? course.publishConfig.salePrice === 0 : course.price === 0) 
+                    ? 'VÀO HỌC NGAY' 
+                    : 'ĐĂNG KÝ NGAY'
+                )}
+              </button>
+
+              <div className="course-features">
+                <h3 className="features-title">Khóa học này bao gồm:</h3>
+                <ul className="features-list">
+                  <li><FaPlayCircle /> {course.videoCount || 0} bài học video</li>
+                  <li><FaStar /> {course.quizCount || 0} bài kiểm tra</li>
+                  <li><FaGlobe /> Ngôn ngữ: Tiếng Việt</li>
+                  <li><FaCertificate /> Cấp chứng chỉ</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

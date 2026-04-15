@@ -88,7 +88,7 @@
   transition: all 0.2s ease;
   white-space: nowrap;
   font-size: 0.9rem;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .art-tab:hover {
@@ -109,6 +109,82 @@
   display: grid;
   grid-template-columns: repeat(1, 1fr);
   gap: 24px;
+}
+
+@media (max-width: 480px) {
+  .art-grid {
+    gap: 8px !important;
+  }
+
+  .art-card {
+    border-radius: 12px;
+  }
+
+  .art-content {
+    padding: 10px;
+    gap: 0;
+  }
+
+  .art-title {
+    font-size: 13px;
+    line-height: 1.3;
+    min-height: 2.6em;
+    margin-bottom: 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .art-excerpt,
+  .art-meta {
+    display: none !important;
+  }
+
+  .art-card-footer {
+    padding-top: 8px;
+    margin-top: 0;
+    border-top: 1px solid #f1f5f9;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .art-read-more {
+    font-size: 11px;
+    padding: 0;
+    color: #3b82f6;
+  }
+
+  .art-read-more span {
+    display: none;
+    /* Hide 'Đọc tiếp' text to save space */
+  }
+
+  .art-read-more::before {
+    content: 'Chi tiết'; /* 'Chi tiết' or 'Đọc' - Chi tiết looks more formal */
+    margin-right: 4px;
+  }
+
+  .art-likes {
+    padding: 2px 6px;
+    font-size: 10px;
+    gap: 3px;
+    border-radius: 6px;
+    background: #fff1f2;
+    color: #e11d48;
+  }
+
+  .art-likes svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .art-category {
+    top: 8px;
+    left: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -333,4 +409,40 @@
 
 .art-page-nav {
   padding: 0 14px;
+}
+
+/* RESPONSIVE ADDITIONS */
+@media (max-width: 768px) {
+  .art-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .art-container {
+    padding: 0 20px;
+  }
+
+
+  .art-content {
+    padding: 8px;
+  }
+
+  .art-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 0 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .art-tab {
+    flex-shrink: 0;
+    padding: 8px 16px;
+  }
+
+  .art-section-title {
+    font-size: 1.5rem;
+  }
 }

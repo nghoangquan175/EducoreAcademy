@@ -140,10 +140,10 @@ const sendOtp = async (req, res) => {
     }
 
     // Kiểm tra domain qua DNS MX
-    const hasMx = await checkEmailDomain(email);
-    if (!hasMx) {
-      return res.status(400).json({ message: 'Email không hợp lệ hoặc domain không tồn tại' });
-    }
+    // const hasMx = await checkEmailDomain(email);
+    // if (!hasMx) {
+    //   return res.status(400).json({ message: 'Email không hợp lệ hoặc domain không tồn tại' });
+    // }
 
     // Kiểm tra email đã dùng chưa
     const userExists = await User.findOne({ where: { email } });

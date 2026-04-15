@@ -91,3 +91,34 @@
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* ─── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .payment-result-card {
+    padding: 2.5rem 2rem;
+  }
+  
+  .result-title {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .payment-result-container {
+    padding: 1rem;
+  }
+  
+  .payment-result-card {
+    padding: 2rem 1.5rem;
+    border-radius: 20px;
+  }
+  
+  .result-title {
+    font-size: 1.5rem;
+  }
+  
+  .result-message {
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+}

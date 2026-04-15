@@ -173,8 +173,17 @@
   left: 0;
   right: 0;
   z-index: 10;
-  display: flex;
-  justify-content: center;
+  display: flex !important;
+  justify-content: center !important;
+  pointer-events: none; /* Allow clicks through wrapper to slide content if needed, though buttons are relative */
+}
+
+.banner-pagination {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
 }
 
 /* Override Swiper default bullets → pill shapes */
@@ -198,19 +207,31 @@
 }
 
 /* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .banner-slide {
+    padding: 40px;
+  }
+}
+
 @media (max-width: 768px) {
   .banner-slide {
     flex-direction: column;
     padding: 40px 24px 32px;
     min-height: auto;
     gap: 32px;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
   }
 
   .banner-content {
     flex: unset;
     width: 100%;
     order: 1;
+    align-items: center;
+  }
+  
+  .banner-desc {
+    margin: 0 auto;
   }
 
   .banner-image-col {
@@ -231,5 +252,37 @@
 
   .banner-title {
     font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .banner-wrapper {
+    padding: 0 16px 48px; /* cách 2 lề 1 tí */
+  }
+
+  .banner-slide {
+    padding: 24px 16px;
+  }
+  
+  .banner-image-col {
+    display: none;
+  }
+  
+  .banner-title {
+    font-size: 18px;
+  }
+  
+  .banner-desc {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  
+  .banner-btn-cta {
+    padding: 8px 18px;
+    font-size: 13px;
+  }
+
+  .banner-pagination-wrapper {
+    bottom: 12px;
   }
 }

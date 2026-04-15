@@ -1,19 +1,20 @@
 /* ─── Chat Inbox (Facebook Messenger style) ─── */
 .chat-inbox {
   position: fixed;
-  bottom: 100px;
-  right: 30px;
-  width: 380px;
-  height: 520px;
+  bottom: 80px; /* Thấp xuống một chút */
+  right: 25px;
+  width: 340px;  /* Gọn hơn (trước là 380) */
+  height: 480px; /* Gọn hơn (trước là 520) */
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 20px; /* Bo góc mượt hơn */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 10000;
-  animation: chatSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  animation: chatSlideUp 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-family: 'Inter', -apple-system, sans-serif;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Hidden state — keeps component mounted but invisible */
@@ -37,8 +38,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 12px 16px; /* Giảm nhẹ padding header */
+  background: linear-gradient(135deg, #4f46e5, #7c3aed); /* Màu gradient hiện đại hơn */
   color: white;
   flex-shrink: 0;
 }
@@ -161,10 +162,10 @@
 }
 
 .chat-bubble-content {
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  padding: 8px 14px; /* Bong bóng gọn hơn */
+  border-radius: 18px;
+  font-size: 0.88rem;
+  line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -299,10 +300,11 @@
 /* Responsive */
 @media (max-width: 768px) {
   .chat-inbox {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 140px);
-    bottom: 80px;
-    right: 12px;
-    border-radius: 12px;
+    width: calc(100vw - 32px);
+    height: 70vh; /* Chỉ chiếm 70% chiều cao màn hình để không quá ngợp */
+    max-height: 550px;
+    bottom: 90px;
+    right: 16px;
+    border-radius: 24px;
   }
 }

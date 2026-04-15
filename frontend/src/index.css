@@ -11,6 +11,13 @@ body {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: #f4f7f6;
   color: #333;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 .app-container {
@@ -53,3 +60,35 @@ body {
   margin: 0 auto;
   box-sizing: border-box;
 }
+
+/* ─── Global Responsive Utilities ────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 1.5rem 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0.5rem 0;
+  }
+}
+
+/* Hide/Show helpers */
+.mobile-only { display: none; }
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: block !important; }
+}
+
+/* Responsive Font Sizes */
+h1 { font-size: clamp(1.8rem, 5vw, 2.5rem); }
+h2 { font-size: clamp(1.5rem, 4vw, 2rem); }
+h3 { font-size: clamp(1.2rem, 3vw, 1.5rem); }

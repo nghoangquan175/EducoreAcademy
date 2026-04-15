@@ -38,7 +38,7 @@ const ArticleCard = ({ article, onClick }) => (
 
       <div className="art-card-footer">
         <button className="art-read-more">
-          Đọc tiếp <ArrowRight size={16} />
+          <span>Đọc tiếp</span> <ArrowRight size={16} />
         </button>
         <div className="art-likes">
           <Heart size={14} fill="#ef4444" stroke="#ef4444" />
@@ -57,7 +57,7 @@ const ArticlesHome = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState(['Tất cả']);
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
-  const limit = 8;
+  const limit = 10;
 
   useEffect(() => {
     const loadCategories = async () => {

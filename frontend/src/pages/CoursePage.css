@@ -88,18 +88,83 @@
   font-weight: 600;
 }
 
-/* --- MAIN BODY LAYOUT --- */
 .course-main-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.course-header-top {
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 40px;
+}
+
+.course-grid-content {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 40px;
-  margin-top: 40px;
   align-items: start;
 }
 
-@media (max-width: 992px) {
-  .course-main-body {
+/* ─── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .course-grid-content {
     grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .course-right-sidebar {
+    order: -1;
+  }
+
+  .purchase-card.sticky {
+    position: static;
+  }
+
+  .course-header-top {
+    padding: 32px 0;
+  }
+
+  .course-meta {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .course-main-title {
+    font-size: 1.75rem;
+  }
+
+  .cp-instructor-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .cp-details-nav {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .cp-title {
+    font-size: 1.5rem;
+  }
+
+  .cp-price {
+    font-size: 1.75rem;
+  }
+
+  .cp-features-list {
+    grid-template-columns: 1fr;
+  }
+
+  .curr-item {
+    padding: 12px;
   }
 }
 
@@ -291,11 +356,13 @@
 }
 
 .current-price.is-sale {
-  color: #ef4444; /* Vibrant Red for Sale */
+  color: #ef4444;
+  /* Vibrant Red for Sale */
 }
 
 .current-price.is-free {
-  color: #10b981; /* Vibrant Green for Free */
+  color: #10b981;
+  /* Vibrant Green for Free */
 }
 
 .original-price {
@@ -568,6 +635,29 @@
 .review-stars .star {
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+.review-stars .star.active {
+  color: #facc15;
+}
+
+.review-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.review-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.no-reviews {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 .review-stars .star.active {

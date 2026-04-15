@@ -78,7 +78,7 @@ const ProCourses = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 8;
+  const limit = 10;
 
   // Load categories once
   useEffect(() => {

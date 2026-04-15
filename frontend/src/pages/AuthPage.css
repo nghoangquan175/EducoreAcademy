@@ -485,8 +485,20 @@
   .auth-panel-right {
     padding: 32px 16px;
   }
+}
 
+@media (max-width: 480px) {
   .auth-card {
-    padding: 32px 28px;
+    padding: 24px 20px !important;
+  }
+  
+  .auth-title {
+    font-size: 1.25rem;
+  }
+  
+  .otp-box {
+    width: 40px;
+    height: 48px;
+    font-size: 18px;
   }
 }

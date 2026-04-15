@@ -33,6 +33,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import CertificateViewer from './pages/CertificateViewer';
 import { BookOpen, X } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import DesktopOnlyGuard from './components/DesktopOnlyGuard';
 
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id_here';
@@ -102,7 +103,7 @@ function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
-                <Route path="/staff/login" element={<StaffLogin />} />
+                <Route path="/staff/login" element={<DesktopOnlyGuard><StaffLogin /></DesktopOnlyGuard>} />
                 <Route path="/partner-application" element={<PartnerApplication />} />
               </Route>
 
@@ -146,21 +147,27 @@ function App() {
               {/* ----- INSTRUCTOR ROUTES (Full Screen) ----- */}
               <Route path="/instructor-dashboard" element={
                 <PrivateRoute allowedRoles={['instructor', 'admin']}>
-                  <InstructorDashboard />
+                  <DesktopOnlyGuard>
+                    <InstructorDashboard />
+                  </DesktopOnlyGuard>
                 </PrivateRoute>
               } />
 
               {/* Admin Dashboard — no header/footer */}
               <Route path="/admin-dashboard" element={
                 <PrivateRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
+                  <DesktopOnlyGuard>
+                    <AdminDashboard />
+                  </DesktopOnlyGuard>
                 </PrivateRoute>
               } />
 
               {/* Instructor Application Detail (Separate tab) */}
               <Route path="/admin/applications/:id" element={
                 <PrivateRoute allowedRoles={['admin']}>
-                  <PartnerApplicationDetail />
+                  <DesktopOnlyGuard>
+                    <PartnerApplicationDetail />
+                  </DesktopOnlyGuard>
                 </PrivateRoute>
               } />
 

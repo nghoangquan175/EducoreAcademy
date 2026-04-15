@@ -71,14 +71,15 @@
 /* Responsive adjustment */
 @media (max-width: 768px) {
   .floating-contact-container {
-    bottom: 20px;
-    right: 20px;
+    bottom: 90px;
+    right: 16px;
+    gap: 12px;
   }
   
   .floating-btn {
-    width: 45px;
-    height: 45px;
-    font-size: 20px;
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
   }
 }
 

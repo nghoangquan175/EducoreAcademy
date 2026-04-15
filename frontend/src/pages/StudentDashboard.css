@@ -81,7 +81,6 @@
     align-items: center;
     gap: 12px;
     text-decoration: none;
-    color: #2563eb;
 }
 
 .std-logo-icon {
@@ -143,7 +142,6 @@
     height: 70px;
     background: var(--card-bg);
     display: flex;
-
     justify-content: space-between;
     align-items: center;
     padding: 0 40px;
@@ -152,10 +150,14 @@
 }
 
 
-.std-search-box {
+.std-search-box-container {
     flex: 1;
+    max-width: 800px;
+}
+
+.std-search-box {
     position: relative;
-    max-width: 600px;
+    width: 100%;
 }
 
 .std-search-box input {
@@ -816,7 +818,7 @@
     background: var(--main-bg);
     padding: 10px 18px;
     border-radius: 12px;
-    width: 480px;
+    width: 100%;
     gap: 12px;
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
@@ -1013,8 +1015,8 @@
 /* Premium Course Grid */
 .std-courses-grid-premium {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
 }
 
 .std-course-card-premium {
@@ -1199,95 +1201,113 @@
     cursor: pointer;
 }
 
+/* Modern Test History Table */
 .std-quiz-history-table {
     background: var(--card-bg);
-    border-radius: 16px;
+    border-radius: 20px;
     overflow: hidden;
     border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
-
 
 .std-quiz-history-table table {
     width: 100%;
-    border-collapse: collapse;
-}
-
-.std-quiz-history-table th,
-.std-quiz-history-table td {
-    padding: 16px 20px;
-    text-align: left;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .std-quiz-history-table th {
     background: var(--main-bg);
+    padding: 16px 20px;
     font-size: 0.85rem;
     color: var(--text-muted);
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
 }
 
 .std-quiz-history-table td {
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
+    padding: 18px 20px;
+    font-size: 0.95rem;
     color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
 }
 
-.std-clickable-row {
-    cursor: pointer;
-    transition: background 0.2s ease;
+.std-quiz-history-table tr:last-child td {
+    border-bottom: none;
 }
 
-.std-clickable-row:hover {
-    background: var(--accent-light);
-}
-
-:root.dark-theme .std-clickable-row:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
+/* Status Badges */
 .std-badge {
-    padding: 6px 12px;
-    border-radius: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 700;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .std-badge.success {
-    background: #dcfce7;
-    color: #15803d;
-}
-
-.std-badge.warning {
-    background: #fef9c3;
-    color: #a16207;
+    background: #ecfdf5;
+    color: #10b981;
 }
 
 .std-badge.danger {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.std-badge.warning {
+    background: #fffbeb;
+    color: #f59e0b;
 }
 
 :root.dark-theme .std-badge.success {
-    background: rgba(22, 163, 74, 0.2);
-    color: #4ade80;
-}
-
-:root.dark-theme .std-badge.warning {
-    background: rgba(202, 138, 4, 0.2);
-    color: #facc15;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
 }
 
 :root.dark-theme .std-badge.danger {
-    background: rgba(220, 38, 38, 0.2);
+    background: rgba(239, 68, 68, 0.15);
     color: #f87171;
 }
 
-/* Report Action Buttons */
+:root.dark-theme .std-badge.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+}
+
+/* Actions in Table */
 .report-actions {
     display: flex;
     gap: 8px;
     justify-content: center;
+}
+
+.btn-action-small {
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+    background: var(--main-bg);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-action-small:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    transform: translateY(-2px);
 }
 
 .btn-action-small {
@@ -2145,4 +2165,247 @@
 /* Adjustments for Transaction Table */
 .std-quiz-history-table table tr:hover {
     background: rgba(59, 130, 246, 0.02);
+}
+
+/* Desktop Logo (hidden by default, only shown via sidebar) */
+
+.mobile-logout-btn {
+    display: none;
+    background: #fee2e2 !important;
+    color: #ef4444 !important;
+}
+
+@media (max-width: 1024px) {
+    .std-mobile-logo {
+        display: flex;
+    }
+
+    .mobile-logout-btn {
+        display: flex;
+    }
+
+    .hide-mobile {
+        display: none !important;
+    }
+
+    .std-sidebar {
+        display: none; /* Hide sidebar on mobile/tablet */
+    }
+
+    .std-right-column {
+        display: none; /* Hide supplementary right column */
+    }
+
+    .std-topbar {
+        padding: 0 20px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--card-bg);
+    }
+
+    .std-search-box {
+        max-width: none;
+    }
+
+    .std-content-scroll {
+        padding: 20px 16px 100px; /* Extra bottom padding for Bottom Nav */
+    }
+
+    /* Analytics Grid Stacking */
+    .std-analytics-row {
+        grid-template-columns: 1fr;
+    }
+
+    .std-suggested-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* Mobile Bottom Navigation */
+    .std-mobile-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 65px;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(15px);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.08);
+        z-index: 1000;
+        justify-content: space-around;
+        align-items: center;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .dark-theme .std-mobile-bottom-nav {
+        background: rgba(15, 23, 42, 0.8);
+        border-top-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .mobile-nav-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        gap: 4px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 5px 0;
+    }
+
+    .mobile-nav-btn.active {
+        color: var(--accent);
+    }
+
+    .mobile-nav-btn.active .mobile-nav-icon {
+        transform: translateY(-2px);
+    }
+
+    .mobile-nav-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    /* Course Grid Mobile */
+    .std-courses-grid-premium {
+        grid-template-columns: 1fr;
+    }
+
+    .std-course-card-premium {
+        margin-bottom: 20px;
+    }
+
+    /* Hero Section Mobile */
+    .std-recent-hero {
+        flex-direction: column;
+        padding: 24px;
+        text-align: center;
+    }
+
+    .hero-content {
+        align-items: center;
+    }
+
+    .hero-title {
+        font-size: 1.5rem;
+    }
+
+    .hero-image-box {
+        display: none; /* Hide image in hero on mobile to save space */
+    }
+
+    .std-class-card {
+        margin-top: 20px;
+    }
+}
+
+/* Hide Bottom Nav on Desktop */
+@media (min-width: 1025px) {
+    .std-mobile-bottom-nav {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .std-header-title {
+        font-size: 1rem;
+    }
+    
+    .std-header-avatar {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .std-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+    
+    .std-stat-item .stat-value {
+        font-size: 1.25rem;
+    }
+}
+
+/* Responsive Card Layout for Test History */
+@media (max-width: 768px) {
+    .std-quiz-history-table {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .std-quiz-history-table table, 
+    .std-quiz-history-table thead, 
+    .std-quiz-history-table tbody, 
+    .std-quiz-history-table th, 
+    .std-quiz-history-table td, 
+    .std-quiz-history-table tr {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .std-quiz-history-table thead {
+        display: none !important;
+    }
+
+    .std-quiz-history-table tr {
+        background: var(--card-bg) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 16px !important;
+        margin-bottom: 20px !important;
+        padding: 16px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    .std-quiz-history-table td {
+        border-bottom: 1px solid var(--border-color) !important;
+        padding: 12px 0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        text-align: right !important;
+    }
+
+    .std-quiz-history-table td::before {
+        content: attr(data-label);
+        font-weight: 700 !important;
+        text-align: left !important;
+        font-size: 0.8rem !important;
+        color: var(--text-muted) !important;
+        text-transform: uppercase !important;
+        flex: 1 !important;
+    }
+
+    .std-quiz-history-table td:last-child {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        justify-content: center !important;
+        margin-top: 10px !important;
+    }
+
+    .report-actions {
+        width: 100% !important;
+        gap: 10px !important;
+        justify-content: space-between !important;
+    }
+
+    .btn-action-small {
+        flex: 1 !important;
+        justify-content: center !important;
+        padding: 10px !important;
+    }
+}
+
+/* Hide elements on mobile only */
+@media (max-width: 768px) {
+    .hide-mobile {
+        display: none !important;
+    }
 }

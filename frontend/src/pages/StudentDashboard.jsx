@@ -843,15 +843,15 @@ const StudentDashboard = () => {
                 ) : (
                   quizAttempts.map(att => (
                     <tr key={att.id}>
-                       <td>{att.lessonTitle}</td>
-                       <td style={{ color: 'var(--text-muted)', fontSize: '0.85em' }}>{att.chapterTitle}</td>
-                       <td>{att.courseTitle}</td>
-                       <td style={{ textAlign: 'center' }}>
+                       <td data-label="Bài học">{att.lessonTitle}</td>
+                       <td data-label="Chương" style={{ color: 'var(--text-muted)', fontSize: '0.85em' }}>{att.chapterTitle}</td>
+                       <td data-label="Khóa học">{att.courseTitle}</td>
+                       <td data-label="Kết quả" style={{ textAlign: 'center' }}>
                           <span className={`std-badge ${att.status === 'passed' ? 'success' : 'danger'}`}>
                              {att.status === 'passed' ? 'Đạt' : 'Chưa đạt'} ({att.score}%)
                           </span>
                        </td>
-                       <td style={{ textAlign: 'center' }}>
+                       <td data-label="Ngày làm" style={{ textAlign: 'center' }}>
                           {new Date(att.createdAt).toLocaleDateString('vi-VN', {
                             day: '2-digit',
                             month: '2-digit',
@@ -1361,8 +1361,8 @@ const StudentDashboard = () => {
       {/* Sidebar */}
       <aside className="std-sidebar">
         <Link to="/" className="std-logo">
-          <BookOpen className="std-logo-icon" size={24} />
-          <span className="std-logo-text">EducoreAcademy</span>
+          <BookOpen className="std-logo-icon" size={28} />
+          <span className="std-logo-text hide-mobile">EducoreAcademy</span>
         </Link>
 
         <nav className="std-sidebar-nav">
@@ -1389,73 +1389,32 @@ const StudentDashboard = () => {
       {/* Main Wrapper */}
       <div className="std-main-wrapper">
         <header className="std-topbar">
-          <h1 className="std-header-title">Chào mừng trở lại</h1>
+          <div className="std-welcome-title hide-mobile">
+             <h1>Chào mừng trở lại, {user?.name}!</h1>
+          </div>
+
           <div className="std-search-box-container" ref={globalSearchRef}>
              <div className={`std-search-box ${showGlobalSearchDropdown ? 'active' : ''}`}>
                 <Search size={18} className="std-search-icon" />
                 <input 
                   type="text" 
-                  placeholder="Tìm kiếm khóa học, bài viết..." 
+                  placeholder="Tìm kiếm khóa học..." 
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
-                  onFocus={() => {
-                    if (globalSearch.length >= 2) setShowGlobalSearchDropdown(true);
-                  }}
                 />
-                {isGlobalSearching && <div className="std-search-loader"></div>}
              </div>
-
-             {/* Global Search Results Dropdown */}
-             {showGlobalSearchDropdown && globalSearch.length >= 2 && (
-                <div className="std-search-dropdown">
-                   {globalSearchResults.length > 0 ? (
-                      <div className="std-search-results-list">
-                         {globalSearchResults.map((item) => (
-                             <Link 
-                                key={`${item.type}-${item.id}`} 
-                                to={item.type === 'course' ? `/learn/${item.id}` : `/article/${item.id}`}
-                                className="std-search-item"
-                                onClick={() => {
-                                   setShowGlobalSearchDropdown(false);
-                                   setGlobalSearch('');
-                                }}
-                             >
-                                <div className="std-search-item-icon">
-                                   {item.thumbnail ? (
-                                     <img src={item.thumbnail} alt={item.title} className="std-search-item-thumb" />
-                                   ) : (
-                                     item.type === 'course' ? <PlayCircle size={18} /> : <FileText size={18} />
-                                   )}
-                                </div>
-                                <div className="std-search-item-info">
-                                   <div className="std-search-item-title">{item.title}</div>
-                                   <div className="std-search-item-type">
-                                      {item.type === 'course' ? 'Khóa học' : 'Bài viết'}
-                                   </div>
-                                </div>
-
-                             </Link>
-                         ))}
-                      </div>
-                   ) : (
-                      !isGlobalSearching && (
-                         <div className="std-search-no-results">
-                            Không tìm thấy kết quả cho "{globalSearch}"
-                         </div>
-                      )
-                   )}
-                </div>
-             )}
           </div>
 
           <div className="std-actions-right">
-             <button className="std-action-btn glass" onClick={() => { setShowCalendar(true); setShowGlobalSearchDropdown(false); }}><Calendar size={18} /></button>
+             <button className="std-action-btn glass hide-mobile" onClick={() => setShowCalendar(true)}><Calendar size={18} /></button>
              <NotificationBell iconSize={18} buttonClassName="std-action-btn" />
              <button className="std-action-btn dark" onClick={toggleTheme}>
                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
              </button>
-             <div className="std-user-profile-header">
-
+             <button className="std-action-btn mobile-logout-btn" onClick={handleLogout} title="Đăng xuất">
+                <LogOut size={18} />
+             </button>
+             <div className="std-user-profile-header hide-mobile">
                 <img src={user?.avatar || "https://i.pravatar.cc/150"} className="std-header-avatar" />
              </div>
           </div>
@@ -1525,6 +1484,20 @@ const StudentDashboard = () => {
               </section>
            </aside>
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="std-mobile-bottom-nav">
+          {menuItems.map((item) => (
+            <button 
+              key={item.id}
+              className={`mobile-nav-btn ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <div className="mobile-nav-icon">{item.icon}</div>
+              <span className="mobile-nav-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
       {confirmDialog.isOpen && (
         <ConfirmDialog 

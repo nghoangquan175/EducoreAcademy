@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, User, Settings, LogOut, BookOpen, CheckCircle, FileText, PlayCircle, LayoutDashboard } from 'lucide-react';
+import { Search, Bell, User, Settings, LogOut, BookOpen, CheckCircle, FileText, PlayCircle, LayoutDashboard, Menu, X, Home } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import './Header.css';
@@ -22,6 +22,22 @@ const Header = () => {
   const searchContainerRef = useRef(null);
   
   const [hasEnrolledCourses, setHasEnrolledCourses] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+    if (!isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  };
+
+  // Close menu on navigation
+  useEffect(() => {
+    setIsMenuOpen(false);
+    document.body.style.overflow = 'unset';
+  }, [location.pathname]);
 
 
   // Search Debounce Effect
@@ -171,21 +187,18 @@ const Header = () => {
         {/* Right: Actions */}
         <div className="header-right">
           {!isLoggedIn ? (
-            <div className="auth-buttons">
+            <div className="auth-buttons desktop-only">
               <Link to="/login" className="btn-login">Đăng nhập</Link>
               <Link to="/register" className="btn-register">Đăng ký</Link>
             </div>
           ) : (
-            <div className="user-actions">
+            <div className="user-actions desktop-only">
               {!isInstructorRoute && hasEnrolledCourses && (
                 <Link to="/student-dashboard" className="my-courses-link">Khóa học của tôi</Link>
               )}
               
-              {/* Notifications */}
               <NotificationBell />
 
-
-              {/* User Avatar */}
               <div className="avatar-container">
                 <div className="avatar">
                   {user?.avatar
@@ -217,7 +230,75 @@ const Header = () => {
               </div>
             </div>
           )}
+
+          {/* Mobile Menu Toggle */}
+          <button className="mobile-menu-toggle" onClick={toggleMenu} aria-label="Toggle Menu">
+            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
         </div>
+      </div>
+
+      {/* Mobile Sidebar/Drawer */}
+      <div className={`mobile-drawer ${isMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-drawer-content">
+          <div className="mobile-search-section">
+            <div className="search-bar">
+              <Search className="search-icon" size={20} />
+              <input 
+                type="text" 
+                placeholder="Tìm kiếm..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <nav className="mobile-nav">
+            <Link to="/" className="mobile-nav-item">
+              <Home size={20} />
+              <span>Trang chủ</span>
+            </Link>
+            {!isLoggedIn ? (
+              <>
+                <Link to="/login" className="mobile-nav-item">
+                  <LogOut size={20} />
+                  <span>Đăng nhập</span>
+                </Link>
+                <Link to="/register" className="mobile-nav-item">
+                  <User size={20} />
+                  <span>Đăng ký</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/student-dashboard" className="mobile-nav-item">
+                  <LayoutDashboard size={20} />
+                  <span>Dashboard của tôi</span>
+                </Link>
+                <Link to="/profile" className="mobile-nav-item">
+                  <User size={20} />
+                  <span>Trang cá nhân</span>
+                </Link>
+                <Link to="/settings" className="mobile-nav-item">
+                  <Settings size={20} />
+                  <span>Cài đặt</span>
+                </Link>
+                <button onClick={handleLogout} className="mobile-nav-item mobile-logout">
+                  <LogOut size={20} />
+                  <span>Đăng xuất</span>
+                </button>
+              </>
+            )}
+          </nav>
+
+          <footer className="mobile-drawer-footer">
+            <div className="logo minified">
+              <BookOpen size={24} />
+              <span>EducoreAcademy</span>
+            </div>
+          </footer>
+        </div>
+        <div className="mobile-drawer-overlay" onClick={toggleMenu}></div>
       </div>
     </header>
 
