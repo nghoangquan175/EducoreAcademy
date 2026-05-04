@@ -72,9 +72,9 @@ const CheckoutLayout = () => {
   return (
     <div className="checkout-layout-container">
       <header className="checkout-mini-header">
-        <div className="checkout-mini-logo" onClick={() => navigate('/')}>
-          <BookOpen size={28} />
-          <span>Educore Academy</span>
+        <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          <BookOpen className="logo-icon" size={28} />
+          <span>EducoreAcademy</span>
         </div>
         {!isResultPage && (
           <button className="checkout-cancel-link" onClick={() => navigate(-1)}>

@@ -115,133 +115,117 @@ const CheckoutPage = () => {
   const discountAmount = originalPrice - salePrice;
 
   return (
-    <div className="checkout-layout-container">
-      {/* Premium Mini Header */}
-      <header className="checkout-mini-header">
-        <div className="checkout-mini-logo" onClick={() => navigate('/')}>
-          <div className="logo-icon-box">
-             <ShieldCheck size={24} />
+    <div className="checkout-container">
+      <div className="checkout-wrapper">
+        
+        {/* LEFT PART: Payment Selection */}
+        <div className="payment-selection-area">
+          <div className="checkout-card">
+            <div className="card-header-label">
+              <span className="step-badge">Bước 1/1</span>
+              <h2 className="checkout-title">Phương thức thanh toán</h2>
+            </div>
+            
+            <div className="payment-methods">
+              <div 
+                className={`payment-method-item ${paymentMethod === 'vnpay' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('vnpay')}
+              >
+                <div className="method-radio">
+                  <div className="radio-inner" />
+                </div>
+                <div className="method-icon">
+                  <Landmark size={24} />
+                </div>
+                <div className="method-info">
+                  <h4>VNPay</h4>
+                  <p>ATM, Visa, Mastercard, JCB, QR Code</p>
+                </div>
+                {paymentMethod === 'vnpay' && <CheckCircle size={18} className="check-indicator" />}
+              </div>
+
+              <div 
+                className={`payment-method-item ${paymentMethod === 'card' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('card')}
+              >
+                 <div className="method-radio">
+                  <div className="radio-inner" />
+                </div>
+                <div className="method-icon">
+                  <CreditCard size={24} />
+                </div>
+                <div className="method-info">
+                  <h4>Thẻ tín dụng / Ghi nợ</h4>
+                  <p>Hỗ trợ thẻ quốc tế (Visa, Master...)</p>
+                </div>
+                {paymentMethod === 'card' && <CheckCircle size={18} className="check-indicator" />}
+              </div>
+            </div>
+
+            <div className="secure-badge-row mt-8">
+              <div className="secure-item">
+                <Lock size={14} /> 
+                <span>Mã hóa SSL 128-bit</span>
+              </div>
+              <div className="secure-item">
+                <ShieldCheck size={14} />
+                <span>Thanh toán an toàn</span>
+              </div>
+            </div>
           </div>
-          <span>Educore Academy</span>
         </div>
-        <button className="checkout-cancel-link" onClick={() => navigate(-1)}>
-          <ArrowLeft size={16} />
-          <span>Hủy thanh toán</span>
-        </button>
-      </header>
 
-      <div className="checkout-container">
-        <div className="checkout-wrapper">
-          
-          {/* LEFT PART: Payment Selection */}
-          <div className="checkout-main">
-            <div className="checkout-card">
-              <div className="card-header-label">
-                <span className="step-badge">Bước 1/1</span>
-                <h2 className="checkout-title">Phương thức thanh toán</h2>
-              </div>
-              
-              <div className="payment-methods">
-                <div 
-                  className={`payment-method-item ${paymentMethod === 'vnpay' ? 'active' : ''}`}
-                  onClick={() => setPaymentMethod('vnpay')}
-                >
-                  <div className="method-radio">
-                    <div className="radio-inner" />
-                  </div>
-                  <div className="method-icon">
-                    <Landmark size={24} />
-                  </div>
-                  <div className="method-info">
-                    <h4>VNPay</h4>
-                    <p>ATM, Visa, Mastercard, JCB, QR Code</p>
-                  </div>
-                  {paymentMethod === 'vnpay' && <CheckCircle size={18} className="check-indicator" />}
-                </div>
+      {/* RIGHT PART: Order Summary */}
+      <div className="checkout-sidebar">
+        <div className="checkout-card order-summary-card">
+          <div className="summary-header">
+            <h3 className="text-xl font-bold">Tóm tắt đơn hàng</h3>
+          </div>
 
-                <div 
-                  className={`payment-method-item ${paymentMethod === 'card' ? 'active' : ''}`}
-                  onClick={() => setPaymentMethod('card')}
-                >
-                   <div className="method-radio">
-                    <div className="radio-inner" />
-                  </div>
-                  <div className="method-icon">
-                    <CreditCard size={24} />
-                  </div>
-                  <div className="method-info">
-                    <h4>Thẻ tín dụng / Ghi nợ</h4>
-                    <p>Hỗ trợ thẻ quốc tế (Visa, Master...)</p>
-                  </div>
-                  {paymentMethod === 'card' && <CheckCircle size={18} className="check-indicator" />}
-                </div>
-              </div>
-
-              <div className="secure-badge-row mt-8">
-                <div className="secure-item">
-                  <Lock size={14} /> 
-                  <span>Mã hóa SSL 128-bit</span>
-                </div>
-                <div className="secure-item">
-                  <ShieldCheck size={14} />
-                  <span>Thanh toán an toàn</span>
-                </div>
-              </div>
+          <div className="summary-course-info">
+            <img src={course.thumbnail || 'https://via.placeholder.com/120x68'} alt="" className="summary-thumb" />
+            <div>
+              <h4 className="summary-course-title">{course.title}</h4>
+              <p className="text-xs text-slate-400">Giảng viên: {course.instructor?.name}</p>
             </div>
           </div>
 
-        {/* RIGHT PART: Order Summary */}
-        <div className="checkout-sidebar">
-          <div className="checkout-card order-summary-card">
-            <div className="summary-header">
-              <h3 className="text-xl font-bold">Tóm tắt đơn hàng</h3>
+          <div className="price-details">
+            <div className="price-row">
+              <span>{discountPercent > 0 ? `Giá gốc` : 'Giá tiền'}</span>
+              <span className={discountPercent > 0 ? "line-through" : ""}>{formatCurrency(originalPrice)}</span>
             </div>
-
-            <div className="summary-course-info">
-              <img src={course.thumbnail || 'https://via.placeholder.com/120x68'} alt="" className="summary-thumb" />
-              <div>
-                <h4 className="summary-course-title">{course.title}</h4>
-                <p className="text-xs text-slate-400">Giảng viên: {course.instructor?.name}</p>
-              </div>
-            </div>
-
-            <div className="price-details">
+            {discountPercent > 0 && (
               <div className="price-row">
-                <span>{discountPercent > 0 ? `Giá gốc` : 'Giá tiền'}</span>
-                <span className={discountPercent > 0 ? "line-through" : ""}>{formatCurrency(originalPrice)}</span>
+                <span>Khuyến mãi ({discountPercent}%)</span>
+                <span className="text-green-500">-{formatCurrency(discountAmount)}</span>
               </div>
-              {discountPercent > 0 && (
-                <div className="price-row">
-                  <span>Khuyến mãi ({discountPercent}%)</span>
-                  <span className="text-green-500">-{formatCurrency(discountAmount)}</span>
-                </div>
-              )}
-              <div className="price-row total">
-                <span>Tổng cộng</span>
-                <span>{formatCurrency(salePrice)}</span>
-              </div>
-            </div>
-
-            <button 
-              className="btn-confirm-payment"
-              onClick={handlePayment}
-              disabled={isProcessing}
-            >
-              {isProcessing ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN THANH TOÁN'}
-            </button>
-
-            <div className="trust-badges">
-              <div className="trust-badge">
-                <ShieldCheck size={14} /> <span>An toàn</span>
-              </div>
-              <div className="trust-badge">
-                <Lock size={14} /> <span>Bảo mật</span>
-              </div>
+            )}
+            <div className="price-row total">
+              <span>Tổng cộng</span>
+              <span>{formatCurrency(salePrice)}</span>
             </div>
           </div>
+
+          <button 
+            className="btn-confirm-payment"
+            onClick={handlePayment}
+            disabled={isProcessing}
+          >
+            {isProcessing ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN THANH TOÁN'}
+          </button>
+
+          <div className="trust-badges">
+            <div className="trust-badge">
+              <ShieldCheck size={14} /> <span>An toàn</span>
+            </div>
+            <div className="trust-badge">
+              <Lock size={14} /> <span>Bảo mật</span>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
-    </div>
 
       {/* Success Modal */}
       {showSuccess && (
@@ -251,7 +235,7 @@ const CheckoutPage = () => {
               <div className="success-icon">
                 <CheckCircle size={48} />
               </div>
-              <h2>Thoanh toán thành công!</h2>
+              <h2>Thanh toán thành công!</h2>
               <p>Chào mừng bạn đến với khóa học <strong>{course.title}</strong>. Bạn có thể bắt đầu học ngay bây giờ.</p>
               <button className="btn-go-learn" onClick={goToLearning}>
                 BẮT ĐẦU HỌC NGAY

@@ -303,15 +303,24 @@
   justify-content: space-between;
 }
 
-.learning-chapter-header:hover {
-  background: var(--accent-light);
+.title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.learning-chapter-header h4 {
+.title-group h4 {
+  margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-main);
 }
+
+.learning-chapter-header:hover {
+  background: var(--accent-light);
+}
+
+
 
 .learning-lesson-item {
   display: flex;
