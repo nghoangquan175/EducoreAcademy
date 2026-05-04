@@ -21,6 +21,11 @@ const Lesson = sequelize.define('Lesson', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  attachmentUrl: {
+    // File đính kèm bài học (DOC, PDF)
+    type: DataTypes.STRING(1024),
+    allowNull: true,
+  },
   lessonOrder: {
     type: DataTypes.INTEGER,
     allowNull: false,

@@ -170,6 +170,17 @@
   word-break: break-word;
 }
 
+.chat-link {
+  color: #4f46e5;
+  text-decoration: underline;
+  font-weight: 700;
+  transition: color 0.2s;
+}
+
+.chat-link:hover {
+  color: #7c3aed;
+}
+
 .chat-bubble--user .chat-bubble-content {
   background: linear-gradient(135deg, #6366f1, #818cf8);
   color: white;

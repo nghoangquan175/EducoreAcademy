@@ -171,6 +171,9 @@ const AdminDashboard = () => {
   const [lockedAccounts, setLockedAccounts] = useState([]);
   const [loadingLockedAccounts, setLoadingLockedAccounts] = useState(false);
 
+  // Reject Course Modal State
+  const [rejectCourseModal, setRejectCourseModal] = useState({ isOpen: false, courseId: null, reason: '' });
+
 
   const handlePublishWithSetup = (courseId, formData) => {
     setConfirmDialog({
@@ -734,6 +737,11 @@ const AdminDashboard = () => {
         message = 'Bạn có chắc chắn muốn cập nhật trạng thái này?';
     }
 
+    if (status === 3) {
+      setRejectCourseModal({ isOpen: true, courseId, reason: '' });
+      return;
+    }
+
     setConfirmDialog({
       isOpen: true,
       title,
@@ -757,6 +765,29 @@ const AdminDashboard = () => {
         }
       }
     });
+  };
+
+  const handleRejectCourseSubmit = async () => {
+    if (!rejectCourseModal.reason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`http://localhost:5000/api/admin/courses/${rejectCourseModal.courseId}/status`, 
+        { status: 3, message: rejectCourseModal.reason }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Đã từ chối khóa học!');
+      setRejectCourseModal({ isOpen: false, courseId: null, reason: '' });
+      fetchData();
+      if (activeTab === 'course-review' && Number(rejectCourseModal.courseId) === Number(reviewCourseId)) {
+        fetchReviewCourse(rejectCourseModal.courseId);
+      }
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái:', error);
+      toast.error('Có lỗi xảy ra khi thực hiện thao tác.');
+    }
   };
 
   const handleBannerToggle = (bannerId, currentStatus) => {
@@ -3038,6 +3069,7 @@ const AdminDashboard = () => {
                                     {uploadingBanner ? 'Đang tải lên...' : newBanner.imageUrl ? 'Đổi ảnh' : 'Nhấn để chọn ảnh'}
                                 </label>
                                 {newBanner.imageUrl && <img src={newBanner.imageUrl} alt="" className="modal-preview-img" />}
+                                <small style={{ display: 'block', marginTop: '8px', color: '#64748b', fontSize: '0.75rem' }}>Định dạng: jpg, png, webp. Tối đa 10MB.</small>
                             </div>
                         </div>
 
@@ -3348,6 +3380,34 @@ const AdminDashboard = () => {
           </div>
         )}
       </main>
+
+      {/* Reject Course Modal */}
+      {rejectCourseModal.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2>Từ chối khóa học</h2>
+              <button className="btn-close" onClick={() => setRejectCourseModal({ ...rejectCourseModal, isOpen: false })}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: '15px', color: '#64748b' }}>Vui lòng cung cấp lý do từ chối để giảng viên có thể khắc phục.</p>
+              <textarea 
+                className="modal-input" 
+                rows="4" 
+                placeholder="Nhập lý do từ chối..." 
+                value={rejectCourseModal.reason}
+                onChange={(e) => setRejectCourseModal({ ...rejectCourseModal, reason: e.target.value })}
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', resize: 'vertical' }}
+              />
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setRejectCourseModal({ ...rejectCourseModal, isOpen: false })}>Hủy</button>
+              <button className="btn-submit" style={{ backgroundColor: '#ef4444' }} onClick={handleRejectCourseSubmit}>Xác nhận từ chối</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog 
         {...confirmDialog} 
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 

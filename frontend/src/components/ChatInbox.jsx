@@ -4,15 +4,57 @@ import { useAuth } from '../contexts/AuthContext';
 import { X, Send, Bot, Loader2 } from 'lucide-react';
 import './ChatInbox.css';
 
-// Strip any leftover markdown from AI response
+// Strip any leftover markdown from AI response, but PRESERVE LINKS
 function stripMarkdown(text) {
+  if (!text) return '';
   return text
     .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/`([^`]+)`/g, '$1')
+    // .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)') // DO NOT STRIP LINKS
     .trim();
+}
+
+// Simple Markdown Link Renderer
+function renderMessage(content) {
+  if (!content) return null;
+  
+  // Regex to find [text](url)
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(content)) !== null) {
+    // Add text before the link
+    if (match.index > lastIndex) {
+      parts.push(content.substring(lastIndex, match.index));
+    }
+    
+    // Add the link element
+    parts.push(
+      <a 
+        key={`link-${match.index}`} 
+        href={match[2]} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="chat-link"
+      >
+        {match[1]}
+      </a>
+    );
+    
+    lastIndex = linkRegex.lastIndex;
+  }
+  
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push(content.substring(lastIndex));
+  }
+  
+  return parts.length > 0 ? parts : content;
 }
 
 // Generate or retrieve guest session ID
@@ -224,7 +266,7 @@ const ChatInbox = ({ isOpen, onClose }) => {
               </div>
             )}
             <div className="chat-bubble-content">
-              {stripMarkdown(msg.content)}
+              {renderMessage(msg.content)}
             </div>
           </div>
         ))}

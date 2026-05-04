@@ -33,7 +33,7 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
     try {
       const token = localStorage.getItem('token');
       // Fetch Quiz
-      const quizRes = await axios.get(`http://localhost:5000/api/quizzes/lesson/${lessonId}`, {
+      const quizRes = await axios.get(`http://localhost:5000/api/quizzes/lesson/${lessonId}?shuffle=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setQuiz(quizRes.data);
@@ -45,11 +45,19 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
       
       if (attemptRes.data && initialReviewMode) {
         setResult(attemptRes.data);
-        const savedAnswers = {};
-        attemptRes.data.userAnswers.forEach((ans, idx) => {
-          savedAnswers[idx] = ans;
-        });
-        setAnswers(savedAnswers);
+        const userAnswers = attemptRes.data.userAnswers;
+        if (Array.isArray(userAnswers)) {
+          // Backward compatibility: Map array indices to question IDs based on current quiz questions
+          const savedAnswers = {};
+          quizRes.data.questions.forEach((q, idx) => {
+            if (userAnswers[idx] !== undefined) {
+              savedAnswers[q.id] = userAnswers[idx];
+            }
+          });
+          setAnswers(savedAnswers);
+        } else {
+          setAnswers(userAnswers || {});
+        }
       }
     } catch (error) {
       console.error("Lỗi khi tải bài kiểm tra:", error);
@@ -58,9 +66,9 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
     }
   };
 
-  const handleOptionSelect = (qIndex, oIndex) => {
+  const handleOptionSelect = (qId, oIndex) => {
     if (result) return;
-    setAnswers({ ...answers, [qIndex]: oIndex });
+    setAnswers({ ...answers, [qId]: oIndex });
   };
 
   const handleSubmit = async () => {
@@ -73,7 +81,7 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
     try {
       const token = localStorage.getItem('token');
       const { data } = await axios.post(`http://localhost:5000/api/quizzes/${quiz.id}/submit`, {
-        answers: Object.values(answers)
+        answers: answers
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -193,31 +201,31 @@ const QuizPlayer = ({ lessonId, onPass, onNextLesson, onBackToVideo, isLastLesso
 
       <div className="quiz-questions">
         {quiz.questions.map((q, qIndex) => {
-          const isCorrect = answers[qIndex] === q.correctOptionIndex;
+          const isCorrect = answers[q.id] === q.correctOptionIndex;
           
           return (
-            <div key={qIndex} className={`quiz-question-card ${reviewMode ? (isCorrect ? 'correct' : 'incorrect') : ''}`}>
+            <div key={q.id || qIndex} className={`quiz-question-card ${reviewMode ? (isCorrect ? 'correct' : 'incorrect') : ''}`}>
               <h4>Câu {qIndex + 1}: {q.text}</h4>
               <div className="quiz-options">
                 {Array.isArray(q.options) && q.options.map((opt, oIndex) => {
                   let statusClass = "";
                   if (reviewMode) {
                     if (oIndex === q.correctOptionIndex) statusClass = "correct-opt";
-                    if (answers[qIndex] === oIndex && !isCorrect) statusClass = "wrong-opt";
+                    if (answers[q.id] === oIndex && !isCorrect) statusClass = "wrong-opt";
                   }
 
                   return (
                     <div 
                       key={oIndex} 
-                      className={`quiz-option-item ${answers[qIndex] === oIndex ? 'selected' : ''} ${statusClass}`}
-                      onClick={() => !reviewMode && handleOptionSelect(qIndex, oIndex)}
+                      className={`quiz-option-item ${answers[q.id] === oIndex ? 'selected' : ''} ${statusClass}`}
+                      onClick={() => !reviewMode && handleOptionSelect(q.id, oIndex)}
                     >
                       <div className="option-radio"></div>
                       <span>{opt}</span>
                       {reviewMode && oIndex === q.correctOptionIndex && (
                         <CheckCircle2 size={16} className="feedback-icon" />
                       )}
-                      {reviewMode && answers[qIndex] === oIndex && !isCorrect && (
+                      {reviewMode && answers[q.id] === oIndex && !isCorrect && (
                         <XCircle size={16} className="feedback-icon" />
                       )}
                     </div>

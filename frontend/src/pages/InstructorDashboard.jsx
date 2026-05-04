@@ -94,6 +94,7 @@ const InstructorDashboard = () => {
   const [debouncedRevenueSearch, setDebouncedRevenueSearch] = useState('');
   const [selectedRevenuePolicy, setSelectedRevenuePolicy] = useState(null);
   const [showRevenuePolicyDetail, setShowRevenuePolicyDetail] = useState(false);
+  const [rejectPolicyModal, setRejectPolicyModal] = useState({ isOpen: false, policyId: null, reason: '' });
 
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({
@@ -202,6 +203,11 @@ const InstructorDashboard = () => {
   };
 
   const handleUpdatePolicyStatus = async (id, status) => {
+    if (status === 'rejected') {
+      setRejectPolicyModal({ isOpen: true, policyId: id, reason: '' });
+      return;
+    }
+
     const isAccepted = status === 'accepted';
     const isDeleted = status === 'deleted';
     const isReversed = status === 'accepted' && selectedRevenuePolicy?.status === 'waiting_delete';
@@ -229,6 +235,26 @@ const InstructorDashboard = () => {
         }
       }
     });
+  };
+
+  const handleRejectPolicySubmit = async () => {
+    if (!rejectPolicyModal.reason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối');
+      return;
+    }
+    try {
+      await axios.patch(`http://localhost:5000/api/revenue-policies/${rejectPolicyModal.policyId}/status`, 
+        { status: 'rejected', message: rejectPolicyModal.reason }, 
+        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+      );
+      toast.success('Đã từ chối chính sách doanh thu');
+      setRejectPolicyModal({ isOpen: false, policyId: null, reason: '' });
+      setShowRevenuePolicyDetail(false);
+      fetchRevenuePolicies();
+      fetchNotifications();
+    } catch (error) {
+      toast.error('Lỗi: ' + (error.response?.data?.message || error.message));
+    }
   };
 
   useEffect(() => {
@@ -1480,6 +1506,40 @@ const InstructorDashboard = () => {
             </div>
         </div>
       )}
+
+      {/* Reject Policy Modal */}
+      {rejectPolicyModal.isOpen && (
+        <div className="inst-modal-overlay">
+            <div className="inst-modal-content" style={{ maxWidth: '500px' }}>
+                <div className="inst-modal-header">
+                    <h3>Từ chối chính sách doanh thu</h3>
+                    <button onClick={() => setRejectPolicyModal({ ...rejectPolicyModal, isOpen: false })}><X size={20} /></button>
+                </div>
+                <div className="inst-modal-body">
+                    <p className="inst-modal-hint" style={{ marginBottom: '15px' }}>Vui lòng cung cấp lý do từ chối để Quản trị viên điều chỉnh lại.</p>
+                    <textarea 
+                        className="modal-input" 
+                        rows="4" 
+                        placeholder="Nhập lý do từ chối..." 
+                        value={rejectPolicyModal.reason}
+                        onChange={(e) => setRejectPolicyModal({ ...rejectPolicyModal, reason: e.target.value })}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', resize: 'vertical' }}
+                    />
+                </div>
+                <div className="inst-modal-footer">
+                    <button className="inst-btn secondary" onClick={() => setRejectPolicyModal({ ...rejectPolicyModal, isOpen: false })}>Hủy</button>
+                    <button 
+                        className="inst-btn" 
+                        style={{ backgroundColor: '#ef4444', color: 'white' }}
+                        onClick={handleRejectPolicySubmit}
+                    >
+                        Xác nhận từ chối
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
         <ConfirmDialog 
           {...confirmDialog} 
           onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} 

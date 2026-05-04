@@ -109,7 +109,7 @@ router.get('/courses', protect, admin, async (req, res) => {
 // @access  Private/Admin
 router.patch('/courses/:id/status', protect, admin, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, message } = req.body;
 
     // Valid statuses for this endpoint: 2 (CONTENT_APPROVED), 3 (REJECTED), 5 (PUBLISHED), 6 (UNPUBLISHED)
     if (![2, 3, 5, 6].includes(Number(status))) {
@@ -162,7 +162,7 @@ router.patch('/courses/:id/status', protect, admin, async (req, res) => {
       const { Notification } = require('../models');
       const actionLabels = {
         2: 'đã được phê duyệt nội dung 🎉. Chính sách doanh thu sẽ được gửi sau!!!.',
-        3: 'đã bị từ chối ❌. Vui lòng kiểm tra lại nội dung.',
+        3: `đã bị từ chối ❌. Lý do: ${message || 'Không có lý do được cung cấp.'}`,
         5: 'đã được xuất bản 🚀!',
         6: 'đã tạm gỡ ⏸️.'
       };

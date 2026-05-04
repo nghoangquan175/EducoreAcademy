@@ -1409,7 +1409,7 @@
     font-size: 1.1rem;
     font-weight: 900;
     color: white;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     z-index: 2;
     pointer-events: none;
     margin-top: 6px;
@@ -1441,12 +1441,12 @@
     display: flex;
     justify-content: space-between;
     padding: 12px;
-    background: rgba(0,0,0,0.03);
+    background: rgba(0, 0, 0, 0.03);
     border-radius: 12px;
 }
 
 :root.dark-theme .streak-weekly-tracker {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .tracker-day {
@@ -1493,14 +1493,17 @@
 }
 
 @keyframes firePulse {
-    0%, 100% { 
-        transform: scale(1); 
+
+    0%,
+    100% {
+        transform: scale(1);
         opacity: 0.9;
         filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.4));
     }
-    50% { 
-        transform: scale(1.15); 
-        opacity: 1; 
+
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
         filter: drop-shadow(0 0 15px rgba(249, 115, 22, 0.7));
     }
 }
@@ -2132,6 +2135,7 @@
     color: #f97316;
     font-weight: 600;
 }
+
 /* Certificate Styles */
 .card-action-btn.certificate-btn {
     background: #3b82f6 !important;
@@ -2139,6 +2143,7 @@
     color: white;
     font-weight: 600;
 }
+
 .card-action-btn.certificate-btn:hover {
     background: #2563eb !important;
 }
@@ -2151,6 +2156,10 @@
     position: relative;
     box-shadow: none !important;
     transform: none !important;
+}
+
+.std-welcome-title h1 {
+    font-size: 1.25rem;
 }
 
 .std-course-card-premium.disabled-card .card-thumb-container img {
@@ -2189,11 +2198,13 @@
     }
 
     .std-sidebar {
-        display: none; /* Hide sidebar on mobile/tablet */
+        display: none;
+        /* Hide sidebar on mobile/tablet */
     }
 
     .std-right-column {
-        display: none; /* Hide supplementary right column */
+        display: none;
+        /* Hide supplementary right column */
     }
 
     .std-topbar {
@@ -2209,7 +2220,8 @@
     }
 
     .std-content-scroll {
-        padding: 20px 16px 100px; /* Extra bottom padding for Bottom Nav */
+        padding: 20px 16px 100px;
+        /* Extra bottom padding for Bottom Nav */
     }
 
     /* Analytics Grid Stacking */
@@ -2298,7 +2310,8 @@
     }
 
     .hero-image-box {
-        display: none; /* Hide image in hero on mobile to save space */
+        display: none;
+        /* Hide image in hero on mobile to save space */
     }
 
     .std-class-card {
@@ -2317,17 +2330,17 @@
     .std-header-title {
         font-size: 1rem;
     }
-    
+
     .std-header-avatar {
         width: 32px;
         height: 32px;
     }
-    
+
     .std-stats-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 12px;
     }
-    
+
     .std-stat-item .stat-value {
         font-size: 1.25rem;
     }
@@ -2341,11 +2354,11 @@
         box-shadow: none !important;
     }
 
-    .std-quiz-history-table table, 
-    .std-quiz-history-table thead, 
-    .std-quiz-history-table tbody, 
-    .std-quiz-history-table th, 
-    .std-quiz-history-table td, 
+    .std-quiz-history-table table,
+    .std-quiz-history-table thead,
+    .std-quiz-history-table tbody,
+    .std-quiz-history-table th,
+    .std-quiz-history-table td,
     .std-quiz-history-table tr {
         display: block !important;
         width: 100% !important;

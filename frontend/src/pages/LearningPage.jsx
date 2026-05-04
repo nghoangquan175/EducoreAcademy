@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import ReactPlayer from 'react-player';
 import axios from 'axios';
 import { FaChevronLeft, FaList, FaAngleDown, FaAngleUp, FaPlayCircle, FaCheckCircle, FaLock, FaClipboardList, FaStar } from 'react-icons/fa';
-import { Sun, Moon, LayoutDashboard, Star } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, Star, Paperclip, Download } from 'lucide-react';
 import { ThemeContext } from '../contexts/ThemeContext';
 import QuizPlayer from './QuizPlayer';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -377,8 +377,8 @@ const LearningPage = () => {
             </div>
           ) : (
             <>
-              <div className="learning-video-container">
-                {currentLesson.videoUrl ? (
+              <div className="learning-video-container" style={{ display: currentLesson.videoUrl ? 'block' : 'none' }}>
+                {currentLesson.videoUrl && (
                   isYouTubeUrl(currentLesson.videoUrl) ? (
                     <ReactPlayer 
                       url={currentLesson.videoUrl}
@@ -407,11 +407,6 @@ const LearningPage = () => {
                       Trình duyệt của bạn không hỗ trợ thẻ video.
                     </video>
                   )
-                ) : (
-                  <div className="no-video-placeholder">
-                    <FaPlayCircle size={64} />
-                    <p>Bài học này chưa có nội dung video.</p>
-                  </div>
                 )}
               </div>
               
@@ -430,7 +425,44 @@ const LearningPage = () => {
                     </div>
                   )}
                 </div>
-                <p className="learning-chapter-title">Thuộc: {currentChapterTitle}</p>
+                <p className="learning-chapter-title" style={{ marginBottom: '20px' }}>Thuộc: {currentChapterTitle}</p>
+                
+                {/* Lesson Rich Text Content */}
+                {currentLesson.content && (
+                  <div className="lesson-rich-text-container">
+                    <div className="lesson-content-body" dangerouslySetInnerHTML={{ __html: currentLesson.content }} />
+                  </div>
+                )}
+
+                {/* Lesson Attachments */}
+                {currentLesson.attachmentUrl && (
+                  <div className="lesson-attachment-section">
+                    <h3 className="section-subtitle">Tài liệu học tập</h3>
+                    <div className="attachment-card">
+                      <div className="attachment-info">
+                        <div className="attachment-icon-wrapper">
+                          <Paperclip size={22} />
+                        </div>
+                        <div className="attachment-details">
+                          <span className="attachment-name">
+                            {currentLesson.attachmentUrl.split('/').pop().split('?')[0] || 'Tai-lieu-hoc-tap.pdf'}
+                          </span>
+                          <span className="attachment-type">Định dạng file đính kèm</span>
+                        </div>
+                      </div>
+                      <a 
+                        href={currentLesson.attachmentUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="attachment-download-link"
+                        download
+                      >
+                        <Download size={18} />
+                        <span>Tải xuống</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Manual Quiz Start Logic */}
                 {currentLesson.quiz && (videoFinished || currentLesson.videoWatched || latestAttempt || passedLessons.includes(parseInt(lessonId)) || passedLessons.includes(currentLesson.id)) && (
@@ -490,9 +522,9 @@ const LearningPage = () => {
                 )}
 
                 {/* Mark as finished if no quiz */}
-                {!currentLesson.quiz && videoFinished && !passedLessons.includes(currentLesson.id) && (
+                {!currentLesson.quiz && (videoFinished || !currentLesson.videoUrl) && !passedLessons.includes(currentLesson.id) && (
                    <div className="no-quiz-completion">
-                      <p>Bạn đã xem xong video!</p>
+                      <p>{!currentLesson.videoUrl ? 'Vui lòng đọc kỹ nội dung bài học!' : 'Bạn đã xem xong video!'}</p>
                       <button className="btn-mark-finished" onClick={handleMarkFinished}>
                          Đánh dấu hoàn thành bài học
                       </button>

@@ -280,6 +280,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
                         </div>
                       )}
                     </label>
+                    <small style={{ display: 'block', marginTop: '5px', color: '#64748b', fontSize: '0.75rem' }}>Định dạng: jpg, png, webp. Tối đa 10MB.</small>
                   </div>
                </div>
 
@@ -310,6 +311,7 @@ const CourseEditor = ({ courseId, onClose, onSuccess }) => {
                         </div>
                       )}
                     </label>
+                    <small style={{ display: 'block', marginTop: '5px', color: '#64748b', fontSize: '0.75rem' }}>Định dạng: mp4, mov, avi. Tối đa 100MB.</small>
                   </div>
                </div>
              </div>

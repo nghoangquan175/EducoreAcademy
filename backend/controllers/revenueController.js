@@ -204,12 +204,12 @@ exports.getAdminCourses = async (req, res) => {
         [Sequelize.fn('COUNT', Sequelize.col('PaymentOrder.id')), 'totalSales']
       ],
       include: [
-        { model: Course, attributes: ['title', 'price', 'thumbnail'], include: [{ model: User, as: 'instructor', attributes: ['name', 'email'] }] }
+        { model: Course, as: 'course', attributes: ['title', 'price', 'thumbnail'], include: [{ model: User, as: 'instructor', attributes: ['name', 'email'] }] }
       ],
       group: [
         'PaymentOrder.courseId',
-        'Course.id', 'Course.title', 'Course.price', 'Course.thumbnail',
-        'Course->instructor.id', 'Course->instructor.name', 'Course->instructor.email'
+        'course.id', 'course.title', 'course.price', 'course.thumbnail',
+        'course->instructor.id', 'course->instructor.name', 'course->instructor.email'
       ],
       order: [[Sequelize.literal('totalGross'), 'DESC']]
     });
@@ -291,16 +291,16 @@ exports.getAdminInstructors = async (req, res) => {
     const instructorStats = await PaymentOrder.findAll({
       where: orderWhere,
       attributes: [
-        [Sequelize.col('Course.instructorId'), 'instructorId'],
+        [Sequelize.col('course.instructorId'), 'instructorId'],
         [Sequelize.fn('SUM', Sequelize.col('PaymentOrder.amount')), 'totalGross'],
         [Sequelize.fn('SUM', Sequelize.col('adminAmount')), 'totalAdminNet'],
         [Sequelize.fn('SUM', Sequelize.col('instructorAmount')), 'totalInstructorNet'],
         [Sequelize.fn('COUNT', Sequelize.col('PaymentOrder.id')), 'totalSales']
       ],
       include: [
-        { model: Course, attributes: [], required: true }
+        { model: Course, as: 'course', attributes: [], required: true }
       ],
-      group: ['Course.instructorId'],
+      group: ['course.instructorId'],
       order: [[Sequelize.literal('totalGross'), 'DESC']]
     });
 
@@ -357,8 +357,8 @@ exports.getAdminTransactions = async (req, res) => {
     const orders = await PaymentOrder.findAll({
       where: whereClause,
       include: [
-        { model: Course, attributes: ['title'] },
-        { model: User, attributes: ['name', 'email'] }
+        { model: Course, as: 'course', attributes: ['title'] },
+        { model: User, as: 'user', attributes: ['name', 'email'] }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -382,6 +382,7 @@ exports.getInstructorOverview = async (req, res) => {
       where: orderWhere,
       include: [{
         model: Course,
+        as: 'course',
         where: { instructorId },
         attributes: []
       }],
@@ -515,11 +516,11 @@ exports.getInstructorCourses = async (req, res) => {
         [Sequelize.fn('COUNT', Sequelize.col('PaymentOrder.id')), 'totalSales']
       ],
       include: [
-        { model: Course, where: { instructorId }, attributes: ['title', 'price', 'thumbnail'] }
+        { model: Course, as: 'course', where: { instructorId }, attributes: ['title', 'price', 'thumbnail'] }
       ],
       group: [
         'PaymentOrder.courseId',
-        'Course.id', 'Course.title', 'Course.price', 'Course.thumbnail'
+        'course.id', 'course.title', 'course.price', 'course.thumbnail'
       ]
     });
 
@@ -608,8 +609,8 @@ exports.getInstructorTransactions = async (req, res) => {
     const orders = await PaymentOrder.findAll({
       where: whereClause,
       include: [
-        { model: Course, where: { instructorId }, attributes: ['title'] },
-        { model: User, attributes: ['name', 'email'] },
+        { model: Course, as: 'course', where: { instructorId }, attributes: ['title'] },
+        { model: User, as: 'user', attributes: ['name', 'email'] },
         {
           model: RevenuePolicy,
           as: 'revenuePolicy',

@@ -336,7 +336,7 @@ router.get('/:id/curriculum', optionalProtect, async (req, res) => {
             {
               model: Lesson,
               as: 'lessons',
-              attributes: ['id', 'title', 'duration', 'isFree', 'lessonOrder', 'videoUrl'],
+              attributes: ['id', 'title', 'duration', 'isFree', 'lessonOrder', 'videoUrl', 'content', 'attachmentUrl'],
             }
           ]
         }
@@ -572,7 +572,13 @@ router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res
     const course = await Course.findByPk(chapter.courseId);
     if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
 
-    const { title, lessonOrder, isFree, videoUrl, content, duration } = req.body;
+    const { title, lessonOrder, isFree, videoUrl, content, duration, attachmentUrl } = req.body;
+    
+    // Yêu cầu phải có video hoặc có nội dung text
+    if (!videoUrl && (!content || content.trim() === '')) {
+      return res.status(400).json({ message: 'Bài học phải có nội dung video hoặc văn bản' });
+    }
+
     const lesson = await Lesson.create({
       title,
       lessonOrder,
@@ -580,6 +586,7 @@ router.post('/chapters/:chapterId/lessons', protect, instructor, async (req, res
       videoUrl,
       content,
       duration,
+      attachmentUrl,
       chapterId: chapter.id
     });
 
@@ -642,13 +649,22 @@ router.patch('/lessons/:id', protect, instructor, async (req, res) => {
     const course = await Course.findByPk(chapter.courseId);
     if (course.instructorId !== req.user.id) return res.status(403).json({ message: 'Không có quyền' });
 
-    const { title, videoUrl, content, lessonOrder, duration, isFree } = req.body;
+    const { title, videoUrl, content, lessonOrder, duration, isFree, attachmentUrl } = req.body;
+    
+    // Yêu cầu phải có video hoặc có nội dung text
+    const finalVideoUrl = videoUrl !== undefined ? videoUrl : lesson.videoUrl;
+    const finalContent = content !== undefined ? content : lesson.content;
+    if (!finalVideoUrl && (!finalContent || finalContent.trim() === '')) {
+      return res.status(400).json({ message: 'Bài học phải có nội dung video hoặc văn bản' });
+    }
+
     lesson.title = title !== undefined ? title : lesson.title;
     lesson.videoUrl = videoUrl !== undefined ? videoUrl : lesson.videoUrl;
     lesson.content = content !== undefined ? content : lesson.content;
     lesson.lessonOrder = lessonOrder !== undefined ? lessonOrder : lesson.lessonOrder;
     lesson.duration = duration !== undefined ? duration : lesson.duration;
     lesson.isFree = isFree !== undefined ? isFree : lesson.isFree;
+    lesson.attachmentUrl = attachmentUrl !== undefined ? attachmentUrl : lesson.attachmentUrl;
 
     await lesson.save();
 

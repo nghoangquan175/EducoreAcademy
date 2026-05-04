@@ -272,11 +272,18 @@
 
 /* Add Lesson Inline Form Full */
 .cur-add-lesson-inline-form-full {
-    background: #f8fafc;
-    padding: 20px;
-    border-radius: 12px;
-    border: 1px dashed #cbd5e1;
-    margin-top: 10px;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    margin-top: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    animation: cur-slide-up 0.3s ease-out;
+}
+
+@keyframes cur-slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .cur-add-lesson-inline-form-full .cur-form-grid {
@@ -310,11 +317,10 @@
 .cur-video-source-box {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    gap: 20px;
+    padding: 0;
+    background: transparent;
+    border: none;
 }
 
 .cur-source-tabs {
@@ -347,22 +353,31 @@
 
 .cur-lesson-upload-area {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
 }
 
 .cur-lesson-upload-label {
-    padding: 8px 16px;
-    background: #f1f5f9;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    padding: 20px;
+    background: #f8fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
-    color: #475569;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
 }
 
 .cur-lesson-upload-label:hover {
-    background: #e2e8f0;
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #1e293b;
 }
 
 .cur-upload-success-check {
@@ -373,4 +388,46 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.cur-upload-row {
+    display: flex;
+    gap: 20px;
+}
+
+.cur-upload-row > div {
+    flex: 1;
+}
+
+.cur-field-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #334155;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.cur-upload-status {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.cur-upload-status.success {
+    color: #10b981;
+}
+
+.cur-upload-note {
+    display: block;
+    margin-top: 8px;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.cur-content-row {
+    width: 100%;
 }

@@ -4,6 +4,7 @@ const { Quiz, Question, QuizAttempt, Lesson, Chapter, Course, Progress, Enrollme
 const { protect, instructor } = require('../middleware/authMiddleware');
 const { calculateCourseProgress } = require('../utils/progressUtils');
 const { adjustReputation, REWARDS } = require('../services/reputationService');
+const { shuffleArray } = require('../utils/arrayUtils');
 const models = require('../models');
 
 
@@ -59,7 +60,29 @@ router.get('/lesson/:lessonId', protect, async (req, res) => {
             return res.status(404).json({ message: 'Không tìm thấy bài kiểm tra cho bài học này' });
         }
 
-        res.json(quiz);
+        // Shuffle questions and options only if requested (usually for students taking the quiz)
+        const quizJson = quiz.toJSON();
+        if (req.query.shuffle === 'true' && quizJson.questions && quizJson.questions.length > 0) {
+            // 1. Shuffle the order of questions
+            quizJson.questions = shuffleArray(quizJson.questions);
+
+            // 2. Shuffle options within each question
+            quizJson.questions = quizJson.questions.map(q => {
+                const originalOptions = [...q.options];
+                const correctValue = originalOptions[q.correctOptionIndex];
+                
+                // Shuffle options
+                const shuffledOptions = shuffleArray(originalOptions);
+                
+                // Update options and correct index to match new order
+                q.options = shuffledOptions;
+                q.correctOptionIndex = shuffledOptions.indexOf(correctValue);
+                
+                return q;
+            });
+        }
+
+        res.json(quizJson);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -130,8 +153,10 @@ router.post('/:quizId/submit', protect, async (req, res) => {
         if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
 
         let correctCount = 0;
-        quiz.questions.forEach((q, index) => {
-            if (answers[index] === q.correctOptionIndex) {
+        // Logic chấm điểm theo Question ID để không bị ảnh hưởng bởi việc xáo trộn ở Client/Server
+        quiz.questions.forEach((q) => {
+            const selectedIndex = answers[q.id];
+            if (selectedIndex !== undefined && selectedIndex === q.correctOptionIndex) {
                 correctCount++;
             }
         });

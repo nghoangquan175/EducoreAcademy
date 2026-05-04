@@ -7,14 +7,17 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const SYSTEM_PROMPT = `Bạn là trợ lý AI của EducoreAcademy — nền tảng học trực tuyến hàng đầu.
 Nhiệm vụ: tư vấn khóa học, giải đáp thắc mắc, hỗ trợ học viên tìm khóa học phù hợp.
 Trả lời bằng tiếng Việt, ngắn gọn, thân thiện, chuyên nghiệp.
-QUAN TRỌNG: Không sử dụng markdown formatting. Không dùng **, *, ##, \`\`\`, etc. Trả lời bằng text thuần túy.
+QUAN TRỌNG: Bạn ĐƯỢC PHÉP sử dụng định dạng Markdown cho đường LINK (ví dụ: [Link khóa học](https://...)). Hãy sử dụng định dạng này để tạo các liên kết có thể nhấp được.
+GIỮ NGUYÊN GIAO THỨC (https) VÀ URL CỦA LINK ĐƯỢC CUNG CẤP TRONG NGỮ CẢNH. KHÔNG ĐƯỢC TỰ Ý THAY ĐỔI SANG HTTP NẾU NÓ ĐANG LÀ HTTPS.
+Tuy nhiên, hãy hạn chế sử dụng các định dạng markdown phức tạp khác như ##, \`\`\`, etc. trừ khi thực sự cần thiết.
 Khi liệt kê, dùng dấu gạch ngang (-) hoặc số thứ tự (1. 2. 3.).
-Nếu được cung cấp thông tin khóa học, bài viết, hãy sử dụng để trả lời chính xác và chi tiết.
-Khi giới thiệu khóa học, nêu rõ: tên khóa, giảng viên, cấp độ, số học viên, rating, giá.
+Nếu được cung cấp thông tin khóa học, bài viết, hãy sử dụng để trả lời chính xác và chi tiết. Luôn CUNG CẤP KÈM ĐƯỜNG LINK dưới dạng Markdown: [Link khóa học](URL) hoặc [Link bài viết](URL).
+Khi giới thiệu khóa học, nêu rõ: tên khóa, giảng viên, cấp độ, số học viên, rating, giá, và ĐƯỜNG LINK Markdown.
 Nếu không biết hoặc không có thông tin, hãy nói rằng bạn không có thông tin và đề nghị liên hệ hỗ trợ.`;
 
 // ── Helper: Strip markdown from text ──
 function stripMarkdown(text) {
+  if (!text) return '';
   return text
     .replace(/\*\*\*(.*?)\*\*\*/g, '$1')  // ***bold italic***
     .replace(/\*\*(.*?)\*\*/g, '$1')       // **bold**
@@ -22,7 +25,7 @@ function stripMarkdown(text) {
     .replace(/^#{1,6}\s+/gm, '')           // # headings
     .replace(/```[\s\S]*?```/g, (match) => match.replace(/```\w*\n?/g, '').replace(/```/g, '')) // code blocks
     .replace(/`([^`]+)`/g, '$1')           // inline code
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [text](url) → text
+    // .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)') // DO NOT STRIP LINKS
     .trim();
 }
 
@@ -121,6 +124,7 @@ async function getRelevantContext(message) {
           context += `- "${c.title}" (${priceLabel}, ${c.category || 'Chưa phân loại'}, ${c.level})\n`;
           context += `  Giảng viên: ${c.instructor?.name || 'N/A'} | ${c.studentsCount || 0} học viên | Rating: ${c.rating || 'N/A'}\n`;
           context += `  ${c.duration || 'N/A'} | ${c.videoCount || 0} videos | ${c.quizCount || 0} quizzes\n`;
+          context += `  Link khóa học: [Link khóa học](${process.env.CLIENT_URL}/course/${c.id})\n`;
           if (c.description) {
             context += `  Mô tả: ${c.description.substring(0, 200)}\n`;
           }
@@ -161,7 +165,7 @@ async function getRelevantContext(message) {
       if (courses.length === 0 && ['course_search', 'general'].includes(intent)) {
         const popularCourses = await Course.findAll({
           where: { published: 2 },
-          attributes: ['title', 'category', 'level', 'rating', 'isPro', 'price', 'studentsCount'],
+          attributes: ['id', 'title', 'category', 'level', 'rating', 'isPro', 'price', 'studentsCount'],
           include: [{ model: User, as: 'instructor', attributes: ['name'] }],
           order: [['studentsCount', 'DESC']],
           limit: 5
@@ -171,6 +175,7 @@ async function getRelevantContext(message) {
           popularCourses.forEach(c => {
             const priceLabel = c.isPro ? `${c.price?.toLocaleString('vi-VN')} VNĐ` : 'Miễn phí';
             context += `- "${c.title}" (${priceLabel}, ${c.category || 'N/A'}, ${c.level}) - ${c.instructor?.name || 'N/A'} | ${c.studentsCount || 0} học viên | Rating: ${c.rating || 'N/A'}\n`;
+            context += `  Link khóa học: [Link khóa học](${process.env.CLIENT_URL}/course/${c.id})\n`;
           });
           context += '\n';
         }
@@ -198,6 +203,7 @@ async function getRelevantContext(message) {
         articles.forEach(a => {
           context += `- "${a.title}" bởi ${a.author?.name || 'N/A'} (${a.category || 'Chưa phân loại'})\n`;
           if (a.excerpt) context += `  Tóm tắt: ${a.excerpt.substring(0, 200)}\n`;
+          context += `  Link bài viết: [Link bài viết](${process.env.CLIENT_URL}/articles/${a.id})\n`;
         });
         context += '\n';
       }

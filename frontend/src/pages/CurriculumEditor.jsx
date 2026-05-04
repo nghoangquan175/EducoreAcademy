@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Plus, Trash2, Edit, Save, X, GripVertical, Check, 
-  ChevronDown, ChevronUp, PlayCircle, FileText, Video
+  ChevronDown, ChevronUp, PlayCircle, FileText, Video, Paperclip
 } from 'lucide-react';
+import RichTextEditor from '../components/RichTextEditor';
 import './CurriculumEditor.css';
 import QuizModal from './QuizModal';
 
@@ -21,9 +22,12 @@ const CurriculumEditor = ({ courseId, onClose }) => {
     duration: '',
     isFree: false,
     videoUrl: '',
+    content: '',
+    attachmentUrl: '',
     videoSource: 'upload'
   });
   const [uploadingLessonVideo, setUploadingLessonVideo] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [tempData, setTempData] = useState({}); // For inline editing titles
 
   useEffect(() => {
@@ -119,7 +123,9 @@ const CurriculumEditor = ({ courseId, onClose }) => {
         duration: '',
         isFree: false,
         videoUrl: '',
-        videoSource: 'link'
+        content: '',
+        attachmentUrl: '',
+        videoSource: 'upload'
       });
       setAddingLessonToChapterId(null);
       fetchFullCurriculum();
@@ -144,12 +150,41 @@ const CurriculumEditor = ({ courseId, onClose }) => {
           Authorization: `Bearer ${token}`
         }
       });
-      setNewLesson({ ...newLesson, videoUrl: res.data.url, duration: String(res.data.duration || 0) });
+      setNewLesson(prev => ({ ...prev, videoUrl: res.data.url, duration: String(res.data.duration || 0) }));
     } catch (error) {
       console.error("Upload video error:", error);
       alert('Tải video thất bại');
     } finally {
       setUploadingLessonVideo(false);
+    }
+  };
+
+  const handleLessonAttachmentUpload = async (e, lessonId = null) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('attachment', file);
+
+    setUploadingAttachment(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post('http://localhost:5000/api/upload/attachment', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (lessonId) {
+          setTempData(prev => ({...prev, [lessonId]: {...(prev[lessonId] || {}), attachmentUrl: res.data.url}}));
+      } else {
+          setNewLesson(prev => ({ ...prev, attachmentUrl: res.data.url }));
+      }
+    } catch (error) {
+      console.error("Upload attachment error:", error);
+      alert('Tải file đính kèm thất bại');
+    } finally {
+      setUploadingAttachment(false);
     }
   };
 
@@ -200,7 +235,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                     <input 
                       autoFocus
                       defaultValue={chapter.title}
-                      onChange={(e) => setTempData({...tempData, [chapter.id]: e.target.value})}
+                      onChange={(e) => setTempData(prev => ({...prev, [chapter.id]: e.target.value}))}
                       className="cur-inline-input"
                     />
                     <button className="cur-icon-save-btn" onClick={() => handleUpdateChapter(chapter.id)}><Check size={18} /></button>
@@ -232,10 +267,12 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                           <input 
                             placeholder="Tên bài học"
                             defaultValue={lesson.title}
-                            onChange={(e) => setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), title: e.target.value}})}
+                            onChange={(e) => setTempData(prev => ({...prev, [lesson.id]: {...(prev[lesson.id] || {}), title: e.target.value}}))}
                           />
-                          <div className="cur-lesson-upload-area" style={{ marginTop: '10px' }}>
-                             <input 
+                          <div className="cur-upload-row" style={{ marginTop: '10px' }}>
+                            <div className="cur-lesson-upload-area">
+                              <label className="cur-field-label">Video bài học:</label>
+                              <input 
                                 type="file" 
                                 id={`lesson-video-edit-${lesson.id}`} 
                                 accept="video/*" 
@@ -250,20 +287,46 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                                     const res = await axios.post('http://localhost:5000/api/upload/video', formData, {
                                       headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
                                     });
-                                    setTempData({...tempData, [lesson.id]: {...(tempData[lesson.id] || {}), videoUrl: res.data.url, duration: String(res.data.duration || 0)}});
+                                    setTempData(prev => ({...prev, [lesson.id]: {...(prev[lesson.id] || {}), videoUrl: res.data.url, duration: String(res.data.duration || 0)}}));
                                   } catch (err) { alert('Tải video thất bại'); }
                                   finally { setUploadingLessonVideo(false); }
                                 }} 
                                 style={{ display: 'none' }}
+                              />
+                              <label htmlFor={`lesson-video-edit-${lesson.id}`} className="cur-lesson-upload-label">
+                                <Video size={32} />
+                                <span>{uploadingLessonVideo ? 'Đang tải...' : (tempData[lesson.id]?.videoUrl || lesson.videoUrl) ? 'Thay đổi video' : 'Tải lên video'}</span>
+                              </label>
+                              {(tempData[lesson.id]?.videoUrl || lesson.videoUrl) && <div className="cur-upload-status success">
+                                <Check size={16} /> Đã có video
+                              </div>}
+                              <small className="cur-upload-note">Định dạng: mp4, avi, mov. Tối đa 100MB.</small>
+                            </div>
+
+                            <div className="cur-lesson-upload-area">
+                              <label className="cur-field-label">Tài liệu đính kèm (PDF, DOC):</label>
+                              <input type="file" id={`lesson-doc-edit-${lesson.id}`} accept=".pdf,.doc,.docx" onChange={(e) => handleLessonAttachmentUpload(e, lesson.id)} style={{ display: 'none' }} />
+                              <label htmlFor={`lesson-doc-edit-${lesson.id}`} className="cur-lesson-upload-label">
+                                <Paperclip size={32} />
+                                <span>{uploadingAttachment ? 'Đang tải...' : (tempData[lesson.id]?.attachmentUrl || lesson.attachmentUrl) ? 'Thay đổi tài liệu' : 'Tải lên tài liệu'}</span>
+                              </label>
+                              {(tempData[lesson.id]?.attachmentUrl || lesson.attachmentUrl) && <div className="cur-upload-status success">
+                                <Check size={16} /> Đã có tài liệu
+                              </div>}
+                              <small className="cur-upload-note">Định dạng: pdf, doc, docx. Tối đa 10MB.</small>
+                            </div>
+                          </div>
+                          
+                          <div className="cur-content-row" style={{ marginTop: '15px' }}>
+                             <label className="cur-field-label">Nội dung bài viết:</label>
+                             <RichTextEditor 
+                               value={(tempData[lesson.id]?.content !== undefined) ? tempData[lesson.id].content : (lesson.content || '')} 
+                               onChange={(content) => setTempData(prev => ({...prev, [lesson.id]: {...(prev[lesson.id] || {}), content}}))} 
                              />
-                             <label htmlFor={`lesson-video-edit-${lesson.id}`} className="cur-lesson-upload-label" style={{ padding: '8px 15px', background: '#f1f5f9', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', display: 'inline-block', border: '1px solid #e2e8f0' }}>
-                                {uploadingLessonVideo ? 'Đang tải...' : (tempData[lesson.id]?.videoUrl || lesson.videoUrl) ? 'Thay đổi video' : 'Tải lên video'}
-                             </label>
-                             {(tempData[lesson.id]?.videoUrl || lesson.videoUrl) && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '0.8rem' }}>✓ Đã có video</span>}
                           </div>
                         </div>
                         <div className="cur-lesson-edit-footer">
-                          <button className="cur-btn-small save" onClick={() => handleUpdateLesson(lesson.id)} disabled={uploadingLessonVideo}>Lưu</button>
+                          <button className="cur-btn-small save" onClick={() => handleUpdateLesson(lesson.id)} disabled={uploadingLessonVideo || uploadingAttachment || (!(tempData[lesson.id]?.videoUrl || lesson.videoUrl) && !(((tempData[lesson.id]?.content !== undefined) ? tempData[lesson.id].content : lesson.content) || '').replace(/<[^>]*>?/gm, '').trim())}>Lưu</button>
                           <button className="cur-btn-small cancel" onClick={() => setEditingLessonId(null)}>Hủy</button>
                         </div>
                       </div>
@@ -279,12 +342,14 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                     <div className="cur-lesson-actions">
                       <button className="cur-lesson-action-btn edit" onClick={() => {
                         setEditingLessonId(lesson.id);
-                        setTempData({...tempData, [lesson.id]: {
+                        setTempData(prev => ({...prev, [lesson.id]: {
                           title: lesson.title,
                           videoUrl: lesson.videoUrl,
+                          content: lesson.content || '',
+                          attachmentUrl: lesson.attachmentUrl || '',
                           duration: lesson.duration,
                           isFree: lesson.isFree
-                        }});
+                        }}));
                       }}>
                         <Edit size={16} />
                       </button>
@@ -314,35 +379,55 @@ const CurriculumEditor = ({ courseId, onClose }) => {
                         autoFocus
                         placeholder="Tên bài học mới..."
                         value={newLesson.title}
-                        onChange={(e) => setNewLesson({ ...newLesson, title: e.target.value })}
+                        onChange={(e) => setNewLesson(prev => ({ ...prev, title: e.target.value }))}
                         className="title-input"
-                        style={{ width: '100%' }}
                       />
                     </div>
                     
                     <div className="cur-video-source-box">
-                      <div className="cur-lesson-upload-area">
-                        <input 
-                          type="file" 
-                          id="lesson-video-upload" 
-                          accept="video/*" 
-                          onChange={handleLessonVideoUpload} 
-                          style={{ display: 'none' }}
-                        />
-                        <label htmlFor="lesson-video-upload" className="cur-lesson-upload-label" style={{ cursor: 'pointer', display: 'block', padding: '15px', border: '2px dashed #e2e8f0', borderRadius: '10px', textAlign: 'center' }}>
-                          <Video size={24} style={{ marginBottom: '8px' }} />
-                          <br />
-                          {uploadingLessonVideo ? 'Đang tải video lên...' : newLesson.videoUrl ? 'Video đã tải lên thành công' : 'Nhấn để tải video bài học lên'}
-                        </label>
-                        {newLesson.videoUrl && <div style={{ marginTop: '5px', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                           <Check size={16} /> Link video đã sẵn sàng
-                        </div>}
+                      <div className="cur-upload-row">
+                        <div className="cur-lesson-upload-area">
+                          <label className="cur-field-label">Video bài học:</label>
+                          <input 
+                            type="file" 
+                            id="lesson-video-upload" 
+                            accept="video/*" 
+                            onChange={handleLessonVideoUpload} 
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="lesson-video-upload" className="cur-lesson-upload-label">
+                            <Video size={32} />
+                            <span>{uploadingLessonVideo ? 'Đang tải video lên...' : newLesson.videoUrl ? 'Video đã tải lên thành công' : 'Nhấn để tải video bài học lên'}</span>
+                          </label>
+                          {newLesson.videoUrl && <div className="cur-upload-status success">
+                             <Check size={16} /> Link video đã sẵn sàng
+                          </div>}
+                          <small className="cur-upload-note">Định dạng: mp4, avi, mov. Tối đa 100MB.</small>
+                        </div>
+
+                        <div className="cur-lesson-upload-area">
+                          <label className="cur-field-label">Tài liệu đính kèm (PDF, DOC):</label>
+                          <input type="file" id="lesson-doc-upload" accept=".pdf,.doc,.docx" onChange={(e) => handleLessonAttachmentUpload(e)} style={{ display: 'none' }} />
+                          <label htmlFor="lesson-doc-upload" className="cur-lesson-upload-label">
+                            <Paperclip size={32} />
+                            <span>{uploadingAttachment ? 'Đang tải tài liệu lên...' : newLesson.attachmentUrl ? 'Tài liệu đã tải lên thành công' : 'Nhấn để tải tài liệu đính kèm lên'}</span>
+                          </label>
+                          {newLesson.attachmentUrl && <div className="cur-upload-status success">
+                             <Check size={16} /> Tài liệu đã sẵn sàng
+                          </div>}
+                          <small className="cur-upload-note">Định dạng: pdf, doc, docx. Tối đa 10MB.</small>
+                        </div>
+                      </div>
+
+                      <div className="cur-content-row" style={{ marginTop: '5px' }}>
+                        <label className="cur-field-label">Nội dung bài viết:</label>
+                        <RichTextEditor value={newLesson.content} onChange={(content) => setNewLesson(prev => ({ ...prev, content }))} />
                       </div>
                     </div>
 
-                    <div className="cur-form-footer-row" style={{ justifyContent: 'flex-end' }}>
+                    <div className="cur-form-footer-row" style={{ justifyContent: 'flex-end', marginTop: '15px' }}>
                       <div className="add-lesson-actions">
-                        <button className="cur-btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo || !newLesson.videoUrl}>Thêm Bài Học</button>
+                        <button className="cur-btn-small save" onClick={() => handleAddLesson(chapter.id)} disabled={uploadingLessonVideo || uploadingAttachment || (!newLesson.videoUrl && !(newLesson.content || '').replace(/<[^>]*>?/gm, '').trim())}>Thêm Bài Học</button>
                         <button className="cur-btn-small cancel" onClick={() => setAddingLessonToChapterId(null)}>Hủy</button>
                       </div>
                     </div>
@@ -351,7 +436,7 @@ const CurriculumEditor = ({ courseId, onClose }) => {
               ) : (
                 <button className="cur-add-lesson-btn" onClick={() => {
                   setAddingLessonToChapterId(chapter.id);
-                  setNewLesson({ title: '', duration: '', isFree: false, videoUrl: '', videoSource: 'upload' });
+                  setNewLesson({ title: '', duration: '', isFree: false, videoUrl: '', content: '', attachmentUrl: '', videoSource: 'upload' });
                 }}>
                   <Plus size={16} /> Thêm bài học mới
                 </button>

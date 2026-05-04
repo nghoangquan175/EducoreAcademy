@@ -76,4 +76,25 @@ router.post('/document', uploadDocument.single('document'), (req, res) => {
   }
 });
 
+// @desc    Upload an attachment (e.g. DOC/PDF for lesson)
+// @route   POST /api/upload/attachment
+// @access  Private (Instructor/Admin)
+router.post('/attachment', protect, instructor, uploadDocument.single('attachment'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No document file provided' });
+    }
+
+    res.status(200).json({
+      message: 'Document uploaded successfully',
+      url: req.file.path,
+      format: req.file.mimetype,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Document upload error:', error);
+    res.status(500).json({ message: 'Document upload error: ' + (error.message || error.toString()) });
+  }
+});
+
 module.exports = router;

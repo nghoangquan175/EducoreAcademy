@@ -24,8 +24,10 @@
     margin-left: -280px;
 }
 
-.sidebar-header {
+.admin-sidebar .sidebar-header {
     padding: 30px 24px;
+    background-color: #0f172a;
+    border-bottom: none;
 }
 
 .admin-logo {

@@ -215,6 +215,7 @@ const PartnerApplication = () => {
                   <Upload size={20} className="upload-icon" />
                   <span>{file ? file.name : 'Tải lên CV (Tối đa 5MB, .pdf, .docx)'}</span>
                 </label>
+                <small style={{ display: 'block', marginTop: '5px', color: '#64748b', fontSize: '0.75rem' }}>Định dạng: pdf, doc, docx. Tối đa 5MB.</small>
               </div>
             </div>
 

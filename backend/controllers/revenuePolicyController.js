@@ -142,7 +142,7 @@ exports.createRevenuePolicy = async (req, res) => {
 // @access  Private
 exports.updatePolicyStatus = async (req, res) => {
   try {
-    const { status } = req.body; 
+    const { status, message } = req.body; 
 
     const policy = await RevenuePolicy.findByPk(req.params.id, {
       include: [
@@ -331,7 +331,7 @@ exports.updatePolicyStatus = async (req, res) => {
       await Notification.create({
         userId: policy.createdByAdminId,
         title: `Chính sách doanh thu được ${status === 'accepted' ? 'chấp nhận' : 'từ chối'}`,
-        message: `Giảng viên đã ${status === 'accepted' ? 'chấp nhận' : 'từ chối'} chính sách doanh thu cho khóa học "${policy.course.title}".${status === 'accepted' ? ' Khóa học đã sẵn sàng để đăng tải.' : ''}`,
+        message: `Giảng viên đã ${status === 'accepted' ? 'chấp nhận' : 'từ chối'} chính sách doanh thu cho khóa học "${policy.course.title}".${status === 'accepted' ? ' Khóa học đã sẵn sàng để đăng tải.' : ` Lý do: ${message || 'Không có'}`}`,
         relatedId: policy.id.toString(),
         type: `revenue_policy_update:${status === 'accepted' ? 4 : 3}`
       });
