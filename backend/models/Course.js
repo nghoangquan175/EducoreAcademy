@@ -43,7 +43,7 @@ const Course = sequelize.define('Course', {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
-    duration: {
+  duration: {
     type: DataTypes.STRING(50), // e.g. "12 giờ", "8.5 giờ"
     allowNull: true,
   },
@@ -57,7 +57,7 @@ const Course = sequelize.define('Course', {
   },
   published: {
     type: DataTypes.INTEGER,
-    defaultValue: 0, 
+    defaultValue: 0,
     // 0 = DRAFT, 1 = PENDING_REVIEW, 2 = CONTENT_APPROVED, 3 = REJECTED, 
     // 4 = READY_TO_PUBLISH, 5 = PUBLISHED, 6 = UNPUBLISHED
   },
@@ -78,6 +78,14 @@ const Course = sequelize.define('Course', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
+  rejectionReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  rejectedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   paranoid: true,
   timestamps: true,
@@ -90,7 +98,7 @@ const Course = sequelize.define('Course', {
   ],
 });
 
-Course.updateCourseStats = async function(courseId) {
+Course.updateCourseStats = async function (courseId) {
   const { Lesson, Chapter, Quiz } = require('./index');
   try {
     const videoCount = await Lesson.count({
@@ -112,19 +120,19 @@ Course.updateCourseStats = async function(courseId) {
 
     let totalCourseSeconds = 0;
     for (const chapter of chapters) {
-        const chapterSeconds = (chapter.lessons || []).reduce((acc, l) => {
-           const dur = l.duration || '0';
-           if (dur.includes(':')) {
-              const parts = dur.split(':');
-              if (parts.length === 2) return acc + (parseInt(parts[0]) * 60 + parseInt(parts[1]));
-              if (parts.length === 3) return acc + (parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]));
-           }
-           return acc + (parseInt(dur) || 0);
-        }, 0);
-        
-        // Update chapter duration
-        await Chapter.update({ duration: String(chapterSeconds) }, { where: { id: chapter.id } });
-        totalCourseSeconds += chapterSeconds;
+      const chapterSeconds = (chapter.lessons || []).reduce((acc, l) => {
+        const dur = l.duration || '0';
+        if (dur.includes(':')) {
+          const parts = dur.split(':');
+          if (parts.length === 2) return acc + (parseInt(parts[0]) * 60 + parseInt(parts[1]));
+          if (parts.length === 3) return acc + (parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]));
+        }
+        return acc + (parseInt(dur) || 0);
+      }, 0);
+
+      // Update chapter duration
+      await Chapter.update({ duration: String(chapterSeconds) }, { where: { id: chapter.id } });
+      totalCourseSeconds += chapterSeconds;
     }
 
     const quizCount = await Quiz.count({

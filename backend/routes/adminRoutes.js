@@ -462,14 +462,14 @@ router.get('/moderation/comments', protect, admin, async (req, res) => {
 router.get('/moderation/stats', protect, admin, async (req, res) => {
   try {
     const totalRejected = await Comment.count({ where: { status: 'REJECTED' } });
-    const rejectedToday = await Comment.count({ 
-      where: { 
+    const rejectedToday = await Comment.count({
+      where: {
         status: 'REJECTED',
-        createdAt: { [Op.gte]: new Date().setHours(0,0,0,0) }
-      } 
+        createdAt: { [Op.gte]: new Date().setHours(0, 0, 0, 0) }
+      }
     });
-    const mutedUsers = await User.count({ 
-      where: { mutedUntil: { [Op.gt]: new Date() } } 
+    const mutedUsers = await User.count({
+      where: { mutedUntil: { [Op.gt]: new Date() } }
     });
 
     res.json({ totalRejected, rejectedToday, mutedUsers });

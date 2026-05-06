@@ -3383,11 +3383,11 @@ const AdminDashboard = () => {
 
       {/* Reject Course Modal */}
       {rejectCourseModal.isOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '500px' }}>
+        <div className="admin-modal-overlay">
+          <div className="admin-modal-content" style={{ maxWidth: '500px', height: 'auto', minHeight: 'auto' }}>
             <div className="modal-header">
-              <h2>Từ chối khóa học</h2>
-              <button className="btn-close" onClick={() => setRejectCourseModal({ ...rejectCourseModal, isOpen: false })}><X size={20} /></button>
+              <h3>Từ chối khóa học</h3>
+              <button className="close-modal" onClick={() => setRejectCourseModal({ ...rejectCourseModal, isOpen: false })}><X size={20} /></button>
             </div>
             <div className="modal-body">
               <p style={{ marginBottom: '15px', color: '#64748b' }}>Vui lòng cung cấp lý do từ chối để giảng viên có thể khắc phục.</p>
@@ -3397,7 +3397,7 @@ const AdminDashboard = () => {
                 placeholder="Nhập lý do từ chối..." 
                 value={rejectCourseModal.reason}
                 onChange={(e) => setRejectCourseModal({ ...rejectCourseModal, reason: e.target.value })}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', resize: 'vertical' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', resize: 'vertical' }}
               />
             </div>
             <div className="modal-footer">

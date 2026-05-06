@@ -28,8 +28,8 @@ exports.getRevenuePolicies = async (req, res) => {
     const { rows: policies, count } = await RevenuePolicy.findAndCountAll({
       where,
       include: [
-        { 
-          model: Course, 
+        {
+          model: Course,
           as: 'course',
           attributes: ['id', 'title', 'instructorId'],
           include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }],
@@ -60,10 +60,10 @@ exports.getLatestVersionPolicy = async (req, res) => {
 
     // Find the latest accepted or outdated policy for any course in this root group
     const latestPolicy = await RevenuePolicy.findOne({
-      include: [{ 
-        model: Course, 
-        as: 'course', 
-        where: { [Op.or]: [{ id: rootId }, { rootCourseId: rootId }] } 
+      include: [{
+        model: Course,
+        as: 'course',
+        where: { [Op.or]: [{ id: rootId }, { rootCourseId: rootId }] }
       }],
       where: { status: { [Op.in]: ['accepted', 'outdated'] } },
       order: [['createdAt', 'DESC']]
@@ -94,10 +94,10 @@ exports.createRevenuePolicy = async (req, res) => {
     // VERSION CONSTRAINT: Check if there's a previous policy type to inherit
     const rootId = course.rootCourseId || course.id;
     const previousPolicy = await RevenuePolicy.findOne({
-      include: [{ 
-        model: Course, 
-        as: 'course', 
-        where: { [Op.or]: [{ id: rootId }, { rootCourseId: rootId }] } 
+      include: [{
+        model: Course,
+        as: 'course',
+        where: { [Op.or]: [{ id: rootId }, { rootCourseId: rootId }] }
       }],
       where: { status: { [Op.in]: ['accepted', 'outdated'] } },
       order: [['createdAt', 'DESC']]
@@ -142,7 +142,7 @@ exports.createRevenuePolicy = async (req, res) => {
 // @access  Private
 exports.updatePolicyStatus = async (req, res) => {
   try {
-    const { status, message } = req.body; 
+    const { status, message } = req.body;
 
     const policy = await RevenuePolicy.findByPk(req.params.id, {
       include: [
@@ -265,7 +265,7 @@ exports.updatePolicyStatus = async (req, res) => {
         // Revert course status to 2 (CONTENT_APPROVED)
         const course = await Course.findByPk(courseId);
         if (course && [4, 5, 6].includes(Number(course.published))) {
-            await course.update({ published: 2 });
+          await course.update({ published: 2 });
         }
 
         await policy.destroy();
@@ -303,7 +303,7 @@ exports.updatePolicyStatus = async (req, res) => {
           },
           attributes: ['id']
         });
-        
+
         if (otherCourses.length > 0) {
           const otherCourseIds = otherCourses.map(c => c.id);
           await RevenuePolicy.update(
@@ -351,10 +351,10 @@ exports.updatePolicyStatus = async (req, res) => {
 exports.updateRevenuePolicy = async (req, res) => {
   try {
     const { type, instructorPercent, fixedAmount, upfrontAmount, sendImmediately } = req.body;
-    
+
     const policy = await RevenuePolicy.findByPk(req.params.id);
     if (!policy) return res.status(404).json({ message: 'Policy not found' });
-    
+
     if (policy.status !== 'draft' && policy.status !== 'rejected') {
       return res.status(400).json({ message: 'Chỉ có thể sửa bản nháp hoặc chính sách bị từ chối' });
     }
@@ -365,10 +365,10 @@ exports.updateRevenuePolicy = async (req, res) => {
     policy.upfrontAmount = upfrontAmount;
     policy.suggestedPrice = (type === 'PERCENT' || type === 'HYBRID') ? req.body.suggestedPrice : null;
     policy.pricePerPurchase = (type === 'PERCENT' || type === 'HYBRID') ? req.body.pricePerPurchase : null;
-    
+
     if (sendImmediately) {
       policy.status = 'waiting_confirm';
-      
+
       const course = await Course.findByPk(policy.courseId);
       // Notify instructor
       await Notification.create({
@@ -394,10 +394,10 @@ exports.getRevenuePolicyById = async (req, res) => {
   try {
     const policy = await RevenuePolicy.findByPk(req.params.id, {
       include: [
-        { 
-          model: Course, 
+        {
+          model: Course,
           as: 'course',
-          include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }] 
+          include: [{ model: User, as: 'instructor', attributes: ['id', 'name'] }]
         },
         { model: User, as: 'admin', attributes: ['id', 'name'] },
         { model: User, as: 'instructor', attributes: ['id', 'name'] }

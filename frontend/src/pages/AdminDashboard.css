@@ -802,7 +802,7 @@
 }
 
 /* Modal / Form Styles (for later) */
-.admin-modal-overlay {
+.admin-modal-overlay, .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -816,7 +816,7 @@
     backdrop-filter: blur(4px);
 }
 
-.admin-modal-content {
+.admin-modal-content, .modal-content {
     background: white;
     width: 1000px;
     /* Duy trì độ rộng */
@@ -948,21 +948,22 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.modal-body {
+    padding: 30px;
+    flex: 1;
+    overflow-y: auto;
+}
+
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
     margin-top: auto;
     padding: 20px 30px;
-    margin-left: -30px;
-    margin-right: -30px;
-    margin-bottom: -30px;
     background: #f8fafc;
     /* Màu khác tí cho phân biệt bar */
     border-top: 1px solid #e2e8f0;
     z-index: 10;
-    position: sticky;
-    bottom: -30px;
 }
 
 .btn-cancel {

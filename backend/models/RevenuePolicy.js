@@ -68,6 +68,14 @@ const RevenuePolicy = sequelize.define('RevenuePolicy', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  rejectionReason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  rejectedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   timestamps: true,
   tableName: 'RevenuePolicies',
